@@ -276,7 +276,10 @@ public class LoginActivity extends AppCompatActivity {
             JsonObjectRequest req = new JsonObjectRequest(Request.Method.POST, ApiRoutes.VERIFY_OTP, body,
                     resp -> {
                         boolean ok = resp.optBoolean("ok", false);
-                        if (!ok) { if (errorField != null) errorField.setText(I18n.t(this, "Invalid/expired OTP")); return; }
+                        if (!ok) {
+                            if (errorField != null) errorField.setText(I18n.t(this, "Invalid/expired OTP"));
+                            return;
+                        }
 
                         String access   = resp.optString("access_token", null);
                         String refresh  = resp.optString("refresh_token", null);
@@ -284,8 +287,15 @@ public class LoginActivity extends AppCompatActivity {
                         int expiresIn   = resp.optInt("expires_in", 0); // seconds
 
                         if (access != null && refresh != null && userId > 0 && expiresIn > 0) {
+                            // Session tokens save
                             session.saveTokens(access, refresh, userId);
                             saveAuthToPrefs(expiresIn);
+
+                            // 🔴 IMPORTANT: yahan se DynamicFormActivity ko user_id milega
+                            SharedPreferences userPrefs = getSharedPreferences("user", MODE_PRIVATE);
+                            userPrefs.edit()
+                                    .putLong("user_id", userId)
+                                    .apply();
 
                             if (resendTimer != null) resendTimer.cancel();
                             if (otpDialog != null) otpDialog.dismiss();
@@ -295,7 +305,9 @@ public class LoginActivity extends AppCompatActivity {
                             if (errorField != null) errorField.setText(I18n.t(this, "Login failed"));
                         }
                     },
-                    err -> { if (errorField != null) errorField.setText(I18n.t(this, "Network error")); }
+                    err -> {
+                        if (errorField != null) errorField.setText(I18n.t(this, "Network error"));
+                    }
             ){
                 @Override public Map<String, String> getHeaders() throws AuthFailureError {
                     HashMap<String, String> h = new HashMap<>();

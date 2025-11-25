@@ -110,6 +110,9 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         rvForm    = findViewById(R.id.rvForm);
         btnSubmit = findViewById(R.id.btnSubmit);
 
+        // XML me agar enabled=false hai to bhi yahan se control lenge
+        btnSubmit.setEnabled(false);
+
         fused = LocationServices.getFusedLocationProviderClient(this);
 
         Intent intent = getIntent();
@@ -118,7 +121,6 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         String category = intent.getStringExtra(EXTRA_CATEGORY);
         if (category == null) category = "General";
         categoryName = category;
-        // Title + subtitle styling
         tvTitle.setText("Dynamic Form (" + categoryName + ")");
 
         // --------- READ category_id / subcategory_id safely (String or Long) ----------
@@ -147,7 +149,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
             }
         }
 
-        // user_id from SharedPreferences (you must set it after login/OTP verify)
+        // user_id from SharedPreferences (set after login/OTP verify)
         SharedPreferences prefs = getSharedPreferences("user", MODE_PRIVATE);
         userId = prefs.getLong("user_id", 0L);
 
@@ -158,11 +160,13 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
 
         rvForm.setLayoutManager(new LinearLayoutManager(this));
 
-        // Load schema from server
+        // Load schema from server (DB-based) ONLY.
         loadSchemaFromServer(categoryId, subcategoryId);
 
         btnSubmit.setOnClickListener(v -> {
             Log.d(TAG, "Submit clicked");
+            toast("Submit clicked"); // sirf debug ke liye, baad me hata sakte ho
+
             if (adapter == null) {
                 toast("Form is not ready yet, please wait...");
                 Log.e(TAG, "Submit pressed but adapter is null");
@@ -178,14 +182,13 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
             submitListing(result);
         });
 
-        // Status bar dark background + light icons
         WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
         getWindow().setStatusBarColor(android.graphics.Color.BLACK);
+
         WindowInsetsControllerCompat wic =
                 new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
         wic.setAppearanceLightStatusBars(false);
 
-        // Apply top inset padding to root
         View root = findViewById(R.id.root);
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
             Insets bars = insets.getInsets(WindowInsetsCompat.Type.statusBars());
@@ -220,6 +223,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
             String msg = "Category info missing (categoryId<=0). Cannot load dynamic schema.";
             Log.e(TAG, msg);
             toast(msg);
+            btnSubmit.setEnabled(false);
             return;
         }
 
@@ -248,6 +252,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                         if (!success) {
                             toast(TextUtils.isEmpty(msg) ? "Failed to load form schema" : msg);
                             Log.e(TAG, "Backend returned success=false for schema, aborting.");
+                            btnSubmit.setEnabled(false);
                             return;
                         }
 
@@ -255,6 +260,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                         if (data == null) {
                             toast("Invalid schema response (data=null).");
                             Log.e(TAG, "Response data is null");
+                            btnSubmit.setEnabled(false);
                             return;
                         }
 
@@ -267,6 +273,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                         if (schemaArr == null) {
                             toast("No schema array returned.");
                             Log.e(TAG, "schemaArr is null");
+                            btnSubmit.setEnabled(false);
                             return;
                         }
 
@@ -329,15 +336,19 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                         if (schema.isEmpty()) {
                             toast("Empty schema received from server.");
                             Log.e(TAG, "Schema list is empty, not setting adapter");
+                            btnSubmit.setEnabled(false);
                         } else {
                             adapter = new DynamicFormAdapter(schema, this);
                             rvForm.setAdapter(adapter);
                             Log.d(TAG, "Adapter set with itemCount=" + adapter.getItemCount());
+                            // Ab form ready hai, button enable karo
+                            btnSubmit.setEnabled(true);
                         }
 
                     } catch (Exception e) {
                         Log.e(TAG, "Schema parse error", e);
                         toast("Error parsing schema.");
+                        btnSubmit.setEnabled(false);
                     }
                 },
                 error -> {
@@ -352,6 +363,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                     }
                     Log.e(TAG, sb.toString());
                     toast("Unable to load form. Please try again.");
+                    btnSubmit.setEnabled(false);
                 }
         );
 
@@ -394,9 +406,11 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         Log.d(TAG, "submitListing() called, userId=" + userId +
                 " categoryId=" + categoryId + " subcategoryId=" + subcategoryId);
 
-        if (userId <= 0) {
+        long effectiveUserId = userId;
+
+        if (effectiveUserId <= 0) {
             toast("User not logged in. Please login again.");
-            Log.e(TAG, "submitListing: userId<=0");
+            Log.e(TAG, "submitListing: effectiveUserId<=0");
             return;
         }
         if (categoryId <= 0) {
@@ -407,7 +421,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
 
         try {
             JSONObject payload = new JSONObject();
-            payload.put("user_id", userId);
+            payload.put("user_id", effectiveUserId);
             payload.put("category_id", categoryId);
             if (subcategoryId > 0) payload.put("subcategory_id", subcategoryId);
 
@@ -435,7 +449,10 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                         toast(message);
 
                         if (success) {
-                            Log.d(TAG, "Listing created successfully, finishing activity");
+                            Log.d(TAG, "Listing created successfully, opening MainActivity");
+                            Intent i = new Intent(DynamicFormActivity.this, MainActivity.class);
+                            i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(i);
                             finish();
                         } else {
                             Log.e(TAG, "Listing creation failed");
@@ -470,7 +487,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         }
     }
 
-    /** Title helper (same logic, with logs) */
+    /** Title helper */
     private String buildTitleFromForm(JSONObject form) {
         try {
             String brand   = form.optString("brand", "").trim();
@@ -564,10 +581,10 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
             getWindow().getDecorView().setSystemUiVisibility(0);
         } catch (Exception ignored) { }
 
-        // DO NOT override root background here so that bg_splash + glass card remain visible
         View root = findViewById(R.id.root);
         if (root != null) {
-            // keep XML-defined background (bg_splash)
+            root.setBackgroundColor(
+                    ContextCompat.getColor(this, R.color.ss_surface));
         }
 
         try {
@@ -587,8 +604,8 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         try {
             Button btn = findViewById(R.id.btnSubmit);
             if (btn != null) {
-                // optional: if you use drawable for button background
-                // btn.setBackground(ContextCompat.getDrawable(this, R.drawable.bg_btn_primary));
+                btn.setBackground(
+                        ContextCompat.getDrawable(this, R.drawable.bg_btn_primary));
                 btn.setTextColor(
                         ContextCompat.getColor(this, android.R.color.white));
             }
@@ -600,7 +617,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
     }
 
     /* NOTE:
-       Static buildSchema / fallback is removed.
-       Only DB-based dynamic schema is used.
+       Static buildSchema / fallback completely removed.
+       Ab sirf DB se dynamic schema hi chalega.
     */
 }
