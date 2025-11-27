@@ -22,7 +22,7 @@ public class LanguageAdapter extends RecyclerView.Adapter<LanguageAdapter.VH> {
 
     private final List<String[]> languages;
     private final OnLanguageClick onLanguageClick;
-    private int selectedPosition = 0;   // default first language selected
+    private int selectedPosition = RecyclerView.NO_POSITION;   // कोई default selection नहीं
 
     public LanguageAdapter(List<String[]> languages, OnLanguageClick onLanguageClick) {
         this.languages = languages;

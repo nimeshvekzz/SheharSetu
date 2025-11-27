@@ -3,9 +3,13 @@ package com.infowave.sheharsetu;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.graphics.Rect;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.StateListDrawable;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
@@ -21,7 +25,6 @@ import com.android.volley.Request;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.infowave.sheharsetu.Adapter.LanguageAdapter;
 import com.infowave.sheharsetu.Adapter.LanguageManager;
-import com.infowave.sheharsetu.core.SessionManager;
 import com.infowave.sheharsetu.net.ApiRoutes;
 import com.infowave.sheharsetu.net.VolleySingleton;
 
@@ -33,18 +36,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Language list server se aata hai: GET ApiRoutes.GET_LANGUAGES
- *
- * JSON format:
- * {
- *   "ok": true,
- *   "data": [
- *     {"code":"hi","native_name":"हिन्दी","english_name":"Hindi","enabled":1},
- *     ...
- *   ]
- * }
- */
 public class LanguageSelection extends AppCompatActivity implements LanguageAdapter.OnLanguageClick {
 
     public static final String PREFS = "sheharsetu_prefs";
@@ -55,8 +46,13 @@ public class LanguageSelection extends AppCompatActivity implements LanguageAdap
 
     private RecyclerView rv;
     private ProgressBar progress;
+    private Button btnContinue;
+
     private final List<String[]> languages = new ArrayList<>();
     private LanguageAdapter adapter;
+
+    // current selected language
+    private String[] selectedLanguage = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,10 +78,45 @@ public class LanguageSelection extends AppCompatActivity implements LanguageAdap
 
         rv = findViewById(R.id.rvLanguages);
         progress = findViewById(R.id.progressLanguages);
+        btnContinue = findViewById(R.id.btnContinue);
 
-        // 3 languages per row
-        rv.setLayoutManager(new GridLayoutManager(this, 3));
+        // Java से professional rounded background
+        setupContinueButtonBackground();
+
+        // Button दिखाई देगा लेकिन शुरू में disabled रहेगा (faded green)
+        btnContinue.setEnabled(false);
+
+        btnContinue.setOnClickListener(v -> {
+            if (selectedLanguage == null) return;
+
+            // lang[0] = code, lang[1] = native_name
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                    .putString(KEY_LANG_CODE, selectedLanguage[0])
+                    .putString(KEY_LANG_NAME, selectedLanguage[1])
+                    .apply();
+
+            LanguageManager.apply(this, selectedLanguage[0]);
+            goNext();
+        });
+
+        // Grid layout for languages
+        GridLayoutManager glm = new GridLayoutManager(this, 3);
+        rv.setLayoutManager(glm);
         rv.setHasFixedSize(true);
+        rv.setClipToPadding(false);
+        rv.setPadding(
+                0,
+                (int) dpToPx(4),
+                0,
+                (int) dpToPx(4)
+        );
+
+        // GAP between language cards (professional spacing)
+        rv.addItemDecoration(new GridSpacingItemDecoration(
+                3,                               // span count
+                (int) dpToPx(12),                // spacing between cards
+                true                             // include edge
+        ));
 
         adapter = new LanguageAdapter(languages, this);
         rv.setAdapter(adapter);
@@ -94,9 +125,47 @@ public class LanguageSelection extends AppCompatActivity implements LanguageAdap
         fetchLanguages();
     }
 
-    /**
-     * API call to load languages dynamically
-     */
+    /** Continue button का stateful rounded background Java से बनाना */
+    private void setupContinueButtonBackground() {
+        float radius = dpToPx(24); // थोड़ा ज्यादा rounded pill look
+
+        // Disabled (#6696A78D)
+        GradientDrawable disabled = new GradientDrawable();
+        disabled.setShape(GradientDrawable.RECTANGLE);
+        disabled.setCornerRadius(radius);
+        disabled.setColor(Color.parseColor("#6696A78D"));
+        disabled.setStroke((int) dpToPx(1), Color.parseColor("#33FFFFFF"));
+
+        // Pressed (#7A96A78D)
+        GradientDrawable pressed = new GradientDrawable();
+        pressed.setShape(GradientDrawable.RECTANGLE);
+        pressed.setCornerRadius(radius);
+        pressed.setColor(Color.parseColor("#7A96A78D"));
+        pressed.setStroke((int) dpToPx(1), Color.parseColor("#80B6CEB4"));
+
+        // Enabled normal (#96A78D)
+        GradientDrawable enabled = new GradientDrawable();
+        enabled.setShape(GradientDrawable.RECTANGLE);
+        enabled.setCornerRadius(radius);
+        enabled.setColor(Color.parseColor("#96A78D"));
+        enabled.setStroke((int) dpToPx(1), Color.parseColor("#B6CEB4"));
+
+        StateListDrawable stateList = new StateListDrawable();
+        // order important: disabled, pressed, default
+        stateList.addState(new int[]{-android.R.attr.state_enabled}, disabled);
+        stateList.addState(new int[]{android.R.attr.state_pressed}, pressed);
+        stateList.addState(new int[]{}, enabled);
+
+        btnContinue.setBackground(stateList);
+        btnContinue.setTextColor(Color.WHITE);
+        // हल्की elevation ताकि button background से ऊपर लगे
+        btnContinue.setElevation(dpToPx(4));
+    }
+
+    private float dpToPx(float dp) {
+        return dp * getResources().getDisplayMetrics().density;
+    }
+
     private void fetchLanguages() {
         showLoading(true);
 
@@ -152,7 +221,7 @@ public class LanguageSelection extends AppCompatActivity implements LanguageAdap
                             return;
                         }
 
-                        // Move English to top if present and not already at index 0
+                        // English ko top pe shift karo
                         if (englishIndex > 0) {
                             String[] en = languages.remove(englishIndex);
                             languages.add(0, en);
@@ -211,19 +280,64 @@ public class LanguageSelection extends AppCompatActivity implements LanguageAdap
 
     @Override
     public void onLanguageSelected(String[] lang) {
-        // lang[0] = code, lang[1] = native_name
-        getSharedPreferences(PREFS, MODE_PRIVATE).edit()
-                .putString(KEY_LANG_CODE, lang[0])
-                .putString(KEY_LANG_NAME, lang[1])
-                .apply();
+        selectedLanguage = lang;
 
-        LanguageManager.apply(this, lang[0]);
-        goNext();
+        if (!btnContinue.isEnabled()) {
+            btnContinue.setEnabled(true);
+            // subtle scale animation when first enabled
+            btnContinue.setScaleX(0.9f);
+            btnContinue.setScaleY(0.9f);
+            btnContinue.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(180L)
+                    .start();
+        }
     }
 
     private void goNext() {
         startActivity(new Intent(this, UserInfoActivity.class));
         overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
         finish();
+    }
+
+    /**
+     * RecyclerView grid spacing decoration for professional gap between language cards.
+     */
+    private static class GridSpacingItemDecoration extends RecyclerView.ItemDecoration {
+
+        private final int spanCount;
+        private final int spacing;
+        private final boolean includeEdge;
+
+        GridSpacingItemDecoration(int spanCount, int spacing, boolean includeEdge) {
+            this.spanCount = spanCount;
+            this.spacing = spacing;
+            this.includeEdge = includeEdge;
+        }
+
+        @Override
+        public void getItemOffsets(Rect outRect, View view,
+                                   RecyclerView parent,
+                                   RecyclerView.State state) {
+            int position = parent.getChildAdapterPosition(view); // item position
+            int column = position % spanCount;                   // item column
+
+            if (includeEdge) {
+                outRect.left = spacing - column * spacing / spanCount;
+                outRect.right = (column + 1) * spacing / spanCount;
+
+                if (position < spanCount) {
+                    outRect.top = spacing;
+                }
+                outRect.bottom = spacing;
+            } else {
+                outRect.left = column * spacing / spanCount;
+                outRect.right = spacing - (column + 1) * spacing / spanCount;
+                if (position >= spanCount) {
+                    outRect.top = spacing;
+                }
+            }
+        }
     }
 }

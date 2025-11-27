@@ -85,14 +85,14 @@ public class MainActivity extends AppCompatActivity {
     // ===== State =====
     private int selectedCategoryId = -1;
     private int selectedSubFilterId = -1;   // -1 = none (sub grid hidden), 0 = ALL
-    private Boolean showNew = null;         // null = all, true=new, false=old (server ignore safe)
+    private Boolean showNew = null;         // null = all, true=new, false=old
     private String searchQuery = "";
 
     // ===== Adapters =====
     private CategoryAdapter catAdapter;
     private ProductAdapter productAdapterRef;
 
-    // ===== Locale Prefs (same as LanguageSelection / I18n) =====
+    // ===== Locale Prefs =====
     private static final String PREFS    = LanguageSelection.PREFS;          // "sheharsetu_prefs"
     private static final String KEY_LANG = LanguageSelection.KEY_LANG_CODE;  // "app_lang_code";
 
@@ -108,7 +108,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Apply the SAME language that user selected in LanguageSelection/UserInfo
+        // Apply saved locale first
         applySavedLocale();
         session = new SessionManager(this);
 
@@ -142,7 +142,6 @@ public class MainActivity extends AppCompatActivity {
         tvMarquee = findViewById(R.id.tvMarquee);
         tvMarquee.setSelected(true);
 
-        // OPTIONAL: if you add tvLangBadge in toolbar/header
         TextView tvLangBadge = findViewById(R.id.tvLangBadge);
         if (tvLangBadge != null) {
             tvLangBadge.setText(
@@ -155,7 +154,9 @@ public class MainActivity extends AppCompatActivity {
         setupLanguageToggle();
         setupAppDrawer();
 
-        rvCategories.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        rvCategories.setLayoutManager(
+                new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        );
         rvSubFiltersGrid.setLayoutManager(new GridLayoutManager(this, 3));
         rvProducts.setLayoutManager(new GridLayoutManager(this, 2));
 
@@ -164,10 +165,9 @@ public class MainActivity extends AppCompatActivity {
         btnPost.setOnClickListener(v -> startActivity(new Intent(this, CategorySelectActivity.class)));
         btnHelp.setOnClickListener(v -> startActivity(new Intent(this, HelpActivity.class)));
 
-        // ==== Prefetch static UI texts for this screen and apply translations ====
         prefetchAndApplyStaticTexts();
 
-        // Load dynamic data
+        // Load data
         showProducts();
         fetchCategories();
         fetchProducts(); // featured on first load
@@ -234,10 +234,6 @@ public class MainActivity extends AppCompatActivity {
         fetchProducts();
     }
 
-    /**
-     * Apply the language selected in LanguageSelection/UserInfo.
-     * Uses the same PREFS + KEY_LANG as the rest of the app.
-     */
     private void applySavedLocale() {
         SharedPreferences sp = getSharedPreferences(PREFS, MODE_PRIVATE);
         String lang = sp.getString(KEY_LANG, "en");
@@ -247,12 +243,12 @@ public class MainActivity extends AppCompatActivity {
     private void setupLanguageToggle() {
         if (btnDrawer == null) return;
 
-        // Normal tap → open drawer
+        // Tap opens drawer
         btnDrawer.setOnClickListener(v -> {
             if (drawerLayout != null) drawerLayout.openDrawer(GravityCompat.START);
         });
 
-        // Long-press → quick toggle EN <-> HI using SAME prefs as LanguageSelection
+        // Long-press toggles EN <-> HI
         btnDrawer.setOnLongClickListener(v -> {
             SharedPreferences sp = getSharedPreferences(PREFS, MODE_PRIVATE);
             String cur = sp.getString(KEY_LANG, "en");
@@ -283,9 +279,31 @@ public class MainActivity extends AppCompatActivity {
         navigationView = findViewById(R.id.navView);
         if (drawerLayout == null || navigationView == null) return;
 
-        drawerToggle = new ActionBarDrawerToggle(this, drawerLayout, R.string.drawer_open, R.string.drawer_close);
+        drawerToggle = new ActionBarDrawerToggle(this, drawerLayout,
+                R.string.drawer_open, R.string.drawer_close);
         drawerLayout.addDrawerListener(drawerToggle);
         drawerToggle.syncState();
+
+        // Setup header view (design only; you can later bind dynamic data here)
+        View header = navigationView.getHeaderView(0);
+        if (header != null) {
+            ImageView ivProfile = header.findViewById(R.id.ivProfile);
+            TextView tvUserName = header.findViewById(R.id.tvUserName);
+            TextView tvUserPhone = header.findViewById(R.id.tvUserPhone);
+            ImageView ivEdit = header.findViewById(R.id.ivEdit);
+
+            // You can set user data here if needed:
+            // tvUserName.setText(session.getUserName());
+            // tvUserPhone.setText(session.getUserPhone());
+
+            if (ivEdit != null) {
+                ivEdit.setOnClickListener(v -> {
+                    // TODO: open profile screen when ready
+                    Toast.makeText(MainActivity.this,
+                            I18n.t(this, "Profile coming soon"), Toast.LENGTH_SHORT).show();
+                });
+            }
+        }
 
         navigationView.setNavigationItemSelectedListener(item -> {
             int id = item.getItemId();
@@ -295,16 +313,46 @@ public class MainActivity extends AppCompatActivity {
 
             if (id == R.id.nav_home) {
                 Toast.makeText(MainActivity.this, I18n.t(this, "Home"), Toast.LENGTH_SHORT).show();
+
             } else if (id == R.id.nav_post) {
                 startActivity(new Intent(MainActivity.this, CategorySelectActivity.class));
+
             } else if (id == R.id.nav_my_ads) {
                 Toast.makeText(MainActivity.this, I18n.t(this, "My Ads"), Toast.LENGTH_SHORT).show();
+
             } else if (id == R.id.nav_notifications) {
                 Toast.makeText(MainActivity.this, I18n.t(this, "Notifications"), Toast.LENGTH_SHORT).show();
+
+            } else if (id == R.id.nav_whatsapp) {
+                Toast.makeText(MainActivity.this, "WhatsApp", Toast.LENGTH_SHORT).show();
+
+            } else if (id == R.id.nav_youtube) {
+                Toast.makeText(MainActivity.this, "YouTube", Toast.LENGTH_SHORT).show();
+
+            } else if (id == R.id.nav_weather) {
+                Toast.makeText(MainActivity.this, "Weather", Toast.LENGTH_SHORT).show();
+
             } else if (id == R.id.nav_invite) {
                 shareApp();
+
             } else if (id == R.id.nav_rate) {
                 rateUs();
+
+            } else if (id == R.id.nav_facebook) {
+                Toast.makeText(MainActivity.this, "Facebook", Toast.LENGTH_SHORT).show();
+
+            } else if (id == R.id.nav_contact) {
+                Toast.makeText(MainActivity.this, "Contact us", Toast.LENGTH_SHORT).show();
+
+            } else if (id == R.id.nav_terms) {
+                Toast.makeText(MainActivity.this, "Terms & Conditions", Toast.LENGTH_SHORT).show();
+
+            } else if (id == R.id.nav_about) {
+                Toast.makeText(MainActivity.this, "About", Toast.LENGTH_SHORT).show();
+
+            } else if (id == R.id.nav_logout) {
+                // NEW: Logout handling
+                doLogout();
             } else {
                 Toast.makeText(MainActivity.this, I18n.t(this, "Coming soon"), Toast.LENGTH_SHORT).show();
             }
@@ -312,11 +360,21 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void doLogout() {
+        // Clear user-related data
+        getSharedPreferences("user", MODE_PRIVATE).edit().clear().apply();
+
+        Toast.makeText(this, "Logged out", Toast.LENGTH_SHORT).show();
+
+        // Go back to language selection or login screen
+        Intent i = new Intent(this, LanguageSelection.class);
+        i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(i);
+        finish();
+    }
+
     // ================= Static UI translation =================
 
-    /**
-     * Prefetch static labels/hints used on this screen and apply translations.
-     */
     private void prefetchAndApplyStaticTexts() {
         List<String> keys = new ArrayList<>();
 
@@ -330,7 +388,6 @@ public class MainActivity extends AppCompatActivity {
             keys.add(tvMarquee.getText().toString());
         }
 
-        // Extra messages used on this screen
         keys.add("Speak to search…");
         keys.add("Voice search not available");
         keys.add("Home");
@@ -350,7 +407,6 @@ public class MainActivity extends AppCompatActivity {
         keys.add("No app found to share");
 
         I18n.prefetch(this, keys, () -> {
-            // Apply translated hint/texts
             if (tiSearch != null) {
                 I18n.translateAndApplyHint(tiSearch, this);
             }
@@ -368,7 +424,7 @@ public class MainActivity extends AppCompatActivity {
     private void setupAdapters() {
         catAdapter = new CategoryAdapter(categories, cat -> {
             selectedCategoryId = toInt(cat.get("id"), -1);
-            selectedSubFilterId = -1; // show sub-grid
+            selectedSubFilterId = -1;
             showNew = null;
             clearSearch();
 
@@ -418,7 +474,7 @@ public class MainActivity extends AppCompatActivity {
     // ================= Network: Fetchers =================
 
     private String urlCategories() {
-        String base = ApiRoutes.BASE_URL; // already without trailing slash
+        String base = ApiRoutes.BASE_URL;
         return base + "/list_categories.php";
     }
 
@@ -452,7 +508,6 @@ public class MainActivity extends AppCompatActivity {
                         JSONArray arr = resp.optJSONArray("data");
                         categories.clear();
 
-                        // Collect English names to translate
                         List<String> catNameKeys = new ArrayList<>();
 
                         if (arr != null) {
@@ -477,10 +532,8 @@ public class MainActivity extends AppCompatActivity {
                             }
                         }
 
-                        // Show English immediately
                         catAdapter.notifyDataSetChanged();
 
-                        // Now translate the category names and refresh once ready
                         I18n.prefetch(this, catNameKeys, () -> {
                             for (Map<String, Object> m : categories) {
                                 Object nObj = m.get("name");

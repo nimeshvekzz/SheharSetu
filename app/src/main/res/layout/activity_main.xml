@@ -213,19 +213,28 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <!-- ========= Drawer menu ========= -->
+<!--    <com.google.android.material.navigation.NavigationView-->
+<!--        android:id="@+id/navView"-->
+<!--        android:layout_width="280dp"-->
+<!--        android:layout_height="match_parent"-->
+<!--        android:layout_gravity="start"-->
+<!--        android:fitsSystemWindows="true"-->
+<!--        android:background="@color/drawerSurface"-->
+<!--        app:headerLayout="@layout/av_header_main"-->
+<!--        app:menu="@menu/nav_main"-->
+<!--        app:itemIconTint="@null"-->
+<!--        app:itemTextColor="@color/white"-->
+<!--        app:itemRippleColor="@color/nav_item_ripple"/>-->
+
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/navView"
-        android:layout_width="280dp"
+        android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:fitsSystemWindows="true"
-        android:background="@color/drawerSurface"
         app:headerLayout="@layout/av_header_main"
         app:menu="@menu/nav_main"
         app:itemIconTint="@null"
-        app:itemTextColor="@color/white"
-        app:itemRippleColor="@color/nav_item_ripple"/>
-
+        app:itemTextColor="@color/white" />
 
 
 </androidx.drawerlayout.widget.DrawerLayout>
