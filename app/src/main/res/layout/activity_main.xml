@@ -99,6 +99,7 @@
 
 
         </androidx.constraintlayout.widget.ConstraintLayout>
+
         <!-- Horizontal categories -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvCategories"
@@ -113,6 +114,39 @@
             app:layout_constraintEnd_toEndOf="parent"
             tools:listitem="@layout/item_category"/>
 
+        <!-- Section title -->
+        <TextView
+            android:id="@+id/tvSectionTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginTop="10dp"
+            android:text="@string/featured_listings"
+            android:textStyle="bold"
+            android:textSize="20sp"
+            android:textColor="@android:color/black"
+            app:layout_constraintTop_toBottomOf="@id/rvCategories"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+        <!-- Subfilters -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvSubFiltersGrid"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="12dp"
+            android:clipToPadding="false"
+            android:visibility="gone"
+            app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+            app:spanCount="3"
+            app:layout_constraintTop_toBottomOf="@id/tvSectionTitle"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:listitem="@layout/item_subfilter_grid"/>
+
         <!-- New/Used toggle -->
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/toggleNewOld"
@@ -124,7 +158,7 @@
             android:visibility="gone"
             app:singleSelection="true"
             app:selectionRequired="false"
-            app:layout_constraintTop_toBottomOf="@id/rvCategories"
+            app:layout_constraintTop_toBottomOf="@id/rvSubFiltersGrid"
             app:layout_constraintStart_toStartOf="parent">
 
             <com.google.android.material.button.MaterialButton
@@ -146,40 +180,6 @@
                 app:shapeAppearanceOverlay="@style/ShapeSquareRight" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
-        <!-- Section title -->
-        <TextView
-            android:id="@+id/tvSectionTitle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_marginEnd="12dp"
-            android:layout_marginTop="10dp"
-            android:text="@string/featured_listings"
-            android:textStyle="bold"
-            android:textSize="20sp"
-            android:textColor="@android:color/black"
-            app:layout_constraintTop_toBottomOf="@id/toggleNewOld"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"/>
-
-        <!-- Subfilters -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvSubFiltersGrid"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:paddingBottom="12dp"
-            android:clipToPadding="false"
-            android:visibility="gone"
-            app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
-            app:spanCount="3"
-            app:layout_constraintTop_toBottomOf="@id/tvSectionTitle"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            tools:listitem="@layout/item_subfilter_grid"/>
-
         <!-- Products -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvProducts"
@@ -191,7 +191,7 @@
             android:clipToPadding="false"
             app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
             app:spanCount="2"
-            app:layout_constraintTop_toBottomOf="@id/tvSectionTitle"
+            app:layout_constraintTop_toBottomOf="@id/toggleNewOld"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -213,18 +213,18 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <!-- ========= Drawer menu ========= -->
-<!--    <com.google.android.material.navigation.NavigationView-->
-<!--        android:id="@+id/navView"-->
-<!--        android:layout_width="280dp"-->
-<!--        android:layout_height="match_parent"-->
-<!--        android:layout_gravity="start"-->
-<!--        android:fitsSystemWindows="true"-->
-<!--        android:background="@color/drawerSurface"-->
-<!--        app:headerLayout="@layout/av_header_main"-->
-<!--        app:menu="@menu/nav_main"-->
-<!--        app:itemIconTint="@null"-->
-<!--        app:itemTextColor="@color/white"-->
-<!--        app:itemRippleColor="@color/nav_item_ripple"/>-->
+    <!--    <com.google.android.material.navigation.NavigationView-->
+    <!--        android:id="@+id/navView"-->
+    <!--        android:layout_width="280dp"-->
+    <!--        android:layout_height="match_parent"-->
+    <!--        android:layout_gravity="start"-->
+    <!--        android:fitsSystemWindows="true"-->
+    <!--        android:background="@color/drawerSurface"-->
+    <!--        app:headerLayout="@layout/av_header_main"-->
+    <!--        app:menu="@menu/nav_main"-->
+    <!--        app:itemIconTint="@null"-->
+    <!--        app:itemTextColor="@color/white"-->
+    <!--        app:itemRippleColor="@color/nav_item_ripple"/>-->
 
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/navView"

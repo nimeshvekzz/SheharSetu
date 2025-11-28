@@ -238,6 +238,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
 
     /**
      * Load form schema from backend (get_form_schema.php) using categoryId + subcategoryId.
+     * Yahin par hum decide karenge ki is_new SWITCH dikhana hai ya nahi.
      */
     private void loadSchemaFromServer(long categoryId, long subcategoryId) {
         Log.d(TAG, "loadSchemaFromServer() called with categoryId=" + categoryId +
@@ -293,6 +294,26 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                         Log.d(TAG, "Category from server: " + (catObj == null ? "null" : catObj.toString()));
                         Log.d(TAG, "Subcategory from server: " + (subObj == null ? "null" : subObj.toString()));
 
+                        // 🔥 NEW: decide if this subcategory supports NEW/OLD condition switch
+                        boolean supportsCondition = false;
+                        if (subObj != null) {
+                            // Try int or boolean dono handle karo
+                            int scInt = subObj.optInt("supports_condition", -1);
+                            boolean scBool = subObj.optBoolean("supports_condition", false);
+                            if (scInt == 1 || scBool) {
+                                supportsCondition = true;
+                            }
+                        }
+                        // Fallback: agar subcategory me nahi ho to category se dekh lo
+                        if (!supportsCondition && catObj != null) {
+                            int scInt = catObj.optInt("supports_condition", -1);
+                            boolean scBool = catObj.optBoolean("supports_condition", false);
+                            if (scInt == 1 || scBool) {
+                                supportsCondition = true;
+                            }
+                        }
+                        Log.d(TAG, "supportsCondition (NEW/USED switch allowed) = " + supportsCondition);
+
                         JSONArray schemaArr = data.optJSONArray("schema");
                         if (schemaArr == null) {
                             toast("No schema array returned.");
@@ -312,14 +333,22 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                                 continue;
                             }
 
-                            Map<String, Object> m = new HashMap<>();
-                            String key = field.optString("key", "");
+                            String key   = field.optString("key", "");
                             String label = field.optString("label", "");
-                            String hint = field.optString("hint", "");
-                            String type = field.optString("type", "TEXT");
+                            String hint  = field.optString("hint", "");
+                            String type  = field.optString("type", "TEXT");
                             boolean required = field.optBoolean("required", false);
-                            String unit = field.optString("unit", "");
+                            String unit  = field.optString("unit", "");
 
+                            // 🔥 IMPORTANT:
+                            // Agar yeh is_new field hai aur supportsCondition = false,
+                            // to is field ko UI me show hi nahi karna.
+                            if ("is_new".equalsIgnoreCase(key) && !supportsCondition) {
+                                Log.d(TAG, "Skipping field 'is_new' because supports_condition = false for this subcategory");
+                                continue;
+                            }
+
+                            Map<String, Object> m = new HashMap<>();
                             m.put("key",      key);
                             m.put("label",    label);
                             m.put("hint",     hint);
@@ -354,7 +383,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                             schema.add(m);
                         }
 
-                        Log.d(TAG, "Final schema list size after parsing: " + schema.size());
+                        Log.d(TAG, "Final schema list size after parsing (after is_new filter) = " + schema.size());
 
                         if (schema.isEmpty()) {
                             toast("Empty schema received from server.");

@@ -284,31 +284,25 @@ public class MainActivity extends AppCompatActivity {
         drawerLayout.addDrawerListener(drawerToggle);
         drawerToggle.syncState();
 
-        // Setup header view
+        // Setup header view (design only; you can later bind dynamic data here)
         View header = navigationView.getHeaderView(0);
         if (header != null) {
-            ImageView ivProfile   = header.findViewById(R.id.ivProfile);
-            TextView tvUserName   = header.findViewById(R.id.tvUserName);
-            TextView tvUserPhone  = header.findViewById(R.id.tvUserPhone);
-            ImageView ivEdit      = header.findViewById(R.id.ivEdit);
+            ImageView ivProfile = header.findViewById(R.id.ivProfile);
+            TextView tvUserName = header.findViewById(R.id.tvUserName);
+            TextView tvUserPhone = header.findViewById(R.id.tvUserPhone);
+            ImageView ivEdit = header.findViewById(R.id.ivEdit);
 
-            // Static demo data – later you can bind from DB/Session
-            if (tvUserName != null) {
-                tvUserName.setText("Vansh Mandanka");
+            // You can set user data here if needed:
+            // tvUserName.setText(session.getUserName());
+            // tvUserPhone.setText(session.getUserPhone());
+
+            if (ivEdit != null) {
+                ivEdit.setOnClickListener(v -> {
+                    // TODO: open profile screen when ready
+                    Toast.makeText(MainActivity.this,
+                            I18n.t(this, "Profile coming soon"), Toast.LENGTH_SHORT).show();
+                });
             }
-            if (tvUserPhone != null) {
-                tvUserPhone.setText("+91 63543 55617");
-            }
-
-            View.OnClickListener openProfileClick = v -> {
-                Intent i = new Intent(MainActivity.this, ProfileActivity.class);
-                startActivity(i);
-            };
-
-            // क्लिक पूरा header, avatar और edit icon पर काम करेगा
-            header.setOnClickListener(openProfileClick);
-            if (ivProfile != null) ivProfile.setOnClickListener(openProfileClick);
-            if (ivEdit != null)    ivEdit.setOnClickListener(openProfileClick);
         }
 
         navigationView.setNavigationItemSelectedListener(item -> {
@@ -351,12 +345,13 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(MainActivity.this, "Contact us", Toast.LENGTH_SHORT).show();
 
             } else if (id == R.id.nav_terms) {
-                Toast.makeText(MainActivity.this, "Term and condition", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Terms & Conditions", Toast.LENGTH_SHORT).show();
 
             } else if (id == R.id.nav_about) {
                 Toast.makeText(MainActivity.this, "About", Toast.LENGTH_SHORT).show();
 
             } else if (id == R.id.nav_logout) {
+                // NEW: Logout handling
                 doLogout();
             } else {
                 Toast.makeText(MainActivity.this, I18n.t(this, "Coming soon"), Toast.LENGTH_SHORT).show();

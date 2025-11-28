@@ -93,11 +93,13 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             String type = s(f.get("type")).toUpperCase(Locale.ROOT);
             switch (type) {
                 case "CHECKBOX":
+                    // default OFF
                     answers.put(key, false);
                     break;
                 case "SWITCH": {
-                    // 🔥 Default: if this is "is_new", start as true (new ON), otherwise false
-                    boolean defaultVal = "is_new".equalsIgnoreCase(key);
+                    // ✅ All switches default OFF (false).
+                    //    "is_new" bhi yahi se OFF se start karega (Used by default).
+                    boolean defaultVal = false;
                     answers.put(key, defaultVal);
                     break;
                 }
@@ -318,7 +320,6 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
         } else if (h instanceof VHSwitch) {
             VHSwitch vh = (VHSwitch) h;
-            // show * when required
             vh.tvLabel.setText(label + (req(f) ? " *" : ""));
             boolean on = answers.get(key) instanceof Boolean && (Boolean) answers.get(key);
             vh.sw.setChecked(on);
@@ -545,10 +546,14 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
                 if (required) {
                     if ("CHECKBOX".equalsIgnoreCase(type) || "SWITCH".equalsIgnoreCase(type)) {
-                        if (!(val instanceof Boolean) || !((Boolean) val)) {
-                            toast("Please enable: " + label);
-                            Log.e(TAG, "Validation failed: checkbox/switch not enabled for " + key);
-                            return null;
+                        // ✅ Special case: "is_new" switch is never forced to ON.
+                        //    Required ka matlab yahan sirf "field exist hai", jo hamare paas hamesha hai.
+                        if (!"is_new".equalsIgnoreCase(key)) {
+                            if (!(val instanceof Boolean) || !((Boolean) val)) {
+                                toast("Please enable: " + label);
+                                Log.e(TAG, "Validation failed: checkbox/switch not enabled for " + key);
+                                return null;
+                            }
                         }
                     } else if ("DROPDOWN".equalsIgnoreCase(type)) {
                         if (TextUtils.isEmpty(sval)) {
@@ -714,7 +719,6 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 vh.container.setBackgroundResource(isCover ? R.drawable.bg_thumb_cover : R.drawable.bg_thumb_normal);
             }
 
-            // Professional, simple label
             if (isCover) {
                 vh.name.setText("Cover photo");
             } else {
