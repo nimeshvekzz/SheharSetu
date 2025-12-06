@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Main soft diagonal gradient -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="135"
+                android:startColor="@color/colorBackgroundSoft"
+            android:centerColor="@color/colorPrimaryLight"
+            android:endColor="@android:color/white"
+            android:centerY="0.45" />
+        </shape>
+    </item>
+
+    <!-- Very soft vignette to make the center/card pop -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <padding
+                android:left="0dp"
+                android:top="0dp"
+                android:right="0dp"
+                android:bottom="0dp" />
+            <corners android:radius="0dp" />
+        </shape>
+    </item>
+
+</layer-list>

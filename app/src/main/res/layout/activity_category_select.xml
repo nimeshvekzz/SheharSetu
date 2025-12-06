@@ -4,92 +4,106 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white">
+    android:background="@color/colorBackgroundSoft">
 
-    <!-- Top AppBar -->
+    <!-- Premium AppBar -->
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@color/colorPrimary"
         android:fitsSystemWindows="true"
-        app:elevation="4dp">
+        app:elevation="6dp">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/topBar"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:background="@color/greenPrimary"
-            app:navigationIcon="@drawable/ic_arrows_24"
+            android:background="@color/colorPrimary"
             app:title="Select Category"
-            app:titleTextColor="@android:color/white"
             app:titleCentered="true"
-            app:contentInsetStartWithNavigation="0dp"/>
+            app:navigationIconTint="@color/white"
+            app:titleTextColor="@android:color/white"
+            app:navigationIcon="@drawable/ic_arrows_24"
+            android:paddingHorizontal="12dp"/>
     </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- Scrollable content -->
+    <!-- Main Scrollable Area -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/scroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true"
+        android:padding="16dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:orientation="vertical">
 
+            <!-- Category Title -->
             <TextView
                 android:id="@+id/tvCatTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Categories"
                 android:textStyle="bold"
-                android:textSize="16sp"
-                android:textColor="@color/black"/>
+                android:textSize="18sp"
+                android:textColor="@color/colorPrimary"
+                android:paddingVertical="4dp"/>
 
+            <!-- Categories Grid -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvCategories"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:nestedScrollingEnabled="false"/>
+                android:layout_marginTop="10dp"
+                android:nestedScrollingEnabled="false"
+                android:background="@android:color/transparent"/>
 
+            <!-- Subcategory Title -->
             <TextView
                 android:id="@+id/tvSubTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="20dp"
                 android:text="Subcategories"
                 android:textStyle="bold"
-                android:textSize="16sp"
-                android:textColor="@color/black"
+                android:textSize="18sp"
+                android:textColor="@color/colorPrimary"
                 android:visibility="gone"/>
 
+            <!-- Subcategories Grid -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvSubcategories"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="10dp"
                 android:nestedScrollingEnabled="false"
                 android:visibility="gone"/>
 
-            <!-- New / Used appears only when required -->
+            <!-- Condition Row -->
             <LinearLayout
                 android:id="@+id/conditionRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="24dp"
+                android:padding="12dp"
+                android:background="@android:color/white"
+                android:elevation="2dp"
+                android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:visibility="gone">
+                android:visibility="gone"
+                android:backgroundTint="@color/colorPrimaryLight">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Condition:"
-                    android:textColor="@color/black"
-                    android:textSize="14sp"
-                    android:layout_marginEnd="8dp"/>
+                    android:textColor="@color/colorPrimary"
+                    android:textStyle="bold"
+                    android:textSize="15sp"
+                    android:layout_marginEnd="12dp"/>
 
                 <com.google.android.material.chip.ChipGroup
                     android:id="@+id/cgCondition"
@@ -99,18 +113,25 @@
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chipNew"
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="New"/>
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
+                        android:text="New"
+                        android:textSize="14sp"
+                        app:chipStrokeWidth="1dp"
+                        app:chipStrokeColor="@color/colorPrimary" />
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chipUsed"
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Used"/>
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
+                        android:text="Used"
+                        android:textSize="14sp"
+                        app:chipStrokeWidth="1dp"
+                        app:chipStrokeColor="@color/colorPrimary" />
                 </com.google.android.material.chip.ChipGroup>
+
             </LinearLayout>
 
             <Space
@@ -119,7 +140,7 @@
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- Sticky CTA -->
+    <!-- Premium Sticky Button -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnContinue"
         android:layout_width="match_parent"
@@ -127,9 +148,11 @@
         android:text="Continue"
         android:textAllCaps="false"
         android:enabled="false"
-        android:layout_gravity="bottom"
+        android:textColor="@android:color/white"
         android:layout_margin="16dp"
-        app:cornerRadius="12dp"
-        app:backgroundTint="@color/greenPrimary"
-        android:textColor="@android:color/white"/>
+        android:layout_gravity="bottom"
+        app:cornerRadius="16dp"
+        app:backgroundTint="@color/colorPrimary"
+        app:elevation="6dp"
+        app:iconGravity="textStart"/>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

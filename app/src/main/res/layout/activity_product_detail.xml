@@ -5,7 +5,7 @@
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white">
+    android:background="@color/colorBackgroundSoft">
 
     <!-- Collapsing header -->
     <com.google.android.material.appbar.AppBarLayout
@@ -13,12 +13,12 @@
         android:layout_width="match_parent"
         android:layout_height="300dp"
         android:fitsSystemWindows="true"
-        android:background="@android:color/transparent">
+        android:background="@color/colorPrimaryLight">
 
         <com.google.android.material.appbar.CollapsingToolbarLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            app:contentScrim="@android:color/white"
+            app:contentScrim="@color/colorPrimary"
             app:layout_scrollFlags="scroll|exitUntilCollapsed">
 
             <FrameLayout
@@ -35,6 +35,7 @@
                     android:clipToPadding="false"
                     android:clipChildren="false"/>
 
+                <!-- Soft overlay on top of image -->
                 <View
                     android:id="@+id/headerGradient"
                     android:layout_width="match_parent"
@@ -42,12 +43,13 @@
                     android:layout_gravity="top"
                     android:background="@drawable/bg_toolbar_gradient"/>
 
+                <!-- Page dots -->
                 <LinearLayout
                     android:id="@+id/pdpDots"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="bottom|center_horizontal"
-                    android:layout_marginBottom="12dp"
+                    android:layout_marginBottom="16dp"
                     android:orientation="horizontal"/>
             </FrameLayout>
 
@@ -66,6 +68,7 @@
                     android:layout_height="36dp"
                     android:padding="8dp"
                     android:src="@drawable/ic_arrows_24"
+                    android:tint="@android:color/white"
                     android:background="?attr/selectableItemBackgroundBorderless"/>
 
                 <LinearLayout
@@ -80,6 +83,7 @@
                         android:layout_height="36dp"
                         android:padding="8dp"
                         android:src="@drawable/ic_share_24"
+                        android:tint="@android:color/white"
                         android:background="?attr/selectableItemBackgroundBorderless"/>
 
                     <ImageView
@@ -88,6 +92,7 @@
                         android:layout_height="36dp"
                         android:padding="8dp"
                         android:src="@drawable/ic_favorite_border_24"
+                        android:tint="@android:color/white"
                         android:background="?attr/selectableItemBackgroundBorderless"/>
                 </LinearLayout>
             </LinearLayout>
@@ -100,6 +105,7 @@
         android:id="@+id/scroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@color/colorBackgroundSoft"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
@@ -109,71 +115,105 @@
             android:padding="16dp">
 
             <!-- Thumbnails -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/pdpThumbRv"
-                android:backgroundTint="@color/white"
-                android:layout_width="match_parent"
-                android:layout_height="72dp"
-                android:layout_marginTop="4dp"
-                android:paddingStart="4dp"
-                android:paddingEnd="4dp"
-                android:overScrollMode="never"
-                android:clipToPadding="false"
-                android:scrollbars="none" />
-
-            <!-- Title & price -->
-            <TextView
-                android:id="@+id/pdpTitle"
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:textStyle="bold"
-                android:textSize="20sp"
-                android:textColor="@android:color/black"/>
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/colorPrimaryLight">
 
-            <TextView
-                android:id="@+id/pdpPrice"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:textStyle="bold"
-                android:textSize="18sp"
-                android:textColor="@color/royalBlue"/>
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/pdpThumbRv"
+                    android:layout_width="match_parent"
+                    android:layout_height="72dp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:overScrollMode="never"
+                    android:clipToPadding="false"
+                    android:scrollbars="none"
+                    android:background="@android:color/white"/>
+            </com.google.android.material.card.MaterialCardView>
 
-            <TextView
-                android:id="@+id/pdpMeta"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textSize="13sp"
-                android:textColor="#7A000000"/>
-
-            <!-- Feature chips -->
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/pdpChips"
+            <!-- Product info card -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                app:singleLine="true"
-                app:chipSpacingHorizontal="6dp"
-                app:chipSpacingVertical="6dp"/>
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@android:color/white">
 
-            <!-- Description -->
-            <TextView
-                android:id="@+id/pdpDesc"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:textSize="14sp"
-                android:textColor="@android:color/black"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Title & price -->
+                    <TextView
+                        android:id="@+id/pdpTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textStyle="bold"
+                        android:textSize="20sp"
+                        android:textColor="@android:color/black"/>
+
+                    <TextView
+                        android:id="@+id/pdpPrice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:textStyle="bold"
+                        android:textSize="18sp"
+                        android:textColor="@color/colorPrimary"/>
+
+                    <TextView
+                        android:id="@+id/pdpMeta"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textSize="13sp"
+                        android:textColor="#7A000000"/>
+
+                    <!-- Feature chips -->
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/pdpChips"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        app:singleLine="true"
+                        app:chipSpacingHorizontal="6dp"
+                        app:chipSpacingVertical="6dp"/>
+
+                    <!-- Divider -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="12dp"
+                        android:background="@color/colorPrimaryLight"/>
+
+                    <!-- Description -->
+                    <TextView
+                        android:id="@+id/pdpDesc"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:textSize="14sp"
+                        android:lineSpacingExtra="2dp"
+                        android:textColor="@android:color/black"/>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Seller card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp">
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@android:color/white">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -187,7 +227,8 @@
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:src="@drawable/ic_placeholder_circle"
-                        android:scaleType="centerCrop"/>
+                        android:scaleType="centerCrop"
+                        android:background="@drawable/bg_circle_surface"/>
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -222,34 +263,52 @@
                         android:layout_width="wrap_content"
                         android:layout_height="36dp"
                         android:minWidth="0dp"
-                        android:paddingStart="16dp"
-                        android:paddingEnd="16dp"
+                        android:paddingStart="20dp"
+                        android:paddingEnd="20dp"
                         android:text="VIEW"
                         android:textAllCaps="true"
-                        android:textColor="@color/royalBlue"
+                        android:textColor="@color/colorPrimary"
                         app:strokeWidth="1dp"
-                        app:strokeColor="@color/royalBlue"
+                        app:strokeColor="@color/colorPrimary"
                         style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Similar list -->
-            <TextView
-                android:id="@+id/labelSimilar"
-                android:layout_width="wrap_content"
+            <!-- Similar list card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
-                android:text="Similar Listings"
-                android:textStyle="bold"
-                android:textSize="16sp"/>
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="1dp"
+                app:cardBackgroundColor="@android:color/white">
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/pdpSimilarRv"
-                android:layout_width="match_parent"
-                android:layout_height="160dp"
-                android:layout_marginTop="8dp"
-                android:clipToPadding="false"
-                android:paddingEnd="4dp"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:id="@+id/labelSimilar"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Similar Listings"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@android:color/black"/>
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/pdpSimilarRv"
+                        android:layout_width="match_parent"
+                        android:layout_height="160dp"
+                        android:layout_marginTop="8dp"
+                        android:clipToPadding="false"
+                        android:paddingEnd="4dp"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
@@ -276,8 +335,9 @@
             android:insetBottom="0dp"
             app:icon="@drawable/ic_coll_24"
             app:iconPadding="8dp"
-            app:iconTint="@null"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+            app:iconTint="@android:color/white"
+            app:backgroundTint="@color/colorPrimaryMedium"
+            style="@style/Widget.MaterialComponents.Button"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/pdpCallWhatsapp"
@@ -293,7 +353,9 @@
             app:icon="@drawable/ic_whatsapp_24"
             app:iconPadding="8dp"
             app:iconGravity="textStart"
-            app:iconTint="@null"/>
+            app:iconTint="@android:color/white"
+            app:backgroundTint="@color/colorPrimary"
+            style="@style/Widget.MaterialComponents.Button"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/pdpViewLocation"
@@ -305,7 +367,11 @@
             android:insetBottom="0dp"
             app:icon="@drawable/ic_location_24"
             app:iconPadding="8dp"
-            app:iconTint="@null"/>
+            app:iconTint="@color/colorPrimary"
+            android:textColor="@color/colorPrimary"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/colorPrimary"/>
     </LinearLayout>
 
     <!-- Loading overlay -->
