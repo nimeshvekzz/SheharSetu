@@ -366,7 +366,8 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(MainActivity.this, "Terms and Condition", Toast.LENGTH_SHORT).show();
 
             } else if (id == R.id.nav_about) {
-                Toast.makeText(MainActivity.this, "About", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(MainActivity.this, "About", Toast.LENGTH_SHORT).show();
+                startActivity(new Intent(MainActivity.this, AboutUsActivity.class));
 
             } else if (id == R.id.nav_logout) {
                 doLogout();

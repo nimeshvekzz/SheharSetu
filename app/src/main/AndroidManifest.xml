@@ -23,6 +23,10 @@
         tools:targetApi="35">
 
         <activity
+            android:name=".AboutUsActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".ProfileActivity"
             android:exported="false" />
 
