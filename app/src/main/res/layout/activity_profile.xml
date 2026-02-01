@@ -98,7 +98,7 @@
                         android:layout_height="72dp"
                         android:background="@drawable/bg_avatar_circle"
                         android:gravity="center"
-                        android:text="V"
+                        android:text=""
                         android:textAllCaps="true"
                         android:textColor="@android:color/white"
                         android:textSize="30sp"
@@ -123,7 +123,7 @@
                                 android:id="@+id/tvFullName"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Vansh Mandanka"
+                                android:text=""
                                 android:textColor="@color/colorTextPrimary"
                                 android:textSize="20sp"
                                 android:textStyle="bold"
@@ -134,7 +134,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
-                                android:text="+91 63543 55617"
+                                android:text=""
                                 android:textColor="@color/colorTextSecondary"
                                 android:textSize="14sp" />
 
@@ -148,7 +148,8 @@
                                 android:paddingTop="5dp"
                                 android:paddingBottom="5dp"
                                 android:background="@drawable/bg_chip_place_type"
-                                android:text="Village"
+                                android:text=""
+                                android:visibility="gone"
                                 android:textColor="@color/colorTextPrimary"
                                 android:textSize="12sp"
                                 android:textStyle="bold" />
@@ -302,7 +303,7 @@
                                 android:id="@+id/tvSurnameValue"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Mandanka"
+                                android:text=""
                                 android:textColor="@color/colorTextPrimary"
                                 android:textSize="14sp" />
                         </LinearLayout>
@@ -326,7 +327,7 @@
                                 android:id="@+id/tvContactPhone"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="+91 63543 55617"
+                                android:text=""
                                 android:textColor="@color/colorTextPrimary"
                                 android:textSize="14sp" />
                         </LinearLayout>
@@ -371,7 +372,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="10dp"
-                            android:text="Nana Sakhpur"
+                            android:text=""
                             android:textColor="@color/colorTextPrimary"
                             android:textSize="14sp" />
 
@@ -394,7 +395,7 @@
                                 android:id="@+id/tvVillage"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Nana Sakhpur"
+                                android:text=""
                                 android:textColor="@color/colorTextPrimary"
                                 android:textSize="14sp" />
                         </LinearLayout>
@@ -418,7 +419,7 @@
                                 android:id="@+id/tvDistrict"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Pune"
+                                android:text=""
                                 android:textColor="@color/colorTextPrimary"
                                 android:textSize="14sp" />
                         </LinearLayout>
@@ -442,7 +443,7 @@
                                 android:id="@+id/tvState"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Maharashtra"
+                                android:text=""
                                 android:textColor="@color/colorTextPrimary"
                                 android:textSize="14sp" />
                         </LinearLayout>
@@ -466,7 +467,7 @@
                                 android:id="@+id/tvPincode"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="364470"
+                                android:text=""
                                 android:textColor="@color/colorTextPrimary"
                                 android:textSize="14sp" />
                         </LinearLayout>

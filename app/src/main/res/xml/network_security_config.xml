@@ -1,5 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">https://darkseagreen-opossum-292390.hostingersite.com/</domain>
+
+    <!-- Only for this domain -->
+    <domain-config cleartextTrafficPermitted="false">
+        <!-- IMPORTANT: domain = hostname only (no https://, no /) -->
+        <domain includeSubdomains="true">magenta-owl-444153.hostingersite.com</domain>
+
+        <!-- Trust normal system CAs + user-installed CAs (needed for HTTPS scanning VPN/AV) -->
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
     </domain-config>
+
 </network-security-config>

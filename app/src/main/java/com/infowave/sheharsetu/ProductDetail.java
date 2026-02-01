@@ -37,6 +37,7 @@ import com.google.android.material.chip.ChipGroup;
 import com.infowave.sheharsetu.Adapter.ImagePagerAdapter;
 import com.infowave.sheharsetu.Adapter.ThumbAdapter;
 import com.infowave.sheharsetu.net.ApiRoutes;
+import com.infowave.sheharsetu.utils.LoadingDialog;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -75,15 +76,15 @@ public class ProductDetail extends AppCompatActivity {
 
     // Palette
     private final int royalBlue = Color.parseColor("#3E7BFA");
-    private final int lavender  = Color.parseColor("#D8C8FF");
-    private final int deepText  = Color.parseColor("#111111");
+    private final int lavender = Color.parseColor("#D8C8FF");
+    private final int deepText = Color.parseColor("#111111");
 
     private String productTitle = "";
     private String productPrice = "";
-    private String productCity  = "";
-    private String postedWhen   = "";
-    private String productDesc  = "";
-    private String sellerPhone  = "";
+    private String productCity = "";
+    private String postedWhen = "";
+    private String productDesc = "";
+    private String sellerPhone = "";
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -103,8 +104,7 @@ public class ProductDetail extends AppCompatActivity {
         if (bottomBar != null) {
             ViewCompat.setOnApplyWindowInsetsListener(bottomBar, (v, insets) -> {
                 int b = insets.getInsets(
-                        WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()
-                ).bottom;
+                        WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()).bottom;
                 v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), v.getPaddingBottom() + b);
                 return insets;
             });
@@ -123,7 +123,8 @@ public class ProductDetail extends AppCompatActivity {
             bindTextFallback(t, p, c, d);
             if (imgs != null && imgs.length > 0) {
                 List<Object> drawables = new ArrayList<>();
-                for (int idRes : imgs) drawables.add(idRes);
+                for (int idRes : imgs)
+                    drawables.add(idRes);
                 setGallery(drawables);
             } else {
                 List<Object> ph = new ArrayList<>();
@@ -136,27 +137,27 @@ public class ProductDetail extends AppCompatActivity {
     /* -------------------- Bind & setup -------------------- */
 
     private void bindViews() {
-        pdpBack  = findViewById(R.id.pdpBack);
+        pdpBack = findViewById(R.id.pdpBack);
         pdpShare = findViewById(R.id.pdpShare);
-        pdpSave  = findViewById(R.id.pdpSave);
-        appBar   = findViewById(R.id.appBar);
+        pdpSave = findViewById(R.id.pdpSave);
+        appBar = findViewById(R.id.appBar);
 
         pdpImagePager = findViewById(R.id.pdpImagePager);
-        pdpDots       = findViewById(R.id.pdpDots);
-        pdpThumbRv    = findViewById(R.id.pdpThumbRv);
+        pdpDots = findViewById(R.id.pdpDots);
+        pdpThumbRv = findViewById(R.id.pdpThumbRv);
 
         pdpTitle = findViewById(R.id.pdpTitle);
         pdpPrice = findViewById(R.id.pdpPrice);
-        pdpMeta  = findViewById(R.id.pdpMeta);
-        pdpDesc  = findViewById(R.id.pdpDesc);
+        pdpMeta = findViewById(R.id.pdpMeta);
+        pdpDesc = findViewById(R.id.pdpDesc);
         pdpChips = findViewById(R.id.pdpChips);
 
         pdpSellerAvatar = findViewById(R.id.pdpSellerAvatar);
-        pdpSellerName   = findViewById(R.id.pdpSellerName);
-        pdpSellerMeta   = findViewById(R.id.pdpSellerMeta);
-        pdpViewProfile  = findViewById(R.id.pdpViewProfile);
+        pdpSellerName = findViewById(R.id.pdpSellerName);
+        pdpSellerMeta = findViewById(R.id.pdpSellerMeta);
+        pdpViewProfile = findViewById(R.id.pdpViewProfile);
 
-        pdpCall         = findViewById(R.id.pdpCall);
+        pdpCall = findViewById(R.id.pdpCall);
         pdpCallWhatsapp = findViewById(R.id.pdpCallWhatsapp);
         pdpViewLocation = findViewById(R.id.pdpViewLocation);
     }
@@ -194,7 +195,10 @@ public class ProductDetail extends AppCompatActivity {
         pdpThumbRv.setAdapter(thumbAdapter);
 
         pdpImagePager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
-            @Override public void onPageSelected(int position) { highlightDot(position); }
+            @Override
+            public void onPageSelected(int position) {
+                highlightDot(position);
+            }
         });
     }
 
@@ -202,7 +206,8 @@ public class ProductDetail extends AppCompatActivity {
         pdpBack.setOnClickListener(v -> onBackPressed());
 
         pdpShare.setOnClickListener(v -> {
-            String text = productTitle + " — " + productPrice + "\n" + productCity + (postedWhen.isEmpty() ? "" : " • Posted " + postedWhen);
+            String text = productTitle + " — " + productPrice + "\n" + productCity
+                    + (postedWhen.isEmpty() ? "" : " • Posted " + postedWhen);
             Intent s = new Intent(Intent.ACTION_SEND);
             s.setType("text/plain");
             s.putExtra(Intent.EXTRA_TEXT, text);
@@ -218,9 +223,8 @@ public class ProductDetail extends AppCompatActivity {
             startActivity(new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + phone)));
         });
 
-        pdpCallWhatsapp.setOnClickListener(v ->
-                openWhatsApp(sellerPhone.isEmpty() ? "0000000000" : sellerPhone,
-                        "Hi, I'm interested in " + productTitle + " (" + productPrice + ")"));
+        pdpCallWhatsapp.setOnClickListener(v -> openWhatsApp(sellerPhone.isEmpty() ? "0000000000" : sellerPhone,
+                "Hi, I'm interested in " + productTitle + " (" + productPrice + ")"));
 
         pdpViewLocation.setOnClickListener(v -> {
             String city = productCity == null ? "" : productCity;
@@ -233,10 +237,13 @@ public class ProductDetail extends AppCompatActivity {
     private void fetchListing(int listingId) {
         String url = ApiRoutes.GET_LISTING + "?listing_id=" + listingId;
 
+        LoadingDialog.showLoading(this, "Loading listing...");
+
         StringRequest req = new StringRequest(
                 Request.Method.GET,
                 url,
                 resp -> {
+                    LoadingDialog.hideLoading();
                     try {
                         JSONObject root = new JSONObject(resp);
                         if (!"success".equalsIgnoreCase(root.optString("status"))) {
@@ -247,16 +254,17 @@ public class ProductDetail extends AppCompatActivity {
 
                         productTitle = d.optString("title", "");
                         productPrice = d.optString("price", "");
-                        productCity  = d.optString("city", "");
-                        productDesc  = d.optString("description", "");
-                        postedWhen   = d.optString("posted_when", "");
+                        productCity = d.optString("city", "");
+                        productDesc = d.optString("description", "");
+                        postedWhen = d.optString("posted_when", "");
 
                         // Bind text
                         pdpTitle.setText(productTitle);
                         pdpPrice.setText(productPrice);
                         pdpPrice.setTextColor(royalBlue);
                         String meta = productCity;
-                        if (!postedWhen.isEmpty()) meta += " • Posted " + postedWhen;
+                        if (!postedWhen.isEmpty())
+                            meta += " • Posted " + postedWhen;
                         pdpMeta.setText(meta);
                         pdpDesc.setText(productDesc);
 
@@ -265,11 +273,12 @@ public class ProductDetail extends AppCompatActivity {
                         if (seller != null) {
                             pdpSellerName.setText(seller.optString("name", "Seller"));
                             String mem = "";
-                            if (!seller.optString("member_since","").isEmpty()) {
+                            if (!seller.optString("member_since", "").isEmpty()) {
                                 mem = "Member since " + seller.optString("member_since");
                             }
                             int cnt = seller.optInt("listings_count", 0);
-                            if (cnt > 0) mem = mem.isEmpty() ? (cnt + " listings") : (mem + " • " + cnt + " listings");
+                            if (cnt > 0)
+                                mem = mem.isEmpty() ? (cnt + " listings") : (mem + " • " + cnt + " listings");
                             pdpSellerMeta.setText(mem);
                             sellerPhone = seller.optString("phone", "");
                         }
@@ -280,26 +289,31 @@ public class ProductDetail extends AppCompatActivity {
                         if (imgs != null && imgs.length() > 0) {
                             for (int i = 0; i < imgs.length(); i++) {
                                 String u = imgs.optString(i);
-                                if (u != null && !u.trim().isEmpty()) srcs.add(u.trim());
+                                if (u != null && !u.trim().isEmpty())
+                                    srcs.add(u.trim());
                             }
                         }
                         if (srcs.isEmpty()) {
                             // fallback single image_url or placeholder
                             String single = d.optString("image_url", "");
-                            if (!single.isEmpty()) srcs.add(single);
-                            else srcs.add(R.drawable.image1);
+                            if (!single.isEmpty())
+                                srcs.add(single);
+                            else
+                                srcs.add(R.drawable.image1);
                         }
                         setGallery(srcs);
 
                         // Optional chips (example: year/fuel etc. यदि चाहें तो backend से भेजें)
-                        bindFeatureChips(new String[]{"Verified Seller", "Secure Deal"});
+                        bindFeatureChips(new String[] { "Verified Seller", "Secure Deal" });
 
                     } catch (Exception e) {
                         Toast.makeText(this, "Parse error", Toast.LENGTH_SHORT).show();
                     }
                 },
-                err -> Toast.makeText(this, "Network error", Toast.LENGTH_SHORT).show()
-        );
+                err -> {
+                    LoadingDialog.hideLoading();
+                    Toast.makeText(this, "Network error", Toast.LENGTH_SHORT).show();
+                });
 
         Volley.newRequestQueue(this).add(req);
     }
@@ -319,20 +333,21 @@ public class ProductDetail extends AppCompatActivity {
     private void bindTextFallback(String title, String price, String city, String desc) {
         productTitle = title == null ? "" : title;
         productPrice = price == null ? "" : price;
-        productCity  = city  == null ? "" : city;
-        productDesc  = desc  == null ? "" : desc;
-        postedWhen   = getIntent().getStringExtra("posted");
+        productCity = city == null ? "" : city;
+        productDesc = desc == null ? "" : desc;
+        postedWhen = getIntent().getStringExtra("posted");
 
         pdpTitle.setText(productTitle);
         pdpPrice.setText(productPrice);
         pdpPrice.setTextColor(royalBlue);
         String meta = productCity;
-        if (postedWhen != null && !postedWhen.isEmpty()) meta += " • Posted " + postedWhen;
+        if (postedWhen != null && !postedWhen.isEmpty())
+            meta += " • Posted " + postedWhen;
         pdpMeta.setText(meta);
         pdpDesc.setText(productDesc);
 
         // Default chips (fallback)
-        bindFeatureChips(new String[]{"Demo", "Fallback"});
+        bindFeatureChips(new String[] { "Demo", "Fallback" });
     }
 
     private void bindFeatureChips(String[] chips) {
@@ -351,8 +366,9 @@ public class ProductDetail extends AppCompatActivity {
     private void applyHeaderStyle(boolean collapsed) {
         int iconTint = collapsed ? deepText : Color.WHITE;
         int bgRes = collapsed ? R.drawable.bg_header_icon_light : R.drawable.bg_header_icon_dark;
-        for (ImageView v : new ImageView[]{pdpBack, pdpShare, pdpSave}) {
-            if (v == null) continue;
+        for (ImageView v : new ImageView[] { pdpBack, pdpShare, pdpSave }) {
+            if (v == null)
+                continue;
             v.setBackground(ResourcesCompat.getDrawable(getResources(), bgRes, getTheme()));
             v.setImageTintList(ColorStateList.valueOf(iconTint));
         }
@@ -372,7 +388,8 @@ public class ProductDetail extends AppCompatActivity {
 
     private void highlightDot(int active) {
         int n = pdpDots.getChildCount();
-        for (int i = 0; i < n; i++) updateDot(pdpDots.getChildAt(i), i == active);
+        for (int i = 0; i < n; i++)
+            updateDot(pdpDots.getChildAt(i), i == active);
     }
 
     private void updateDot(View dot, boolean active) {

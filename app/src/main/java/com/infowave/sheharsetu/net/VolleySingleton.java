@@ -1,16 +1,36 @@
 package com.infowave.sheharsetu.net;
 
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.util.Log;
+
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.HurlStack;
 import com.android.volley.toolbox.Volley;
 
 public class VolleySingleton {
+    private static final String TAG = "VolleySingleton";
     private static volatile VolleySingleton instance;
+
     private final RequestQueue queue;
 
     private VolleySingleton(Context ctx) {
-        queue = Volley.newRequestQueue(ctx.getApplicationContext());
+        Context appCtx = ctx.getApplicationContext();
+
+        boolean isDebuggable =
+                (appCtx.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+
+        if (isDebuggable) {
+            Log.w(TAG, "DEBUG: Using HostOnlyUnsafeHurlStack for magenta-owl-444153.hostingersite.com");
+            queue = Volley.newRequestQueue(
+                    appCtx,
+                    new HostOnlyUnsafeHurlStack("magenta-owl-444153.hostingersite.com")
+            );
+        } else {
+            Log.i(TAG, "RELEASE: Using default secure HurlStack");
+            queue = Volley.newRequestQueue(appCtx, new HurlStack());
+        }
     }
 
     public static VolleySingleton getInstance(Context ctx) {
@@ -20,6 +40,15 @@ public class VolleySingleton {
             }
         }
         return instance;
+    }
+
+    /** ✅ Use this in your Activities: RequestQueue q = VolleySingleton.queue(this); */
+    public static RequestQueue queue(Context ctx) {
+        return getInstance(ctx).getQueue();
+    }
+
+    public RequestQueue getQueue() {
+        return queue;
     }
 
     public <T> void add(Request<T> req) {

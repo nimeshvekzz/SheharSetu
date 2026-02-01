@@ -40,6 +40,7 @@ import com.google.android.gms.location.LocationServices;
 import com.infowave.sheharsetu.Adapter.DynamicFormAdapter;
 import com.infowave.sheharsetu.net.ApiRoutes;
 import com.infowave.sheharsetu.net.VolleySingleton;
+import com.infowave.sheharsetu.utils.LoadingDialog;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -55,7 +56,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
     private static final String TAG = "DynamicFormActivity";
 
     public static final String EXTRA_CATEGORY = "categoryName";
-    public static final String RESULT_JSON    = "formResultJson";
+    public static final String RESULT_JSON = "formResultJson";
 
     private TextView tvTitle;
     private RecyclerView rvForm;
@@ -78,8 +79,8 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
 
     /* ---------------- Photo pickers ---------------- */
 
-    private final ActivityResultLauncher<String> coverPicker =
-            registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+    private final ActivityResultLauncher<String> coverPicker = registerForActivityResult(
+            new ActivityResultContracts.GetContent(), uri -> {
                 Log.d(TAG, "coverPicker result: " + uri + " for fieldKey=" + currentPhotoFieldKey);
                 if (uri != null && currentPhotoFieldKey != null && adapter != null) {
                     String base64 = encodeImageToBase64(uri);
@@ -91,14 +92,15 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                 }
             });
 
-    private final ActivityResultLauncher<String> morePicker =
-            registerForActivityResult(new ActivityResultContracts.GetMultipleContents(), uris -> {
+    private final ActivityResultLauncher<String> morePicker = registerForActivityResult(
+            new ActivityResultContracts.GetMultipleContents(), uris -> {
                 Log.d(TAG, "morePicker result size=" + (uris == null ? 0 : uris.size()) +
                         " for fieldKey=" + currentPhotoFieldKey);
                 if (uris != null && currentPhotoFieldKey != null && adapter != null) {
                     java.util.ArrayList<String> base64List = new java.util.ArrayList<>();
                     for (Uri u : uris) {
-                        if (u == null) continue;
+                        if (u == null)
+                            continue;
                         String b64 = encodeImageToBase64(u);
                         if (b64 != null) {
                             base64List.add(b64);
@@ -114,12 +116,14 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
 
     /* ---------------- Permissions ---------------- */
 
-    private final ActivityResultLauncher<String> locationPerm =
-            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+    private final ActivityResultLauncher<String> locationPerm = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(), granted -> {
                 Log.d(TAG, "Location permission result: " + granted +
                         " for fieldKey=" + pendingLocationFieldKey);
-                if (granted) fillMyLocation(pendingLocationFieldKey);
-                else toast("Location permission denied");
+                if (granted)
+                    fillMyLocation(pendingLocationFieldKey);
+                else
+                    toast("Location permission denied");
             });
 
     @SuppressLint("SetTextI18n")
@@ -129,8 +133,8 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         setContentView(R.layout.activity_dynamic_form);
         applyThemeBarsAndWidgets();
 
-        tvTitle   = findViewById(R.id.tvTitle);
-        rvForm    = findViewById(R.id.rvForm);
+        tvTitle = findViewById(R.id.tvTitle);
+        rvForm = findViewById(R.id.rvForm);
         btnSubmit = findViewById(R.id.btnSubmit);
 
         // XML me agar enabled=false hai to bhi yahan se control lenge
@@ -142,11 +146,13 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
 
         // category name (UI only)
         String category = intent.getStringExtra(EXTRA_CATEGORY);
-        if (category == null) category = "General";
+        if (category == null)
+            category = "General";
         categoryName = category;
         tvTitle.setText("Dynamic Form (" + categoryName + ")");
 
-        // --------- READ category_id / subcategory_id safely (String or Long) ----------
+        // --------- READ category_id / subcategory_id safely (String or Long)
+        // ----------
         String catIdStr = intent.getStringExtra("category_id");
         String subIdStr = intent.getStringExtra("subcategory_id");
 
@@ -173,7 +179,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         }
 
         // ✅ user_id from SharedPreferences (set after login/OTP verify)
-        //    Same prefs file as SplashScreen / LoginActivity
+        // Same prefs file as SplashScreen / LoginActivity
         SharedPreferences prefs = getSharedPreferences(SplashScreen.PREFS, MODE_PRIVATE);
         userId = prefs.getLong("user_id", 0L);
 
@@ -209,8 +215,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
         getWindow().setStatusBarColor(android.graphics.Color.BLACK);
 
-        WindowInsetsControllerCompat wic =
-                new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
+        WindowInsetsControllerCompat wic = new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
         wic.setAppearanceLightStatusBars(false);
 
         View root = findViewById(R.id.root);
@@ -220,14 +225,14 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                     v.getPaddingLeft(),
                     bars.top,
                     v.getPaddingRight(),
-                    v.getPaddingBottom()
-            );
+                    v.getPaddingBottom());
             return insets;
         });
     }
 
     private long parseLongSafe(String s) {
-        if (TextUtils.isEmpty(s)) return 0L;
+        if (TextUtils.isEmpty(s))
+            return 0L;
         try {
             return Long.parseLong(s.trim());
         } catch (Exception e) {
@@ -237,7 +242,8 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
     }
 
     /**
-     * Load form schema from backend (get_form_schema.php) using categoryId + subcategoryId.
+     * Load form schema from backend (get_form_schema.php) using categoryId +
+     * subcategoryId.
      * Yahin par hum decide karenge ki is_new SWITCH dikhana hai ya nahi.
      */
     private void loadSchemaFromServer(long categoryId, long subcategoryId) {
@@ -261,6 +267,8 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
 
         String url = urlBuilder.toString();
         Log.d(TAG, "Requesting schema from URL: " + url);
+
+        LoadingDialog.showLoading(this, "Loading form...");
 
         JsonObjectRequest req = new JsonObjectRequest(
                 Request.Method.GET,
@@ -333,28 +341,29 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                                 continue;
                             }
 
-                            String key   = field.optString("key", "");
+                            String key = field.optString("key", "");
                             String label = field.optString("label", "");
-                            String hint  = field.optString("hint", "");
-                            String type  = field.optString("type", "TEXT");
+                            String hint = field.optString("hint", "");
+                            String type = field.optString("type", "TEXT");
                             boolean required = field.optBoolean("required", false);
-                            String unit  = field.optString("unit", "");
+                            String unit = field.optString("unit", "");
 
                             // 🔥 IMPORTANT:
                             // Agar yeh is_new field hai aur supportsCondition = false,
                             // to is field ko UI me show hi nahi karna.
                             if ("is_new".equalsIgnoreCase(key) && !supportsCondition) {
-                                Log.d(TAG, "Skipping field 'is_new' because supports_condition = false for this subcategory");
+                                Log.d(TAG,
+                                        "Skipping field 'is_new' because supports_condition = false for this subcategory");
                                 continue;
                             }
 
                             Map<String, Object> m = new HashMap<>();
-                            m.put("key",      key);
-                            m.put("label",    label);
-                            m.put("hint",     hint);
-                            m.put("type",     type);
+                            m.put("key", key);
+                            m.put("label", label);
+                            m.put("hint", hint);
+                            m.put("type", type);
                             m.put("required", required);
-                            m.put("unit",     unit);
+                            m.put("unit", unit);
 
                             JSONArray optsArr = field.optJSONArray("options");
                             if (optsArr != null && optsArr.length() > 0) {
@@ -395,9 +404,11 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                             Log.d(TAG, "Adapter set with itemCount=" + adapter.getItemCount());
                             // Ab form ready hai, button enable karo
                             btnSubmit.setEnabled(true);
+                            LoadingDialog.hideLoading();
                         }
 
                     } catch (Exception e) {
+                        LoadingDialog.hideLoading();
                         Log.e(TAG, "Schema parse error", e);
                         toast("Error parsing schema.");
                         btnSubmit.setEnabled(false);
@@ -414,10 +425,18 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                         }
                     }
                     Log.e(TAG, sb.toString());
+                    LoadingDialog.hideLoading();
                     toast("Unable to load form. Please try again.");
                     btnSubmit.setEnabled(false);
-                }
-        );
+                }) {
+            @Override
+            public Map<String, String> getHeaders() {
+                HashMap<String, String> headers = new HashMap<>();
+                headers.put("Accept", "application/json");
+                headers.put("Accept-Language", "en");
+                return headers;
+            }
+        };
 
         VolleySingleton.getInstance(this).add(req);
     }
@@ -475,7 +494,8 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
             JSONObject payload = new JSONObject();
             payload.put("user_id", effectiveUserId);
             payload.put("category_id", categoryId);
-            if (subcategoryId > 0) payload.put("subcategory_id", subcategoryId);
+            if (subcategoryId > 0)
+                payload.put("subcategory_id", subcategoryId);
 
             String title = buildTitleFromForm(formResult);
             payload.put("title", title);
@@ -510,13 +530,14 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
             Log.d(TAG, "submitListing payload: " + payload.toString());
 
             btnSubmit.setEnabled(false);
-            toast("Submitting your form...");
+            LoadingDialog.showLoading(this, "Submitting listing...");
 
             JsonObjectRequest req = new JsonObjectRequest(
                     Request.Method.POST,
                     ApiRoutes.CREATE_LISTING,
                     payload,
                     response -> {
+                        LoadingDialog.hideLoading();
                         btnSubmit.setEnabled(true);
                         Log.d(TAG, "submitListing response: " + response.toString());
 
@@ -537,6 +558,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                         }
                     },
                     error -> {
+                        LoadingDialog.hideLoading();
                         btnSubmit.setEnabled(true);
                         StringBuilder sb = new StringBuilder();
                         sb.append("submitListing error: ").append(error.toString());
@@ -553,8 +575,16 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                             errorMsg = "Error " + error.networkResponse.statusCode;
                         }
                         toast(errorMsg);
-                    }
-            );
+                    }) {
+                @Override
+                public Map<String, String> getHeaders() {
+                    HashMap<String, String> headers = new HashMap<>();
+                    headers.put("Accept", "application/json");
+                    headers.put("Accept-Language", "en");
+                    headers.put("Content-Type", "application/json");
+                    return headers;
+                }
+            };
 
             VolleySingleton.getInstance(this).add(req);
 
@@ -568,19 +598,22 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
     /** Title helper */
     private String buildTitleFromForm(JSONObject form) {
         try {
-            String brand   = form.optString("brand", "").trim();
-            String model   = form.optString("model", "").trim();
-            String year    = form.optString("year", "").trim();
+            String brand = form.optString("brand", "").trim();
+            String model = form.optString("model", "").trim();
+            String year = form.optString("year", "").trim();
             String product = form.optString("product", "").trim();
 
             StringBuilder sb = new StringBuilder();
-            if (!brand.isEmpty()) sb.append(brand);
+            if (!brand.isEmpty())
+                sb.append(brand);
             if (!model.isEmpty()) {
-                if (sb.length() > 0) sb.append(" ");
+                if (sb.length() > 0)
+                    sb.append(" ");
                 sb.append(model);
             }
             if (!year.isEmpty()) {
-                if (sb.length() > 0) sb.append(" ");
+                if (sb.length() > 0)
+                    sb.append(" ");
                 sb.append(year);
             }
             if (sb.length() == 0 && !product.isEmpty()) {
@@ -606,7 +639,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         } else {
             Log.d(TAG, "Requesting READ_EXTERNAL_STORAGE permission");
             ActivityCompat.requestPermissions(
-                    this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1231);
+                    this, new String[] { Manifest.permission.READ_EXTERNAL_STORAGE }, 1231);
         }
     }
 
@@ -631,9 +664,10 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                     if (res != null && !res.isEmpty()) {
                         Address a = res.get(0);
                         String locality = a.getLocality() == null ? "" : a.getLocality();
-                        String admin    = a.getAdminArea() == null ? "" : a.getAdminArea();
+                        String admin = a.getAdminArea() == null ? "" : a.getAdminArea();
                         addr = (locality + (admin.isEmpty() ? "" : ", " + admin)).trim();
-                        if (addr.isEmpty()) addr = a.getFeatureName();
+                        if (addr.isEmpty())
+                            addr = a.getFeatureName();
                     } else {
                         addr = loc.getLatitude() + "," + loc.getLongitude();
                     }
@@ -676,8 +710,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
             if (width > maxSize || height > maxSize) {
                 float scale = Math.min(
                         (float) maxSize / width,
-                        (float) maxSize / height
-                );
+                        (float) maxSize / height);
                 int newW = Math.round(width * scale);
                 int newH = Math.round(height * scale);
                 bitmap = Bitmap.createScaledBitmap(bitmap, newW, newH, true);
@@ -704,7 +737,8 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
             getWindow().setNavigationBarColor(
                     ContextCompat.getColor(this, R.color.black));
             getWindow().getDecorView().setSystemUiVisibility(0);
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) {
+        }
 
         View root = findViewById(R.id.root);
         if (root != null) {
@@ -724,7 +758,8 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                             ContextCompat.getColor(this, android.R.color.white));
                 }
             }
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) {
+        }
 
         try {
             Button btn = findViewById(R.id.btnSubmit);
@@ -734,15 +769,17 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                 btn.setTextColor(
                         ContextCompat.getColor(this, android.R.color.white));
             }
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) {
+        }
     }
 
     private void toast(String s) {
         Toast.makeText(this, s, Toast.LENGTH_SHORT).show();
     }
 
-    /* NOTE:
-       Static buildSchema / fallback completely removed.
-       Ab sirf DB se dynamic schema hi chalega.
-    */
+    /*
+     * NOTE:
+     * Static buildSchema / fallback completely removed.
+     * Ab sirf DB se dynamic schema hi chalega.
+     */
 }

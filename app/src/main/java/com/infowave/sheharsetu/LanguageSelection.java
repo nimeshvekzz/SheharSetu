@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.StateListDrawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -21,8 +22,12 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
-import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.HttpHeaderParser;
+import com.android.volley.toolbox.StringRequest;
 import com.infowave.sheharsetu.Adapter.LanguageAdapter;
 import com.infowave.sheharsetu.Adapter.LanguageManager;
 import com.infowave.sheharsetu.net.ApiRoutes;
@@ -31,6 +36,7 @@ import com.infowave.sheharsetu.net.VolleySingleton;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -169,19 +175,37 @@ public class LanguageSelection extends AppCompatActivity implements LanguageAdap
     private void fetchLanguages() {
         showLoading(true);
 
-        Log.d(TAG, "fetchLanguages: URL = " + ApiRoutes.GET_LANGUAGES);
+        final String url = ApiRoutes.GET_LANGUAGES;
+        Log.d(TAG, "fetchLanguages: URL = " + url);
 
-        JsonObjectRequest req = new JsonObjectRequest(
+        final String origin = buildOriginFromUrl(url); // e.g. https://domain.com
+        final String referer = origin + "/";
+
+        StringRequest req = new StringRequest(
                 Request.Method.GET,
-                ApiRoutes.GET_LANGUAGES,
-                null,
-                resp -> {
-                    Log.d(TAG, "onResponse: " + resp.toString());
+                url,
+                response -> {
+                    String cleaned = response == null ? "" : response.trim();
+                    // Handle BOM if present
+                    if (cleaned.startsWith("\uFEFF")) cleaned = cleaned.substring(1).trim();
+
+                    Log.d(TAG, "Raw response: " + cleaned);
+
+                    // If server/WAF returns HTML instead of JSON
+                    if (cleaned.startsWith("<!DOCTYPE") || cleaned.startsWith("<html") || cleaned.startsWith("<")) {
+                        Toast.makeText(this, "Blocked/HTML response from server. Check WAF/ModSecurity.", Toast.LENGTH_LONG).show();
+                        showLoading(false);
+                        return;
+                    }
+
                     try {
+                        JSONObject resp = new JSONObject(cleaned);
+
                         languages.clear();
                         boolean ok = resp.optBoolean("ok", false);
                         if (!ok) {
-                            Toast.makeText(this, "Failed to load languages (ok=false)", Toast.LENGTH_SHORT).show();
+                            String errMsg = resp.optString("error", "ok=false");
+                            Toast.makeText(this, "Failed to load languages: " + errMsg, Toast.LENGTH_SHORT).show();
                             showLoading(false);
                             return;
                         }
@@ -232,23 +256,12 @@ public class LanguageSelection extends AppCompatActivity implements LanguageAdap
                         Log.e(TAG, "Parse error in fetchLanguages", e);
                         Toast.makeText(this, "Parse error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
+
                     showLoading(false);
                 },
                 err -> {
-                    String message = "Network error";
-                    try {
-                        if (err.networkResponse != null) {
-                            int code = err.networkResponse.statusCode;
-                            String body = new String(err.networkResponse.data);
-                            message = "HTTP " + code + ": " + body;
-                            Log.e(TAG, "Volley error body: " + body);
-                        } else if (err.getMessage() != null) {
-                            message = err.getMessage();
-                        }
-                    } catch (Exception e) {
-                        Log.e(TAG, "Error reading Volley error body", e);
-                    }
-                    Log.e(TAG, "fetchLanguages Volley error", err);
+                    String message = buildVolleyErrorMessage(err);
+                    Log.e(TAG, "fetchLanguages Volley error: " + message, err);
                     Toast.makeText(this, message, Toast.LENGTH_LONG).show();
                     showLoading(false);
                 }
@@ -256,17 +269,83 @@ public class LanguageSelection extends AppCompatActivity implements LanguageAdap
             @Override
             public Map<String, String> getHeaders() throws AuthFailureError {
                 HashMap<String, String> h = new HashMap<>();
-                h.put("Content-Type", "application/json; charset=utf-8");
+
+                // GET request => don't send Content-Type
+                h.put("Accept", "application/json");
+
                 String current = getSharedPreferences(PREFS, MODE_PRIVATE)
                         .getString(KEY_LANG_CODE, "en");
-                h.put("Accept-Language", current == null ? "en" : current);
+                h.put("Accept-Language", (current == null || current.trim().isEmpty()) ? "en" : current);
+
+                // Browser-like headers to avoid Hostinger/WAF blocking
+                h.put("User-Agent",
+                        "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
+                h.put("Referer", referer);
+                h.put("Origin", origin);
+
                 Log.d(TAG, "Request headers: " + h);
                 return h;
             }
+
+            // Ensure charset decoding based on response headers (avoids weird parsing issues)
+            @Override
+            protected Response<String> parseNetworkResponse(NetworkResponse response) {
+                try {
+                    String charset = HttpHeaderParser.parseCharset(response.headers, "UTF-8");
+                    String parsed = new String(response.data, Charset.forName(charset));
+                    return Response.success(parsed, HttpHeaderParser.parseCacheHeaders(response));
+                } catch (Exception e) {
+                    String parsed = new String(response.data, Charset.forName("UTF-8"));
+                    return Response.success(parsed, HttpHeaderParser.parseCacheHeaders(response));
+                }
+            }
         };
 
-        req.setRetryPolicy(new DefaultRetryPolicy(12000, 1, 1.0f));
+        req.setShouldCache(false);
+        req.setRetryPolicy(new DefaultRetryPolicy(
+                20000,  // timeout ms
+                0,      // no retries (avoid duplicate)
+                1.0f
+        ));
+
         VolleySingleton.getInstance(this).add(req);
+    }
+
+    private String buildOriginFromUrl(String url) {
+        try {
+            Uri u = Uri.parse(url);
+            String scheme = u.getScheme();
+            String host = u.getHost();
+            if (scheme == null || host == null) return "https://magenta-owl-444153.hostingersite.com";
+            return scheme + "://" + host;
+        } catch (Exception e) {
+            return "https://magenta-owl-444153.hostingersite.com";
+        }
+    }
+
+    private String buildVolleyErrorMessage(VolleyError err) {
+        if (err == null) return "Network error";
+
+        try {
+            if (err.networkResponse != null) {
+                int code = err.networkResponse.statusCode;
+                String body = "";
+                if (err.networkResponse.data != null) {
+                    body = new String(err.networkResponse.data, Charset.forName("UTF-8"));
+                    body = body.trim();
+                    if (body.length() > 300) body = body.substring(0, 300) + "...";
+                }
+                return "HTTP " + code + ": " + body;
+            }
+        } catch (Exception ignored) { }
+
+        // SSLHandshakeException / NoConnectionError etc
+        if (err.getCause() != null) {
+            return "Network error: " + err.getCause().getClass().getSimpleName() + " - " + err.getCause().getMessage();
+        }
+        if (err.getMessage() != null) return "Network error: " + err.getMessage();
+
+        return "Network error";
     }
 
     private void showLoading(boolean show) {

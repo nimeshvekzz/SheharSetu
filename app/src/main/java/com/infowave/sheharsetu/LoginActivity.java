@@ -34,6 +34,7 @@ import com.infowave.sheharsetu.Adapter.LanguageManager;
 import com.infowave.sheharsetu.core.SessionManager;
 import com.infowave.sheharsetu.net.ApiRoutes;
 import com.infowave.sheharsetu.net.VolleySingleton;
+import com.infowave.sheharsetu.utils.LoadingDialog;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -75,11 +76,11 @@ public class LoginActivity extends AppCompatActivity {
 
         session = new SessionManager(this);
 
-        etMobile     = findViewById(R.id.etMobile);
-        btnSendOtp   = findViewById(R.id.btnSendOtp);
+        etMobile = findViewById(R.id.etMobile);
+        btnSendOtp = findViewById(R.id.btnSendOtp);
         tvGoRegister = findViewById(R.id.tvGoRegister);
-        tvLangBadge  = findViewById(R.id.tvLangBadge);
-        tvTitle      = findViewById(R.id.tvTitle);
+        tvLangBadge = findViewById(R.id.tvLangBadge);
+        tvTitle = findViewById(R.id.tvTitle);
 
         // Prefetch common phrases used on this screen (use overload with Runnable)
         I18n.prefetch(this, java.util.Arrays.asList(
@@ -95,15 +96,17 @@ public class LoginActivity extends AppCompatActivity {
                 "OTP sent to",
                 "Enter 6 digits",
                 "Resend in",
-                "Already have an account? Log in"
-        ), () -> { /* no-op: warm cache */ });
+                "Already have an account? Log in"), () -> {
+                    /* no-op: warm cache */ });
 
         // Translate static labels
         if (tvLangBadge != null) {
             tvLangBadge.setText(I18n.t(this, "Language") + ": " + session.getLangName());
         }
-        if (tvTitle != null) I18n.translateAndApplyText(tvTitle, this);
-        if (tvGoRegister != null) I18n.translateAndApplyText(tvGoRegister, this);
+        if (tvTitle != null)
+            I18n.translateAndApplyText(tvTitle, this);
+        if (tvGoRegister != null)
+            I18n.translateAndApplyText(tvGoRegister, this);
 
         // Translate hint on the phone field (via its TextInputLayout)
         View til = etMobile.getParent() != null ? (View) etMobile.getParent().getParent() : null;
@@ -119,25 +122,28 @@ public class LoginActivity extends AppCompatActivity {
 
         if (getIntent().hasExtra("prefill_phone")) {
             String pre = getIntent().getStringExtra("prefill_phone");
-            if (pre != null) etMobile.setText(pre);
+            if (pre != null)
+                etMobile.setText(pre);
         }
 
         btnSendOtp.setOnClickListener(v -> {
-            if (isSendingOtp) return; // debounce
+            if (isSendingOtp)
+                return; // debounce
 
-            String m = etMobile.getText()==null ? "" : etMobile.getText().toString().trim();
+            String m = etMobile.getText() == null ? "" : etMobile.getText().toString().trim();
             if (!m.matches("^[6-9]\\d{9}$")) {
                 etMobile.setError(I18n.t(this, "Enter 10-digit mobile"));
                 etMobile.requestFocus();
                 return;
             }
 
-            setSending(true);  // inline "Loading…" state (no external loader)
+            setSending(true); // inline "Loading…" state (no external loader)
             sendOtpToServer(m);
         });
 
         tvGoRegister.setOnClickListener(v -> {
-            if (isSendingOtp) return; // optional: block while sending
+            if (isSendingOtp)
+                return; // optional: block while sending
             startActivity(new Intent(this, UserInfoActivity.class));
             finish();
         });
@@ -148,7 +154,8 @@ public class LoginActivity extends AppCompatActivity {
         isSendingOtp = sending;
         btnSendOtp.setEnabled(!sending);
         if (sending) {
-            if (btnIdleText == null) btnIdleText = I18n.t(this, "Send OTP");
+            if (btnIdleText == null)
+                btnIdleText = I18n.t(this, "Send OTP");
             btnSendOtp.setText(I18n.t(this, "Loading…"));
         } else {
             btnSendOtp.setText(btnIdleText == null ? I18n.t(this, "Send OTP") : btnIdleText);
@@ -156,6 +163,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void sendOtpToServer(String mobile) {
+        LoadingDialog.showLoading(this, "Sending OTP...");
         try {
             JSONObject body = new JSONObject();
             body.put("phone", mobile);
@@ -169,7 +177,8 @@ public class LoginActivity extends AppCompatActivity {
                         boolean userExists = resp.optBoolean("user_exists", false);
 
                         if (!ok && "NOT_REGISTERED".equalsIgnoreCase(errorCode)) {
-                            Toast.makeText(this, I18n.t(this, "Not registered. Please register."), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, I18n.t(this, "Not registered. Please register."), Toast.LENGTH_SHORT)
+                                    .show();
                             setSending(false);
                             startActivity(new Intent(this, UserInfoActivity.class));
                             finish();
@@ -177,6 +186,7 @@ public class LoginActivity extends AppCompatActivity {
                         }
 
                         // Registered users → open OTP sheet
+                        LoadingDialog.hideLoading();
                         if (userExists || "login_flow".equalsIgnoreCase(next) || ok) {
                             showOtpSheet(mobile); // will call setSending(false)
                         } else {
@@ -185,11 +195,12 @@ public class LoginActivity extends AppCompatActivity {
                         }
                     },
                     err -> {
+                        LoadingDialog.hideLoading();
                         Toast.makeText(this, I18n.t(this, "Network error"), Toast.LENGTH_SHORT).show();
                         setSending(false);
-                    }
-            ){
-                @Override public Map<String, String> getHeaders() throws AuthFailureError {
+                    }) {
+                @Override
+                public Map<String, String> getHeaders() throws AuthFailureError {
                     HashMap<String, String> h = new HashMap<>();
                     h.put("Content-Type", "application/json; charset=utf-8");
                     // Hint server for localized responses (if supported)
@@ -200,6 +211,7 @@ public class LoginActivity extends AppCompatActivity {
             req.setRetryPolicy(new DefaultRetryPolicy(15000, 1, 1.0f));
             VolleySingleton.getInstance(this).add(req);
         } catch (JSONException e) {
+            LoadingDialog.hideLoading();
             Toast.makeText(this, "JSON error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             setSending(false);
         }
@@ -208,20 +220,23 @@ public class LoginActivity extends AppCompatActivity {
     /* ===================== OTP Bottom Sheet ===================== */
     @SuppressLint("SetTextI18n")
     private void showOtpSheet(String mobile) {
-        if (otpDialog != null && otpDialog.isShowing()) otpDialog.dismiss();
-        if (resendTimer != null) resendTimer.cancel();
+        if (otpDialog != null && otpDialog.isShowing())
+            otpDialog.dismiss();
+        if (resendTimer != null)
+            resendTimer.cancel();
 
-        otpDialog = new BottomSheetDialog(this, com.google.android.material.R.style.ThemeOverlay_Material3_BottomSheetDialog);
+        otpDialog = new BottomSheetDialog(this,
+                com.google.android.material.R.style.ThemeOverlay_Material3_BottomSheetDialog);
         View sheet = LayoutInflater.from(this).inflate(R.layout.sheet_otp, null, false);
         otpDialog.setContentView(sheet);
         otpDialog.setCancelable(false);
         otpDialog.setCanceledOnTouchOutside(false);
 
         TextView tvMobile = sheet.findViewById(R.id.tvMobile);
-        TextView tvTimer  = sheet.findViewById(R.id.tvTimer);
+        TextView tvTimer = sheet.findViewById(R.id.tvTimer);
         TextView tvResend = sheet.findViewById(R.id.tvResend);
-        View btnVerify    = sheet.findViewById(R.id.btnVerify);
-        View btnClose     = sheet.findViewById(R.id.btnClose);
+        View btnVerify = sheet.findViewById(R.id.btnVerify);
+        View btnClose = sheet.findViewById(R.id.btnClose);
 
         EditText d1 = sheet.findViewById(R.id.d1);
         EditText d2 = sheet.findViewById(R.id.d2);
@@ -236,7 +251,8 @@ public class LoginActivity extends AppCompatActivity {
         startResendTimer(tvTimer, tvResend);
 
         tvResend.setOnClickListener(v -> {
-            if (!tvResend.isEnabled()) return;
+            if (!tvResend.isEnabled())
+                return;
             clearOtp(d1, d2, d3, d4, d5, d6);
             d1.requestFocus();
             startResendTimer(tvTimer, tvResend);
@@ -246,12 +262,17 @@ public class LoginActivity extends AppCompatActivity {
 
         btnVerify.setOnClickListener(v -> {
             String code = get(d1) + get(d2) + get(d3) + get(d4) + get(d5) + get(d6);
-            if (code.length() != 6) { d6.setError(I18n.t(this, "Enter 6 digits")); d6.requestFocus(); return; }
+            if (code.length() != 6) {
+                d6.setError(I18n.t(this, "Enter 6 digits"));
+                d6.requestFocus();
+                return;
+            }
             verifyOtpOnServer(mobile, code, tvTimer);
         });
 
         btnClose.setOnClickListener(v -> {
-            if (resendTimer != null) resendTimer.cancel();
+            if (resendTimer != null)
+                resendTimer.cancel();
             otpDialog.dismiss();
         });
 
@@ -268,6 +289,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void verifyOtpOnServer(String mobile, String otp, TextView errorField) {
+        LoadingDialog.showLoading(this, "Verifying OTP...");
         try {
             JSONObject body = new JSONObject();
             body.put("phone", mobile);
@@ -276,16 +298,18 @@ public class LoginActivity extends AppCompatActivity {
 
             JsonObjectRequest req = new JsonObjectRequest(Request.Method.POST, ApiRoutes.VERIFY_OTP, body,
                     resp -> {
+                        LoadingDialog.hideLoading();
                         boolean ok = resp.optBoolean("ok", false);
                         if (!ok) {
-                            if (errorField != null) errorField.setText(I18n.t(this, "Invalid/expired OTP"));
+                            if (errorField != null)
+                                errorField.setText(I18n.t(this, "Invalid/expired OTP"));
                             return;
                         }
 
-                        String access   = resp.optString("access_token", null);
-                        String refresh  = resp.optString("refresh_token", null);
-                        int userId      = resp.optInt("user_id", -1);
-                        int expiresIn   = resp.optInt("expires_in", 0); // seconds
+                        String access = resp.optString("access_token", null);
+                        String refresh = resp.optString("refresh_token", null);
+                        int userId = resp.optInt("user_id", -1);
+                        int expiresIn = resp.optInt("expires_in", 0); // seconds
 
                         if (access != null && refresh != null && userId > 0 && expiresIn > 0) {
                             // Session tokens save
@@ -298,19 +322,24 @@ public class LoginActivity extends AppCompatActivity {
                                     .putLong("user_id", userId)
                                     .apply();
 
-                            if (resendTimer != null) resendTimer.cancel();
-                            if (otpDialog != null) otpDialog.dismiss();
+                            if (resendTimer != null)
+                                resendTimer.cancel();
+                            if (otpDialog != null)
+                                otpDialog.dismiss();
                             startActivity(new Intent(this, MainActivity.class));
                             finish();
                         } else {
-                            if (errorField != null) errorField.setText(I18n.t(this, "Login failed"));
+                            if (errorField != null)
+                                errorField.setText(I18n.t(this, "Login failed"));
                         }
                     },
                     err -> {
-                        if (errorField != null) errorField.setText(I18n.t(this, "Network error"));
-                    }
-            ){
-                @Override public Map<String, String> getHeaders() throws AuthFailureError {
+                        LoadingDialog.hideLoading();
+                        if (errorField != null)
+                            errorField.setText(I18n.t(this, "Network error"));
+                    }) {
+                @Override
+                public Map<String, String> getHeaders() throws AuthFailureError {
                     HashMap<String, String> h = new HashMap<>();
                     h.put("Content-Type", "application/json; charset=utf-8");
                     // Keep language consistent across flows
@@ -321,12 +350,14 @@ public class LoginActivity extends AppCompatActivity {
             req.setRetryPolicy(new DefaultRetryPolicy(15000, 1, 1.0f));
             VolleySingleton.getInstance(this).add(req);
         } catch (JSONException e) {
-            if (errorField != null) errorField.setText("JSON error");
+            LoadingDialog.hideLoading();
+            if (errorField != null)
+                errorField.setText("JSON error");
         }
     }
 
     private void saveAuthToPrefs(int expiresInSeconds) {
-        long expAt = (System.currentTimeMillis()/1000L) + Math.max(0, expiresInSeconds);
+        long expAt = (System.currentTimeMillis() / 1000L) + Math.max(0, expiresInSeconds);
         SharedPreferences sp = getSharedPreferences(SplashScreen.PREFS, MODE_PRIVATE);
         sp.edit()
                 .putString(SplashScreen.KEY_ACCESS, session.getAccessToken())
@@ -339,13 +370,21 @@ public class LoginActivity extends AppCompatActivity {
         for (int i = 0; i < boxes.length; i++) {
             final int index = i;
             EditText et = boxes[i];
-            et.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(1)});
+            et.setFilters(new android.text.InputFilter[] { new android.text.InputFilter.LengthFilter(1) });
             et.setKeyListener(DigitsKeyListener.getInstance("0123456789"));
             et.addTextChangedListener(new TextWatcher() {
-                @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
-                @Override public void onTextChanged(CharSequence s, int st, int b, int c) {}
-                @Override public void afterTextChanged(Editable s) {
-                    if (s != null && s.length() == 1 && index < boxes.length - 1) boxes[index + 1].requestFocus();
+                @Override
+                public void beforeTextChanged(CharSequence s, int st, int c, int a) {
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int st, int b, int c) {
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    if (s != null && s.length() == 1 && index < boxes.length - 1)
+                        boxes[index + 1].requestFocus();
                 }
             });
             et.setOnKeyListener((v, keyCode, event) -> {
@@ -365,22 +404,38 @@ public class LoginActivity extends AppCompatActivity {
     private void startResendTimer(TextView tvTimer, TextView tvResend) {
         tvResend.setEnabled(false);
         tvResend.setAlpha(0.5f);
-        if (resendTimer != null) resendTimer.cancel();
+        if (resendTimer != null)
+            resendTimer.cancel();
         resendTimer = new CountDownTimer(30_000, 1000) {
-            @Override public void onTick(long ms) {
+            @Override
+            public void onTick(long ms) {
                 tvTimer.setText(I18n.t(LoginActivity.this, "Resend in") + " " + (ms / 1000) + "s");
             }
-            @Override public void onFinish() { tvTimer.setText(""); tvResend.setEnabled(true); tvResend.setAlpha(1f); }
+
+            @Override
+            public void onFinish() {
+                tvTimer.setText("");
+                tvResend.setEnabled(true);
+                tvResend.setAlpha(1f);
+            }
         }.start();
     }
 
-    private static void clearOtp(EditText... boxes) { for (EditText e : boxes) e.setText(""); }
-    private static String get(EditText e) { return e.getText() == null ? "" : e.getText().toString().trim(); }
+    private static void clearOtp(EditText... boxes) {
+        for (EditText e : boxes)
+            e.setText("");
+    }
+
+    private static String get(EditText e) {
+        return e.getText() == null ? "" : e.getText().toString().trim();
+    }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (resendTimer != null) resendTimer.cancel();
-        if (otpDialog != null && otpDialog.isShowing()) otpDialog.dismiss();
+        if (resendTimer != null)
+            resendTimer.cancel();
+        if (otpDialog != null && otpDialog.isShowing())
+            otpDialog.dismiss();
     }
 }

@@ -23,11 +23,12 @@
 
         <ImageView
             android:id="@+id/ivProfile"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
             android:src="@drawable/ic_person_24"
             android:background="@drawable/circle_white"
             android:padding="14dp"
+            android:elevation="2dp"
             android:contentDescription="@null" />
 
         <LinearLayout
@@ -35,49 +36,58 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical"
-            android:layout_marginStart="12dp">
+            android:layout_marginStart="14dp">
 
+            <!-- User Name - Dark green for readability -->
             <TextView
                 android:id="@+id/tvUserName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Vansh Mandanka"
-                android:textSize="18sp"
+                android:text="User"
+                android:textSize="20sp"
                 android:textStyle="bold"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:letterSpacing="0.02"
-                android:textColor="@android:color/white" />
+                android:letterSpacing="0.01"
+                android:textColor="#1B4332"
+                android:shadowColor="#40FFFFFF"
+                android:shadowRadius="2"
+                android:shadowDx="0"
+                android:shadowDy="1" />
 
+            <!-- Phone Number - Medium dark for secondary info -->
             <TextView
                 android:id="@+id/tvUserPhone"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="+91 6354355617"
-                android:textSize="13sp"
-                android:textColor="#E6FFFFFF"
-                android:layout_marginTop="2dp"/>
+                android:text=""
+                android:textSize="14sp"
+                android:textColor="#2D6A4F"
+                android:fontFamily="sans-serif-medium"
+                android:layout_marginTop="3dp"/>
 
-            <!-- small app tagline -->
+            <!-- App tagline - Subtle but readable -->
             <TextView
                 android:id="@+id/tvUserTagline"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="SheharSetu · Local. Simple. Smart."
                 android:textSize="11sp"
-                android:textColor="#B3FFFFFF"
-                android:layout_marginTop="4dp"/>
+                android:textColor="#40916C"
+                android:fontFamily="sans-serif"
+                android:layout_marginTop="6dp"/>
         </LinearLayout>
 
-        <!-- tiny edit icon on the right (kept same id) -->
+        <!-- Edit icon -->
         <ImageView
             android:id="@+id/ivEdit"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
             android:src="@drawable/ic_edit_24"
             android:contentDescription="@null"
             android:background="@drawable/bg_icon_tap"
-            android:padding="6dp" />
+            android:padding="8dp"
+            android:alpha="0.8" />
     </LinearLayout>
 
 </LinearLayout>

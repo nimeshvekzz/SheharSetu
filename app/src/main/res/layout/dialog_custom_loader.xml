@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="32dp"
+    android:background="@drawable/bg_loader_dialog"
+    android:elevation="16dp">
+
+    <!-- Custom animated loader -->
+    <FrameLayout
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_gravity="center">
+
+        <!-- Outer spinning ring -->
+        <ProgressBar
+            android:id="@+id/progressOuter"
+            style="?android:attr/progressBarStyleLarge"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:indeterminate="true"
+            android:indeterminateTint="@color/colorPrimary" />
+
+        <!-- Inner pulsing background circle -->
+        <View
+            android:id="@+id/pulseCircle"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_pulse_circle" />
+
+        <!-- Animated icon in center - cycles through buy/sell icons -->
+        <ImageView
+            android:id="@+id/ivLoaderIcon"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_loader_bag"
+            android:contentDescription="Loading" />
+
+    </FrameLayout>
+
+    <!-- Loading message -->
+    <TextView
+        android:id="@+id/tvLoadingMessage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Loading..."
+        android:textColor="@color/colorTextPrimary"
+        android:textSize="14sp"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.02" />
+
+</LinearLayout>
