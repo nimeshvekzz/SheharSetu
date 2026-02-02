@@ -15,6 +15,11 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/config.php';
 header('Content-Type: application/json; charset=utf-8');
 
+// Prevent caching - user data should always be fresh
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
+
 error_log("========== UPDATE USER PROFILE START ==========");
 
 // Only allow POST

@@ -30,6 +30,7 @@ import com.infowave.sheharsetu.Adapter.LanguageManager;
 import com.infowave.sheharsetu.Adapter.SubcategoryGridAdapter;
 import com.infowave.sheharsetu.net.ApiRoutes;
 import com.infowave.sheharsetu.net.VolleySingleton;
+import com.infowave.sheharsetu.utils.CategoryCache;
 import com.infowave.sheharsetu.utils.LoadingDialog;
 
 import org.json.JSONArray;
@@ -68,6 +69,9 @@ public class CategorySelectActivity extends AppCompatActivity {
     private static final String PREFS = LanguageSelection.PREFS; // "sheharsetu_prefs"
     private static final String KEY_LANG = LanguageSelection.KEY_LANG_CODE; // "app_lang_code"
 
+    // === Smart caching ===
+    private CategoryCache categoryCache;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -91,7 +95,11 @@ public class CategorySelectActivity extends AppCompatActivity {
         setupLists();
         setupClicks();
 
-        loadCategoriesFromApi();
+        // Initialize smart cache
+        categoryCache = new CategoryCache(this);
+
+        // Smart caching: load cached categories first, then refresh from API
+        loadCategoriesWithSmartCache();
         updateCtaState();
     }
 
@@ -279,13 +287,54 @@ public class CategorySelectActivity extends AppCompatActivity {
         }
     }
 
-    private void loadCategoriesFromApi() {
-        final String url = ApiRoutes.GET_CATEGORIES;
-        Log.d(TAG, "========== LOAD CATEGORIES FROM API START ==========");
-        Log.d(TAG, "loadCategoriesFromApi URL=" + url);
-        Log.d(TAG, "loadCategoriesFromApi timestamp=" + System.currentTimeMillis());
+    /**
+     * Smart caching: Load from cache first for instant UI, then refresh from API
+     */
+    private void loadCategoriesWithSmartCache() {
+        Log.d(TAG, "========== SMART CACHE: LOAD CATEGORIES ==========");
 
-        LoadingDialog.showLoading(this, "Loading categories...");
+        // Step 1: Try to load from cache immediately (instant UI)
+        List<CategoryCache.CachedCategory> cachedCategories = categoryCache.loadCategories();
+
+        if (!cachedCategories.isEmpty()) {
+            Log.d(TAG, "Found " + cachedCategories.size() + " cached categories, showing immediately");
+
+            // Convert cached data to our Category model
+            categories.clear();
+            List<String> catNameKeys = new ArrayList<>();
+            for (CategoryCache.CachedCategory cached : cachedCategories) {
+                categories.add(new Category(cached.id, cached.name, cached.iconUrl, cached.requiresCondition));
+                catNameKeys.add(cached.name);
+            }
+
+            // Update UI immediately with cached data
+            I18n.prefetch(this, catNameKeys, () -> {
+                categoryAdapter.submit(mapToCategoryItems(categories));
+                Log.d(TAG, "Displayed cached categories, now refreshing from API...");
+            });
+
+            // Step 2: Refresh from API in background (no loading dialog)
+            refreshCategoriesFromApi(false);
+        } else {
+            Log.d(TAG, "No cached categories, loading from API with loader");
+            // No cache - show loading and fetch from API
+            refreshCategoriesFromApi(true);
+        }
+    }
+
+    /**
+     * Fetch categories from API and update cache
+     * 
+     * @param showLoader Whether to show loading dialog
+     */
+    private void refreshCategoriesFromApi(boolean showLoader) {
+        final String url = ApiRoutes.GET_CATEGORIES;
+        Log.d(TAG, "========== REFRESH CATEGORIES FROM API ==========");
+        Log.d(TAG, "refreshCategoriesFromApi URL=" + url + " showLoader=" + showLoader);
+
+        if (showLoader) {
+            LoadingDialog.showLoading(this, "Loading categories...");
+        }
 
         StringRequest req = new StringRequest(
                 Request.Method.GET,
@@ -293,12 +342,10 @@ public class CategorySelectActivity extends AppCompatActivity {
                 response -> {
                     Log.d(TAG, "========== CATEGORIES API RESPONSE ==========");
                     Log.d(TAG, "Categories raw response len=" + (response == null ? 0 : response.length()));
-                    Log.d(TAG, "Categories raw response head=" + safeHead(response));
 
                     try {
                         JSONObject root = new JSONObject(response);
 
-                        // ✅ accept multiple formats
                         boolean ok = "success".equalsIgnoreCase(root.optString("status"))
                                 || root.optBoolean("ok", false)
                                 || root.optBoolean("success", false)
@@ -307,7 +354,10 @@ public class CategorySelectActivity extends AppCompatActivity {
                         if (!ok) {
                             String msg = root.optString("message", "Failed to load categories.");
                             Log.e(TAG, "Categories ok=false message=" + msg);
-                            toast(I18n.t(this, msg));
+                            if (showLoader) {
+                                LoadingDialog.hideLoading();
+                                toast(I18n.t(this, msg));
+                            }
                             return;
                         }
 
@@ -315,21 +365,17 @@ public class CategorySelectActivity extends AppCompatActivity {
                         if (dataArr == null)
                             dataArr = root.optJSONArray("categories");
 
-                        categories.clear();
+                        List<Category> freshCategories = new ArrayList<>();
+                        List<CategoryCache.CachedCategory> toCache = new ArrayList<>();
                         List<String> catNameKeys = new ArrayList<>();
 
                         if (dataArr != null) {
                             Log.d(TAG, "Categories dataArr.length=" + dataArr.length());
                             for (int i = 0; i < dataArr.length(); i++) {
                                 JSONObject obj = dataArr.optJSONObject(i);
-                                if (obj == null) {
-                                    Log.w(TAG, "Category[" + i + "] is null, skipping");
+                                if (obj == null)
                                     continue;
-                                }
 
-                                Log.d(TAG, "--- Category[" + i + "] RAW JSON: " + obj.toString());
-
-                                // ✅ tolerate key variations
                                 String id = firstNonEmpty(
                                         obj.optString("id", ""),
                                         obj.optString("category_id", ""),
@@ -347,41 +393,46 @@ public class CategorySelectActivity extends AppCompatActivity {
                                 boolean requiresCond = obj.optInt("hasNewOld", obj.optInt("has_new_old", 0)) == 1;
 
                                 if (!TextUtils.isEmpty(id) && !"0".equals(id) && !TextUtils.isEmpty(name)) {
-                                    categories.add(new Category(id, name, iconUrl, requiresCond));
+                                    freshCategories.add(new Category(id, name, iconUrl, requiresCond));
+                                    toCache.add(new CategoryCache.CachedCategory(id, name, iconUrl, requiresCond));
                                     catNameKeys.add(name);
                                     Log.d(TAG, "Category[" + i + "] ADDED: id=" + id + " name=" + name);
-                                    Log.d(TAG, "Category[" + i + "] icon field=" + obj.optString("icon", "<empty>"));
-                                    Log.d(TAG, "Category[" + i + "] icon_url field="
-                                            + obj.optString("icon_url", "<empty>"));
-                                    Log.d(TAG, "Category[" + i + "] FINAL iconUrl=" + iconUrl);
-                                    Log.d(TAG, "Category[" + i + "] requiresCond=" + requiresCond);
-                                } else {
-                                    Log.w(TAG, "Skipping category idx=" + i + " id=" + id + " name=" + name);
                                 }
                             }
-                        } else {
-                            Log.e(TAG, "Categories dataArr is NULL!");
                         }
 
+                        // Save fresh data to cache
+                        categoryCache.saveCategories(toCache);
+                        Log.d(TAG, "Saved " + toCache.size() + " categories to cache");
+
+                        // Update UI with fresh data
+                        categories.clear();
+                        categories.addAll(freshCategories);
                         Log.d(TAG, "Parsed categories count=" + categories.size());
-                        Log.d(TAG, "========== LOAD CATEGORIES COMPLETE ==========");
 
                         I18n.prefetch(this, catNameKeys, () -> {
-                            LoadingDialog.hideLoading();
+                            if (showLoader)
+                                LoadingDialog.hideLoading();
                             categoryAdapter.submit(mapToCategoryItems(categories));
-                            Log.d(TAG, "Category adapter submitted items=" + categories.size());
+                            Log.d(TAG, "Category adapter submitted fresh items=" + categories.size());
                         });
 
                     } catch (JSONException e) {
                         Log.e(TAG, "Categories parse error", e);
-                        toast(I18n.t(this, "Parsing error (categories)."));
+                        if (showLoader) {
+                            LoadingDialog.hideLoading();
+                            toast(I18n.t(this, "Parsing error (categories)."));
+                        }
                     }
                 },
                 error -> {
-                    LoadingDialog.hideLoading();
+                    if (showLoader) {
+                        LoadingDialog.hideLoading();
+                        toast(I18n.t(this, "Unable to load categories. Please check internet."));
+                    }
                     Log.e(TAG, "Categories request failed: " + describeVolleyError(error));
-                    toast(I18n.t(this, "Unable to load categories. Please check internet."));
                 }) {
+
             @Override
             public Map<String, String> getHeaders() {
                 HashMap<String, String> h = new HashMap<>();
@@ -389,6 +440,7 @@ public class CategorySelectActivity extends AppCompatActivity {
                 h.put("Accept-Language", I18n.lang(CategorySelectActivity.this));
                 return h;
             }
+
         };
 
         req.setShouldCache(false);
@@ -396,35 +448,101 @@ public class CategorySelectActivity extends AppCompatActivity {
         VolleySingleton.getInstance(this).add(req);
     }
 
+    /**
+     * @deprecated Use loadCategoriesWithSmartCache() instead
+     */
+    @Deprecated
+    private void loadCategoriesFromApi() {
+        refreshCategoriesFromApi(true);
+    }
+
+    /**
+     * Smart caching for subcategories: load from cache first, then refresh from API
+     */
     private void loadSubcategories(String catId) {
+        Log.d(TAG, "========== SMART CACHE: LOAD SUBCATEGORIES ==========");
         Log.d(TAG, "loadSubcategories catId=" + catId);
 
+        // Step 1: Check in-memory cache first (fastest)
         if (subMap.containsKey(catId)) {
             List<Subcategory> cached = subMap.get(catId);
-            Log.d(TAG, "Using cached subcategories size=" + (cached == null ? 0 : cached.size()));
-
-            List<SubcategoryGridAdapter.Item> ui = new ArrayList<>();
-            if (cached != null) {
-                for (Subcategory s : cached) {
-                    ui.add(new SubcategoryGridAdapter.Item(
-                            s.id,
-                            s.parentId,
-                            I18n.t(this, s.name),
-                            s.iconUrl,
-                            s.requiresCondition));
-                }
-            }
-            subcategoryAdapter.submit(ui);
+            Log.d(TAG, "Using in-memory cached subcategories size=" + (cached == null ? 0 : cached.size()));
+            displaySubcategories(cached);
+            // Still refresh in background for freshness
+            refreshSubcategoriesFromApi(catId, false);
             return;
         }
 
-        final String url = ApiRoutes.GET_SUBCATEGORIES + "?category_id=" + catId;
-        Log.d(TAG, "========== LOAD SUBCATEGORIES START ==========");
-        Log.d(TAG, "Subcategories URL=" + url);
-        Log.d(TAG, "Subcategories catId=" + catId);
-        Log.d(TAG, "Subcategories timestamp=" + System.currentTimeMillis());
+        // Step 2: Check persistent cache (SharedPreferences)
+        List<CategoryCache.CachedSubcategory> persistentCached = categoryCache.loadSubcategories(catId);
+        if (persistentCached != null && !persistentCached.isEmpty()) {
+            Log.d(TAG, "Found " + persistentCached.size() + " subcategories in persistent cache, showing immediately");
 
-        LoadingDialog.showLoading(this, "Loading subcategories...");
+            // Convert to Subcategory model
+            List<Subcategory> subs = new ArrayList<>();
+            for (CategoryCache.CachedSubcategory cs : persistentCached) {
+                subs.add(new Subcategory(cs.id, cs.parentId, cs.name, cs.iconUrl, cs.requiresCondition));
+            }
+
+            // Store in memory cache
+            subMap.put(catId, subs);
+
+            // Display immediately
+            displaySubcategories(subs);
+
+            // Refresh from API in background
+            refreshSubcategoriesFromApi(catId, false);
+            return;
+        }
+
+        // Step 3: No cache found - fetch from API with loading dialog
+        Log.d(TAG, "No cached subcategories, loading from API with loader");
+        refreshSubcategoriesFromApi(catId, true);
+    }
+
+    /**
+     * Display subcategories in the RecyclerView
+     */
+    private void displaySubcategories(List<Subcategory> subs) {
+        if (subs == null || subs.isEmpty()) {
+            subcategoryAdapter.submit(new ArrayList<>());
+            return;
+        }
+
+        List<String> subNameKeys = new ArrayList<>();
+        for (Subcategory s : subs) {
+            subNameKeys.add(s.name);
+        }
+
+        I18n.prefetch(this, subNameKeys, () -> {
+            List<SubcategoryGridAdapter.Item> ui = new ArrayList<>();
+            for (Subcategory s : subs) {
+                ui.add(new SubcategoryGridAdapter.Item(
+                        s.id,
+                        s.parentId,
+                        I18n.t(this, s.name),
+                        s.iconUrl,
+                        s.requiresCondition));
+            }
+            subcategoryAdapter.submit(ui);
+            Log.d(TAG, "Displayed " + ui.size() + " subcategories");
+        });
+    }
+
+    /**
+     * Fetch subcategories from API and update caches
+     * 
+     * @param catId      Category ID
+     * @param showLoader Whether to show loading dialog
+     */
+    private void refreshSubcategoriesFromApi(String catId, boolean showLoader) {
+        final String url = ApiRoutes.GET_SUBCATEGORIES + "?category_id=" + catId;
+        Log.d(TAG, "========== REFRESH SUBCATEGORIES FROM API ==========");
+        Log.d(TAG, "refreshSubcategoriesFromApi URL=" + url + " showLoader=" + showLoader);
+
+        if (showLoader) {
+            LoadingDialog.showLoading(this, "Loading subcategories...");
+        }
 
         StringRequest req = new StringRequest(
                 Request.Method.GET,
@@ -432,7 +550,6 @@ public class CategorySelectActivity extends AppCompatActivity {
                 response -> {
                     Log.d(TAG, "========== SUBCATEGORIES API RESPONSE ==========");
                     Log.d(TAG, "Subcategories raw response len=" + (response == null ? 0 : response.length()));
-                    Log.d(TAG, "Subcategories raw response head=" + safeHead(response));
 
                     try {
                         JSONObject root = new JSONObject(response);
@@ -445,7 +562,10 @@ public class CategorySelectActivity extends AppCompatActivity {
                         if (!ok) {
                             String msg = root.optString("message", "Failed to load subcategories.");
                             Log.e(TAG, "Subcategories ok=false message=" + msg);
-                            toast(I18n.t(this, msg));
+                            if (showLoader) {
+                                LoadingDialog.hideLoading();
+                                toast(I18n.t(this, msg));
+                            }
                             return;
                         }
 
@@ -454,18 +574,14 @@ public class CategorySelectActivity extends AppCompatActivity {
                             dataArr = root.optJSONArray("subcategories");
 
                         List<Subcategory> subs = new ArrayList<>();
-                        List<String> subNameKeys = new ArrayList<>();
+                        List<CategoryCache.CachedSubcategory> toCache = new ArrayList<>();
 
                         if (dataArr != null) {
                             Log.d(TAG, "Subcategories dataArr.length=" + dataArr.length());
                             for (int i = 0; i < dataArr.length(); i++) {
                                 JSONObject obj = dataArr.optJSONObject(i);
-                                if (obj == null) {
-                                    Log.w(TAG, "Subcategory[" + i + "] is null, skipping");
+                                if (obj == null)
                                     continue;
-                                }
-
-                                Log.d(TAG, "--- Subcategory[" + i + "] RAW JSON: " + obj.toString());
 
                                 String id = firstNonEmpty(
                                         obj.optString("id", ""),
@@ -484,51 +600,41 @@ public class CategorySelectActivity extends AppCompatActivity {
                                 boolean requiresCond = obj.optInt("hasNewOld", obj.optInt("has_new_old", 0)) == 1;
 
                                 if (!TextUtils.isEmpty(id) && !"0".equals(id) && !TextUtils.isEmpty(name)) {
-                                    Subcategory s = new Subcategory(id, catId, name, iconUrl, requiresCond);
-                                    subs.add(s);
-                                    subNameKeys.add(name);
+                                    subs.add(new Subcategory(id, catId, name, iconUrl, requiresCond));
+                                    toCache.add(new CategoryCache.CachedSubcategory(id, catId, name, iconUrl,
+                                            requiresCond));
                                     Log.d(TAG, "Subcategory[" + i + "] ADDED: id=" + id + " name=" + name);
-                                    Log.d(TAG, "Subcategory[" + i + "] icon field=" + obj.optString("icon", "<empty>"));
-                                    Log.d(TAG, "Subcategory[" + i + "] icon_url field="
-                                            + obj.optString("icon_url", "<empty>"));
-                                    Log.d(TAG, "Subcategory[" + i + "] FINAL iconUrl=" + iconUrl);
-                                    Log.d(TAG, "Subcategory[" + i + "] requiresCond=" + requiresCond);
-                                } else {
-                                    Log.w(TAG, "Skipping subcategory idx=" + i + " id=" + id + " name=" + name);
                                 }
                             }
-                        } else {
-                            Log.e(TAG, "Subcategories dataArr is NULL!");
                         }
 
-                        subMap.put(catId, subs);
-                        Log.d(TAG, "Parsed subcategories count=" + subs.size());
-                        Log.d(TAG, "========== LOAD SUBCATEGORIES COMPLETE ==========");
+                        // Save to persistent cache
+                        categoryCache.saveSubcategories(catId, toCache);
+                        Log.d(TAG, "Saved " + toCache.size() + " subcategories to persistent cache");
 
-                        I18n.prefetch(this, subNameKeys, () -> {
+                        // Save to memory cache
+                        subMap.put(catId, subs);
+                        Log.d(TAG, "Saved " + subs.size() + " subcategories to memory cache");
+
+                        // Update UI
+                        if (showLoader)
                             LoadingDialog.hideLoading();
-                            List<SubcategoryGridAdapter.Item> ui = new ArrayList<>();
-                            for (Subcategory s : subs) {
-                                ui.add(new SubcategoryGridAdapter.Item(
-                                        s.id,
-                                        s.parentId,
-                                        I18n.t(this, s.name),
-                                        s.iconUrl,
-                                        s.requiresCondition));
-                            }
-                            subcategoryAdapter.submit(ui);
-                            Log.d(TAG, "Subcategory adapter submitted items=" + ui.size());
-                        });
+                        displaySubcategories(subs);
 
                     } catch (JSONException e) {
                         Log.e(TAG, "Subcategories parse error", e);
-                        toast(I18n.t(this, "Parsing error (subcategories)."));
+                        if (showLoader) {
+                            LoadingDialog.hideLoading();
+                            toast(I18n.t(this, "Parsing error (subcategories)."));
+                        }
                     }
                 },
                 error -> {
-                    LoadingDialog.hideLoading();
+                    if (showLoader) {
+                        LoadingDialog.hideLoading();
+                        toast(I18n.t(this, "Unable to load subcategories. Please check internet."));
+                    }
                     Log.e(TAG, "Subcategories request failed: " + describeVolleyError(error));
-                    toast(I18n.t(this, "Unable to load subcategories. Please check internet."));
                 }) {
             @Override
             public Map<String, String> getHeaders() {

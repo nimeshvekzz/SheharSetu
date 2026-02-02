@@ -1,5 +1,7 @@
 package com.infowave.sheharsetu;
 
+import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -12,18 +14,24 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.StringRequest;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
+import com.infowave.sheharsetu.Adapter.MyListingsAdapter;
 import com.infowave.sheharsetu.core.SessionManager;
 import com.infowave.sheharsetu.net.ApiRoutes;
 import com.infowave.sheharsetu.net.VolleySingleton;
@@ -32,10 +40,13 @@ import com.infowave.sheharsetu.utils.LoadingDialog;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ProfileActivity extends AppCompatActivity {
@@ -54,6 +65,12 @@ public class ProfileActivity extends AppCompatActivity {
 
     // Bottom-right FAB for edit
     private FloatingActionButton btnEditToggle;
+
+    // My Listings section
+    private RecyclerView rvMyListings;
+    private CardView cardEmptyListings;
+    private MaterialButton btnPostFirstListing;
+    private MyListingsAdapter myListingsAdapter;
 
     // Session
     private SessionManager session;
@@ -93,9 +110,13 @@ public class ProfileActivity extends AppCompatActivity {
         bindViews();
         setupToolbar();
         setupEditFab();
+        setupMyListings();
 
         // Fetch user profile from API
         fetchUserProfile();
+
+        // Fetch user listings
+        fetchMyListings();
 
         Log.d(TAG, "========== onCreate END ==========");
     }
@@ -121,6 +142,11 @@ public class ProfileActivity extends AppCompatActivity {
 
         // FAB (bottom-right)
         btnEditToggle = findViewById(R.id.btnEditToggle);
+
+        // My Listings section
+        rvMyListings = findViewById(R.id.rvMyListings);
+        cardEmptyListings = findViewById(R.id.cardEmptyListings);
+        btnPostFirstListing = findViewById(R.id.btnPostFirstListing);
 
         Log.d(TAG, "Views bound successfully");
     }
@@ -267,6 +293,7 @@ public class ProfileActivity extends AppCompatActivity {
     /**
      * Show placeholder data when API fails or no token
      */
+    @SuppressLint("SetTextI18n")
     private void showPlaceholderData() {
         Log.d(TAG, "Showing placeholder data");
         tvFullName.setText("Guest User");
@@ -525,6 +552,180 @@ public class ProfileActivity extends AppCompatActivity {
                 DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
 
         Log.d(TAG, "Adding update request to Volley queue...");
+        VolleySingleton.getInstance(this).add(req);
+    }
+
+    // ==================== MY LISTINGS SECTION ====================
+
+    private void setupMyListings() {
+        // Setup RecyclerView with horizontal layout
+        rvMyListings.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        myListingsAdapter = new MyListingsAdapter(this);
+        rvMyListings.setAdapter(myListingsAdapter);
+
+        myListingsAdapter.setOnListingActionListener(new MyListingsAdapter.OnListingActionListener() {
+            @Override
+            public void onListingClick(int listingId) {
+                // Open ProductDetail
+                Intent intent = new Intent(ProfileActivity.this, ProductDetail.class);
+                intent.putExtra("listing_id", listingId);
+                startActivity(intent);
+            }
+
+            @Override
+            public void onMarkSoldClick(int listingId, boolean currentlySold) {
+                showMarkSoldConfirmation(listingId, currentlySold);
+            }
+        });
+
+        // Post first listing button click
+        btnPostFirstListing.setOnClickListener(v -> {
+            Intent intent = new Intent(ProfileActivity.this, CategorySelectActivity.class);
+            startActivity(intent);
+        });
+    }
+
+    private void fetchMyListings() {
+        Log.d(TAG, "========== FETCH MY LISTINGS START ==========");
+
+        String accessToken = session.getAccessToken();
+        if (TextUtils.isEmpty(accessToken)) {
+            Log.w(TAG, "No access token - cannot fetch listings");
+            showEmptyListingsState();
+            return;
+        }
+
+        // Show custom loading dialog
+        LoadingDialog.showLoading(this, "Loading your listings...");
+        rvMyListings.setVisibility(View.GONE);
+        cardEmptyListings.setVisibility(View.GONE);
+
+        StringRequest req = new StringRequest(
+                Request.Method.GET,
+                ApiRoutes.GET_USER_LISTINGS,
+                response -> {
+                    Log.d(TAG, "✅ Listings API Response: " + response);
+                    LoadingDialog.hideLoading();
+
+                    try {
+                        JSONObject json = new JSONObject(response);
+                        if (json.optBoolean("success", false)) {
+                            JSONArray listingsArray = json.optJSONArray("listings");
+                            if (listingsArray != null && listingsArray.length() > 0) {
+                                List<MyListingsAdapter.ListingItem> items = new ArrayList<>();
+                                for (int i = 0; i < listingsArray.length(); i++) {
+                                    items.add(MyListingsAdapter.ListingItem.fromJson(listingsArray.getJSONObject(i)));
+                                }
+                                myListingsAdapter.setItems(items);
+                                rvMyListings.setVisibility(View.VISIBLE);
+                                cardEmptyListings.setVisibility(View.GONE);
+                                Log.d(TAG, "✅ Loaded " + items.size() + " listings");
+                            } else {
+                                showEmptyListingsState();
+                            }
+                        } else {
+                            String error = json.optString("error", "Failed to load listings");
+                            Log.w(TAG, "API error: " + error);
+                            showEmptyListingsState();
+                        }
+                    } catch (JSONException e) {
+                        Log.e(TAG, "JSON parse error: " + e.getMessage());
+                        showEmptyListingsState();
+                    }
+                    Log.d(TAG, "========== FETCH MY LISTINGS END ==========");
+                },
+                error -> {
+                    Log.e(TAG, "❌ Listings API error: " + error.toString());
+                    LoadingDialog.hideLoading();
+                    showEmptyListingsState();
+                }) {
+            @Override
+            public Map<String, String> getHeaders() {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Authorization", "Bearer " + accessToken);
+                return headers;
+            }
+        };
+
+        req.setRetryPolicy(new DefaultRetryPolicy(10000, 1, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+        req.setShouldCache(false); // Disable Volley cache to always get fresh data
+        VolleySingleton.getInstance(this).add(req);
+    }
+
+    private void showEmptyListingsState() {
+        rvMyListings.setVisibility(View.GONE);
+        cardEmptyListings.setVisibility(View.VISIBLE);
+    }
+
+    private void showMarkSoldConfirmation(int listingId, boolean currentlySold) {
+        String title = currentlySold ? "Mark as Available" : "Mark as Sold";
+        String message = currentlySold
+                ? "This will make your listing visible to buyers again."
+                : "This will mark your listing as sold. Buyers will see it's no longer available.";
+
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton("Confirm", (dialog, which) -> markListingAsSold(listingId, !currentlySold))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void markListingAsSold(int listingId, boolean markAsSold) {
+        Log.d(TAG, "Marking listing " + listingId + " as " + (markAsSold ? "sold" : "available"));
+
+        String accessToken = session.getAccessToken();
+        if (TextUtils.isEmpty(accessToken)) {
+            Toast.makeText(this, "Please log in again", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        LoadingDialog.showLoading(this, markAsSold ? "Marking as sold..." : "Marking as available...");
+
+        StringRequest req = new StringRequest(
+                Request.Method.POST,
+                ApiRoutes.MARK_LISTING_SOLD,
+                response -> {
+                    Log.d(TAG, "✅ Mark sold response: " + response);
+                    LoadingDialog.hideLoading();
+
+                    try {
+                        JSONObject json = new JSONObject(response);
+                        if (json.optBoolean("success", false)) {
+                            // Update adapter UI
+                            myListingsAdapter.updateItemSoldStatus(listingId, markAsSold);
+                            String msg = markAsSold ? "Marked as sold!" : "Marked as available!";
+                            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+                        } else {
+                            String error = json.optString("error", "Failed to update");
+                            Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
+                        }
+                    } catch (JSONException e) {
+                        Toast.makeText(this, "Error processing response", Toast.LENGTH_SHORT).show();
+                    }
+                },
+                error -> {
+                    Log.e(TAG, "❌ Mark sold error: " + error.toString());
+                    LoadingDialog.hideLoading();
+                    Toast.makeText(this, "Network error. Please try again.", Toast.LENGTH_SHORT).show();
+                }) {
+            @Override
+            public Map<String, String> getHeaders() {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Authorization", "Bearer " + accessToken);
+                return headers;
+            }
+
+            @Override
+            protected Map<String, String> getParams() {
+                Map<String, String> params = new HashMap<>();
+                params.put("listing_id", String.valueOf(listingId));
+                params.put("is_sold", markAsSold ? "1" : "0");
+                return params;
+            }
+        };
+
+        req.setRetryPolicy(new DefaultRetryPolicy(10000, 0, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
         VolleySingleton.getInstance(this).add(req);
     }
 }

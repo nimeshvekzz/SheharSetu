@@ -28,6 +28,10 @@ public final class ApiRoutes {
 
     public static final String CREATE_LISTING = BASE_URL + "/create_listing.php";
 
+    // My Listings
+    public static final String GET_USER_LISTINGS = BASE_URL + "/get_user_listings.php";
+    public static final String MARK_LISTING_SOLD = BASE_URL + "/mark_listing_sold.php";
+
     private ApiRoutes() {
     }
 }

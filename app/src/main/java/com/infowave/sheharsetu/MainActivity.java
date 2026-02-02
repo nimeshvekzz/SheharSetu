@@ -1133,6 +1133,9 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
+        // Disable caching - user profile should always be fresh
+        req.setShouldCache(false);
+
         // Network optimization: shorter timeout, no retries for profile fetch
         req.setRetryPolicy(new DefaultRetryPolicy(
                 5000, // 5 second timeout
@@ -1235,6 +1238,9 @@ public class MainActivity extends AppCompatActivity {
                 return headers;
             }
         };
+
+        // Disable caching - user profile should always be fresh
+        req.setShouldCache(false);
 
         // Network optimization: shorter timeout, no retries
         req.setRetryPolicy(new DefaultRetryPolicy(
