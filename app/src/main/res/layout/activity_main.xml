@@ -13,7 +13,7 @@
         android:id="@+id/main"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/white">
+        android:background="?android:attr/colorBackground">
 
         <!-- ===== HEADER (unchanged) ===== -->
         <ImageView
@@ -48,7 +48,7 @@
                 android:padding="6dp"
                 android:contentDescription="Menu"
                 android:src="@drawable/ic_menu_24"
-                app:tint="@android:color/white"
+                app:tint="@color/white"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent" />
@@ -66,11 +66,11 @@
                 android:paddingBottom="0dp"
                 app:boxBackgroundMode="none"
                 app:startIconDrawable="@drawable/ic_search_24"
-                app:startIconTint="@android:color/black"
+                app:startIconTint="?attr/colorOnSurface"
                 app:startIconMinSize="24dp"
                 app:endIconMode="custom"
                 app:endIconDrawable="@drawable/ic_mic_24"
-                app:endIconTint="@android:color/white"
+                app:endIconTint="@color/white"
                 app:endIconMinSize="24dp"
                 app:layout_constraintStart_toEndOf="@id/btnDrawer"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -87,7 +87,7 @@
                     android:inputType="text"
                     android:singleLine="true"
                     android:textSize="16sp"
-                    android:textColor="@color/black"
+                    android:textColor="@color/colorTextPrimary"
                     android:textColorHint="#CCFFFFFF"
                     android:gravity="center_vertical|start"
                     android:includeFontPadding="false"
@@ -125,7 +125,7 @@
             android:text="@string/featured_listings"
             android:textStyle="bold"
             android:textSize="20sp"
-            android:textColor="@android:color/black"
+            android:textColor="@color/colorTextPrimary"
             app:layout_constraintTop_toBottomOf="@id/rvCategories"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
@@ -180,22 +180,73 @@
                 app:shapeAppearanceOverlay="@style/ShapeSquareRight" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
-        <!-- Products -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvProducts"
+        <!-- Refresh Container -->
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:id="@+id/swipeRefresh"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:paddingBottom="12dp"
-            android:clipToPadding="false"
-            app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
-            app:spanCount="2"
             app:layout_constraintTop_toBottomOf="@id/toggleNewOld"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            tools:listitem="@layout/item_product"/>
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <!-- Products -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvProducts"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingBottom="80dp"
+                    android:clipToPadding="false"
+                    app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+                    app:spanCount="2"
+                    tools:listitem="@layout/item_product"/>
+
+                <!-- Empty State (Centered) -->
+                <LinearLayout
+                    android:id="@+id/layoutEmptyState"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:layout_gravity="center"
+                    android:visibility="gone"
+                    android:padding="32dp">
+
+                    <ImageView
+                        android:layout_width="120dp"
+                        android:layout_height="120dp"
+                        android:src="@drawable/ic_search_24"
+                        app:tint="#DDDDDD"
+                        android:contentDescription="@null"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="No products found"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/colorTextSecondary"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Try adjusting your filters or search query"
+                        android:textSize="14sp"
+                        android:textColor="@color/colorTextSecondary"
+                        android:gravity="center"/>
+                </LinearLayout>
+
+            </FrameLayout>
+
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
         <!-- Floating GLASS banner -->
         <include
@@ -231,10 +282,11 @@
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_gravity="start"
+        android:background="@color/colorSurface"
         app:headerLayout="@layout/av_header_main"
         app:menu="@menu/nav_main"
-        app:itemIconTint="@null"
-        app:itemTextColor="@color/white" />
+        app:itemIconTint="@color/colorPrimary"
+        app:itemTextColor="@color/colorTextPrimary" />
 
 
 </androidx.drawerlayout.widget.DrawerLayout>

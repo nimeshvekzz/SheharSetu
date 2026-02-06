@@ -5,7 +5,7 @@
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/colorBackgroundSoft">
+    android:background="?android:attr/colorBackground">
 
     <!-- Collapsing header -->
     <com.google.android.material.appbar.AppBarLayout
@@ -105,7 +105,7 @@
         android:id="@+id/scroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/colorBackgroundSoft"
+        android:background="?android:attr/colorBackground"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
@@ -132,7 +132,7 @@
                     android:overScrollMode="never"
                     android:clipToPadding="false"
                     android:scrollbars="none"
-                    android:background="@android:color/white"/>
+                    android:background="?attr/colorSurface"/>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- Product info card -->
@@ -142,7 +142,7 @@
                 android:layout_marginTop="12dp"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="2dp"
-                app:cardBackgroundColor="@android:color/white">
+                app:cardBackgroundColor="?attr/colorSurface">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -157,7 +157,7 @@
                         android:layout_height="wrap_content"
                         android:textStyle="bold"
                         android:textSize="20sp"
-                        android:textColor="@android:color/black"/>
+                        android:textColor="@color/colorTextPrimary"/>
 
                     <TextView
                         android:id="@+id/pdpPrice"
@@ -174,7 +174,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:textSize="13sp"
-                        android:textColor="#7A000000"/>
+                        android:textColor="@color/colorTextSecondary"/>
 
                     <!-- Feature chips -->
                     <com.google.android.material.chip.ChipGroup
@@ -182,7 +182,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        app:singleLine="true"
+                        app:singleLine="false"
                         app:chipSpacingHorizontal="6dp"
                         app:chipSpacingVertical="6dp"/>
 
@@ -201,7 +201,7 @@
                         android:layout_marginTop="12dp"
                         android:textSize="14sp"
                         android:lineSpacingExtra="2dp"
-                        android:textColor="@android:color/black"/>
+                        android:textColor="@color/colorTextPrimary"/>
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -213,7 +213,7 @@
                 android:layout_marginTop="16dp"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="2dp"
-                app:cardBackgroundColor="@android:color/white">
+                app:cardBackgroundColor="?attr/colorSurface">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -244,7 +244,7 @@
                             android:layout_height="wrap_content"
                             android:textStyle="bold"
                             android:textSize="16sp"
-                            android:textColor="@android:color/black"
+                            android:textColor="@color/colorTextPrimary"
                             android:maxLines="1"
                             android:ellipsize="end"/>
 
@@ -253,7 +253,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:textSize="12sp"
-                            android:textColor="#7A000000"
+                            android:textColor="@color/colorTextSecondary"
                             android:maxLines="1"
                             android:ellipsize="end"/>
                     </LinearLayout>
@@ -282,7 +282,7 @@
                 android:layout_marginBottom="16dp"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="1dp"
-                app:cardBackgroundColor="@android:color/white">
+                app:cardBackgroundColor="?attr/colorSurface">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -297,7 +297,7 @@
                         android:text="Similar Listings"
                         android:textStyle="bold"
                         android:textSize="16sp"
-                        android:textColor="@android:color/black"/>
+                        android:textColor="@color/colorTextPrimary"/>
 
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/pdpSimilarRv"
@@ -318,7 +318,7 @@
         android:layout_width="match_parent"
         android:layout_height="80dp"
         android:layout_gravity="bottom"
-        android:background="@android:color/white"
+        android:background="?attr/colorSurface"
         android:padding="8dp"
         android:elevation="8dp"
         android:gravity="center_vertical"
@@ -336,7 +336,7 @@
             app:icon="@drawable/ic_coll_24"
             app:iconPadding="8dp"
             app:iconTint="@android:color/white"
-            app:backgroundTint="@color/colorPrimaryMedium"
+            app:backgroundTint="@color/colorPrimary"
             style="@style/Widget.MaterialComponents.Button"/>
 
         <com.google.android.material.button.MaterialButton

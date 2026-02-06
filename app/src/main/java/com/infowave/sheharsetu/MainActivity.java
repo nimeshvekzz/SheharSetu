@@ -62,6 +62,7 @@ import java.util.Map;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
+    private static final String TAG_FETCH_PRODUCTS = "TAG_FETCH_PRODUCTS"; // Tag for cancelling requests
 
     // ===== Views (Header) =====
     private ImageView btnDrawer;
@@ -77,6 +78,10 @@ public class MainActivity extends AppCompatActivity {
     // ===== Bottom banner =====
     private ImageButton btnPost, btnHelp;
     private TextView tvMarquee;
+    private androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefresh;
+    private View layoutEmptyState;
+    private android.os.Handler searchHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private Runnable searchRunnable;
 
     // ===== Drawer =====
     private DrawerLayout drawerLayout;
@@ -116,9 +121,12 @@ public class MainActivity extends AppCompatActivity {
     private static final int LIMIT = 50;
 
     // ✅ Network optimization + correctness
+    // ✅ NETWORK OPTIMIZATION
+    private android.util.LruCache<String, JSONObject> productCache;
     private String lastProductsUrl = null;
     private boolean productsInFlight = false;
 
+    @SuppressLint("SetTextI18n")
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -128,6 +136,9 @@ public class MainActivity extends AppCompatActivity {
         // Apply saved locale first
         applySavedLocale();
         session = new SessionManager(this);
+
+        // Cache: 20 responses max
+        productCache = new android.util.LruCache<>(20);
 
         WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
         getWindow().setStatusBarColor(android.graphics.Color.BLACK);
@@ -163,6 +174,18 @@ public class MainActivity extends AppCompatActivity {
         tvMarquee = findViewById(R.id.tvMarquee);
         if (tvMarquee != null)
             tvMarquee.setSelected(true);
+
+        swipeRefresh = findViewById(R.id.swipeRefresh);
+        layoutEmptyState = findViewById(R.id.layoutEmptyState);
+
+        if (swipeRefresh != null) {
+            swipeRefresh.setColorSchemeResources(R.color.colorPrimary);
+            swipeRefresh.setOnRefreshListener(() -> {
+                // Clear cache/state if needed, then re-fetch
+                productsInFlight = false;
+                fetchProducts();
+            });
+        }
 
         TextView tvLangBadge = findViewById(R.id.tvLangBadge);
         if (tvLangBadge != null) {
@@ -297,12 +320,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void performSearch(String query) {
-        ensureProductsView();
-        searchQuery = TextUtils.isEmpty(query) ? "" : query.toLowerCase(Locale.ROOT).trim();
-        Log.d(TAG, "performSearch(): q=" + searchQuery);
-        // allow same URL to re-fetch when user hits search again
-        productsInFlight = false;
-        fetchProducts();
+        if (searchHandler != null) {
+            if (searchRunnable != null)
+                searchHandler.removeCallbacks(searchRunnable);
+        }
+
+        searchRunnable = () -> {
+            ensureProductsView();
+            searchQuery = TextUtils.isEmpty(query) ? "" : query.toLowerCase(Locale.ROOT).trim();
+            Log.d(TAG, "performSearch(): q=" + searchQuery);
+            productsInFlight = false;
+            fetchProducts();
+        };
+        // Debounce: 500ms delay
+        searchHandler.postDelayed(searchRunnable, 500);
     }
 
     private void applySavedLocale() {
@@ -502,7 +533,14 @@ public class MainActivity extends AppCompatActivity {
             productsInFlight = false;
             lastProductsUrl = null;
 
-            fetchSubFilters(selectedCategoryId);
+            if (selectedCategoryId == 0) {
+                // "All Listings" -> Skip subfilter fetch (client side optimization)
+                mapSubFilters.remove(0); // clear if any
+                showProducts();
+                fetchProducts();
+            } else {
+                fetchSubFilters(selectedCategoryId);
+            }
         });
         rvCategories.setAdapter(catAdapter);
 
@@ -512,9 +550,22 @@ public class MainActivity extends AppCompatActivity {
 
     private void bindProducts(List<Map<String, Object>> items) {
         Log.d(TAG, "bindProducts(): items=" + (items == null ? 0 : items.size()));
-        rvProducts.setVisibility(View.VISIBLE);
-        if (productAdapterRef != null)
-            productAdapterRef.setItems(items);
+
+        // Stop refresh animation
+        if (swipeRefresh != null)
+            swipeRefresh.setRefreshing(false);
+
+        if (items == null || items.isEmpty()) {
+            rvProducts.setVisibility(View.GONE);
+            if (layoutEmptyState != null)
+                layoutEmptyState.setVisibility(View.VISIBLE);
+        } else {
+            rvProducts.setVisibility(View.VISIBLE);
+            if (layoutEmptyState != null)
+                layoutEmptyState.setVisibility(View.GONE);
+            if (productAdapterRef != null)
+                productAdapterRef.setItems(items);
+        }
     }
 
     private void showSubFilters() {
@@ -599,7 +650,15 @@ public class MainActivity extends AppCompatActivity {
 
                         categories.clear();
 
+                        // ✅ ADDED: "All Listings" button at the start
+                        Map<String, Object> allCat = new HashMap<>();
+                        allCat.put("id", 0); // Special ID for "All"
+                        allCat.put("name", "All Listings");
+                        allCat.put("iconRes", R.drawable.ic_all_listings); // Custom dashboard/grid icon
+                        categories.add(allCat);
+
                         List<String> catNameKeys = new ArrayList<>();
+                        catNameKeys.add("All Listings");
 
                         if (arr != null) {
                             Log.d(TAG, "fetchCategories(): dataCount=" + arr.length());
@@ -691,6 +750,42 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "========== FETCH SUBFILTERS START ==========");
         Log.d(TAG, "fetchSubFilters(): categoryId=" + categoryId + " url=" + url);
         Log.d(TAG, "fetchSubFilters(): timestamp=" + System.currentTimeMillis());
+
+        // ✅ CHECK MEMORY CACHE
+        if (mapSubFilters.containsKey(categoryId)) {
+            Log.d(TAG, "fetchSubFilters(): MEMORY HIT for cat=" + categoryId);
+            List<Map<String, Object>> subs = mapSubFilters.get(categoryId);
+
+            rvSubFiltersGrid.setAdapter(new SubFilterGridAdapter(subs, sub -> {
+                selectedSubFilterId = toInt(sub.get("id"), 0);
+                clearSearch();
+                showProducts();
+
+                if (selectedSubFilterId > 0) {
+                    boolean hasNewOld = toBool(sub.get("hasNewOld"), false);
+                    if (hasNewOld && toggleNewOld != null)
+                        toggleNewOld.setVisibility(View.VISIBLE);
+                    else if (toggleNewOld != null) {
+                        toggleNewOld.setVisibility(View.GONE);
+                        showNew = null;
+                        toggleNewOld.clearChecked();
+                    }
+                } else {
+                    if (toggleNewOld != null) {
+                        toggleNewOld.setVisibility(View.GONE);
+                        showNew = null;
+                        toggleNewOld.clearChecked();
+                    }
+                }
+
+                productsInFlight = false;
+                lastProductsUrl = null;
+                fetchProducts();
+            }));
+
+            showSubFilters();
+            return; // SKIP API
+        }
 
         JsonObjectRequest req = new JsonObjectRequest(
                 Request.Method.GET,
@@ -815,150 +910,71 @@ public class MainActivity extends AppCompatActivity {
 
     private void fetchProducts() {
         final String url = urlProducts();
-
         Log.d(TAG, "========== FETCH PRODUCTS START ==========");
-        Log.d(TAG, "fetchProducts(): url=" + url);
-        Log.d(TAG, "fetchProducts(): timestamp=" + System.currentTimeMillis());
-        Log.d(TAG, "fetchProducts() filters: categoryId=" + selectedCategoryId
-                + " subId=" + selectedSubFilterId
-                + " showNew=" + showNew
-                + " q=" + searchQuery);
+        Log.d(TAG, "fetchProducts(): " + url);
 
-        // Prevent parallel duplicate calls
+        // ✅ CANCEL NON-CRITICAL PREVIOUS REQUESTS
         if (productsInFlight) {
-            Log.w(TAG, "fetchProducts(): skipped (already in flight)");
-            return;
+            Log.w(TAG, "fetchProducts(): Cancelling previous in-flight request to prioritize new one.");
+            VolleySingleton.getInstance(this).getQueue().cancelAll(TAG_FETCH_PRODUCTS);
         }
-
-        // If same URL already loaded successfully, skip
-        if (lastProductsUrl != null && lastProductsUrl.equals(url)) {
-            Log.w(TAG, "fetchProducts(): skipped (same as last success URL)");
-            return;
-        }
-
         productsInFlight = true;
+
+        // ✅ CHECK MEMORY CACHE
+        JSONObject cachedResp = productCache.get(url);
+        if (cachedResp != null) {
+            Log.d(TAG, "fetchProducts(): CACHE HIT! key=" + url);
+            try {
+                productsInFlight = false;
+                // Stop refresh if it was triggered
+                if (swipeRefresh != null)
+                    swipeRefresh.setRefreshing(false);
+
+                // Parse cached data
+                parseProductsResponse(cachedResp);
+                lastProductsUrl = url;
+                return;
+            } catch (Exception e) {
+                // error in cache parse? fallback to network
+            }
+        }
+
+        lastProductsUrl = url;
 
         JsonObjectRequest req = new JsonObjectRequest(
                 Request.Method.GET,
                 url,
                 null,
                 resp -> {
+                    Log.d(TAG, "fetchProducts() SUCCESS");
                     productsInFlight = false;
 
-                    Log.d(TAG, "========== FETCH PRODUCTS RESPONSE ==========");
-                    Log.d(TAG, "fetchProducts() response=" + safeJsonSnippet(resp));
-                    Log.d(TAG, "fetchProducts() response.status=" + resp.optString("status"));
-                    Log.d(TAG, "fetchProducts() response.has('data')=" + resp.has("data"));
+                    // Stop refresh logic
+                    if (swipeRefresh != null)
+                        swipeRefresh.setRefreshing(false);
 
-                    try {
-                        if (!"success".equalsIgnoreCase(resp.optString("status"))) {
-                            Log.e(TAG, "fetchProducts(): status != success, status=" + resp.optString("status"));
-                            makeText(this, I18n.t(this, "Products error"), Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-
-                        JSONArray arr = resp.optJSONArray("data");
-                        currentProducts.clear();
-
-                        if (arr != null) {
-                            Log.d(TAG, "fetchProducts(): dataCount=" + arr.length());
-
-                            for (int i = 0; i < arr.length(); i++) {
-                                JSONObject o = arr.getJSONObject(i);
-
-                                // Log first 3 products in detail, rest in summary
-                                if (i < 3) {
-                                    Log.d(TAG, "--- Product[" + i + "] RAW JSON: " + o.toString());
-                                }
-
-                                Map<String, Object> m = new HashMap<>();
-                                int prodId = o.optInt("id", 0);
-                                m.put("id", prodId);
-                                m.put("categoryId", o.optInt("category_id", 0));
-                                m.put("subFilterId", o.optInt("subcategory_id", 0));
-                                String title = o.optString("title", "");
-                                m.put("title", title);
-
-                                m.put("price",
-                                        o.opt("price") == null
-                                                ? ""
-                                                : String.valueOf(o.opt("price")));
-
-                                m.put("city", o.optString("city", ""));
-
-                                // ✅ FIXED: Comprehensive image URL handling with multiple fallbacks
-                                String imageUrl = "";
-
-                                // Priority 1: cover_image (from listing_media join)
-                                if (!o.isNull("cover_image")) {
-                                    imageUrl = o.optString("cover_image", "");
-                                }
-
-                                // Priority 2: image_url (fallback)
-                                if (TextUtils.isEmpty(imageUrl) && !o.isNull("image_url")) {
-                                    imageUrl = o.optString("image_url", "");
-                                }
-
-                                // Priority 3: image (fallback)
-                                if (TextUtils.isEmpty(imageUrl) && !o.isNull("image")) {
-                                    imageUrl = o.optString("image", "");
-                                }
-
-                                // ✅ Convert relative path to absolute URL
-                                imageUrl = makeAbsoluteImageUrl(imageUrl);
-                                m.put("imageUrl", imageUrl);
-
-                                if (i < 3) {
-                                    Log.d(TAG, "Product[" + i + "] id=" + prodId + " title=" + title);
-                                    Log.d(TAG,
-                                            "Product[" + i + "] cover_image=" + o.optString("cover_image", "<empty>"));
-                                    Log.d(TAG, "Product[" + i + "] image_url=" + o.optString("image_url", "<empty>"));
-                                    Log.d(TAG, "Product[" + i + "] image=" + o.optString("image", "<empty>"));
-                                    Log.d(TAG, "Product[" + i + "] ✅ FINAL imageUrl=" + imageUrl);
-                                    Log.d(TAG, "Product[" + i + "] imageUrl.length=" + imageUrl.length());
-                                    Log.d(TAG, "Product[" + i + "] imageUrl.startsWith('http')="
-                                            + imageUrl.startsWith("http"));
-                                }
-
-                                int rawIsNew = o.isNull("is_new") ? -1 : o.optInt("is_new", -1);
-                                boolean isNew = (rawIsNew == 1);
-                                m.put("isNew", isNew);
-
-                                currentProducts.add(m);
-                            }
-                        } else {
-                            Log.e(TAG, "fetchProducts(): data array is NULL!");
-                        }
-
-                        Log.d(TAG, "fetchProducts(): Total products parsed=" + currentProducts.size());
-                        Log.d(TAG, "fetchProducts(): Binding products to adapter...");
-                        bindProducts(new ArrayList<>(currentProducts));
-                        LoadingDialog.hideLoading();
-                        Log.d(TAG, "========== FETCH PRODUCTS COMPLETE ==========");
-
-                        if (tvSectionTitle != null) {
-                            tvSectionTitle.setText(I18n.t(this, getString(R.string.featured_listings)));
-                        }
-
-                        // ✅ mark success URL only after success
-                        lastProductsUrl = url;
-
-                    } catch (Exception e) {
-                        Log.e(TAG, "fetchProducts(): parse exception", e);
-                        makeText(this, I18n.t(this, "Parse products failed"), Toast.LENGTH_SHORT).show();
+                    if (resp != null) {
+                        productCache.put(url, resp);
+                        parseProductsResponse(resp);
                     }
                 },
                 err -> {
+                    Log.e(TAG, "fetchProducts() ERROR: " + err.toString());
                     productsInFlight = false;
-                    LoadingDialog.hideLoading();
 
-                    Log.e(TAG, "fetchProducts() error=" + buildVolleyError(err), err);
+                    // Stop refresh logic on error
+                    if (swipeRefresh != null)
+                        swipeRefresh.setRefreshing(false);
+
+                    // Show error toast
                     makeText(this, I18n.t(this, "Network error (products)"), Toast.LENGTH_SHORT).show();
 
-                    // allow retry next time
-                    // (do NOT set lastProductsUrl on error)
+                    // If we have no items, ensure empty state is visible (handled by bindProducts
+                    // usually, but if error happens before bind...)
+                    if (currentProducts.isEmpty()) {
+                        bindProducts(new ArrayList<>());
+                    }
                 }) {
-
             @Override
             public Map<String, String> getHeaders() {
                 HashMap<String, String> headers = new HashMap<>();
@@ -966,11 +982,70 @@ public class MainActivity extends AppCompatActivity {
                 headers.put("Accept-Language", I18n.lang(MainActivity.this));
                 return headers;
             }
-
         };
+
+        // Standard timeout
+        req.setRetryPolicy(new DefaultRetryPolicy(
+                10000,
+                1,
+                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+
         req.setShouldCache(false);
-        req.setRetryPolicy(new DefaultRetryPolicy(20000, 0, 1f));
+        req.setTag(TAG_FETCH_PRODUCTS); // ✅ TAG FOR CANCELLATION
         VolleySingleton.getInstance(this).add(req);
+    }
+
+    /**
+     * Helper to parse product response - logic extracted for reuse
+     */
+    private void parseProductsResponse(JSONObject resp) {
+        try {
+            if (!"success".equalsIgnoreCase(resp.optString("status"))) {
+                Log.e(TAG, "parseProductsResponse(): status != success");
+                makeText(this, I18n.t(this, "Products error"), Toast.LENGTH_SHORT).show();
+                bindProducts(new ArrayList<>()); // Force empty
+                return;
+            }
+
+            JSONArray arr = resp.optJSONArray("data");
+            currentProducts.clear();
+
+            if (arr != null) {
+                Log.d(TAG, "parseProductsResponse(): dataCount=" + arr.length());
+
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject o = arr.getJSONObject(i);
+                    Map<String, Object> m = new HashMap<>();
+                    int prodId = o.optInt("id", 0);
+                    m.put("id", prodId);
+                    m.put("categoryId", o.optInt("category_id", 0));
+                    m.put("subFilterId", o.optInt("subcategory_id", 0));
+                    m.put("title", o.optString("title", ""));
+                    m.put("price", String.valueOf(o.opt("price")));
+                    m.put("city", o.optString("city", ""));
+
+                    String imageUrl = "";
+                    if (!o.isNull("cover_image"))
+                        imageUrl = o.optString("cover_image", "");
+                    if (TextUtils.isEmpty(imageUrl) && !o.isNull("image_url"))
+                        imageUrl = o.optString("image_url", "");
+                    if (TextUtils.isEmpty(imageUrl) && !o.isNull("image"))
+                        imageUrl = o.optString("image", "");
+
+                    m.put("imageUrl", makeAbsoluteImageUrl(imageUrl));
+                    m.put("isNew", o.optInt("is_new", 0) == 1);
+
+                    currentProducts.add(m);
+                }
+            }
+
+            bindProducts(new ArrayList<>(currentProducts));
+            LoadingDialog.hideLoading();
+
+        } catch (Exception e) {
+            Log.e(TAG, "parseProductsResponse(): exception", e);
+            bindProducts(new ArrayList<>()); // Force empty on error
+        }
     }
 
     // ================= Back navigation =================

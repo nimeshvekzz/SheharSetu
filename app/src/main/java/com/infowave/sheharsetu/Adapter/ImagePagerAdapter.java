@@ -14,22 +14,31 @@ import com.infowave.sheharsetu.R;
 import java.util.List;
 
 public class ImagePagerAdapter extends RecyclerView.Adapter<ImagePagerAdapter.VH> {
-
-    private final Context ctx;
-    private final List<Object> sources; // String URL या Integer drawable
-
-    public ImagePagerAdapter(Context ctx, List<Object> sources) {
-        this.ctx = ctx;
-        this.sources = sources;
+    public interface OnItemClickListener {
+        void onClick(int position);
     }
 
-    @NonNull @Override
+    private final Context ctx;
+    private final List<Object> sources;
+    private final OnItemClickListener listener;
+
+    public ImagePagerAdapter(Context ctx, List<Object> sources, OnItemClickListener listener) {
+        this.ctx = ctx;
+        this.sources = sources;
+        this.listener = listener;
+    }
+
+    public ImagePagerAdapter(Context ctx, List<Object> sources) {
+        this(ctx, sources, null);
+    }
+
+    @NonNull
+    @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         ImageView iv = new ImageView(parent.getContext());
         iv.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-        ));
+                ViewGroup.LayoutParams.MATCH_PARENT));
         iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
         return new VH(iv);
     }
@@ -42,13 +51,21 @@ public class ImagePagerAdapter extends RecyclerView.Adapter<ImagePagerAdapter.VH
                 .placeholder(R.drawable.ic_placeholder_circle)
                 .error(R.drawable.ic_placeholder_circle)
                 .into(h.iv);
+
+        h.itemView.setOnClickListener(v -> {
+            if (listener != null)
+                listener.onClick(position);
+        });
     }
 
     @Override
-    public int getItemCount() { return sources.size(); }
+    public int getItemCount() {
+        return sources.size();
+    }
 
     static class VH extends RecyclerView.ViewHolder {
         ImageView iv;
+
         VH(@NonNull View itemView) {
             super(itemView);
             iv = (ImageView) itemView;

@@ -13,7 +13,7 @@
         android:text="Accept Terms"
         android:textStyle="bold"
         android:textSize="15sp"
-        android:textColor="@android:color/black"
+        android:textColor="@color/colorTextPrimary"
         android:paddingBottom="2dp"/>
 
     <androidx.appcompat.widget.AppCompatCheckBox
@@ -21,7 +21,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="You must accept terms to continue"
-        android:textColor="@color/ss_on_surface"
+        android:textColor="@color/colorTextPrimary"
         app:buttonTint="@color/checkbox_tint"/>
 
 </LinearLayout>

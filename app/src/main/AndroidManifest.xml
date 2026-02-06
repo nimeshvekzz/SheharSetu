@@ -57,6 +57,10 @@
             android:exported="false"
             android:theme="@style/Theme.SheharSetu.M3"/>
         <activity
+            android:name=".FullScreenImageActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SheharSetu.M3"/>
+        <activity
             android:name=".LanguageSelection"
             android:exported="false" />
         <activity

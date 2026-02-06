@@ -77,6 +77,9 @@
     <color name="colorTextSecondary">#4B5563</color>
     <color name="colorSurface">#FFFFFFFF</color>        <!-- white card -->
     <color name="colorDivider">#E5E7EB</color>
+    
+    <!-- Glass Background for Forms -->
+    <color name="colorGlass">#CCFFFFFF</color>          <!-- Semi-transparent White -->
 
     <!-- Status bar color for splash -->
     <color name="splashStatusBar">#B6CEB4</color>
@@ -94,4 +97,3 @@
     <!-- Ripple for light buttons -->
     <color name="ss_ripple_light">#33FFFFFF</color>
 </resources>
-

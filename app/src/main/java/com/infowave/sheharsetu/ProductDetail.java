@@ -183,7 +183,26 @@ public class ProductDetail extends AppCompatActivity {
     }
 
     private void setupGalleryShell() {
-        pagerAdapter = new ImagePagerAdapter(this, imageSources);
+        pagerAdapter = new ImagePagerAdapter(this, imageSources, pos -> {
+            ArrayList<String> urls = new ArrayList<>();
+            for (Object obj : imageSources) {
+                if (obj instanceof String) {
+                    urls.add((String) obj);
+                } else {
+                    // It's a resource (Integer)
+                    // We can't easily pass resource IDs to another activity expecting Strings
+                    // unless we handle it
+                    // For now, let's skip resources or convert to string URI
+                    urls.add("android.resource://" + getPackageName() + "/" + obj);
+                }
+            }
+            if (!urls.isEmpty()) {
+                Intent i = new Intent(ProductDetail.this, FullScreenImageActivity.class);
+                i.putStringArrayListExtra("images", urls);
+                i.putExtra("pos", pos);
+                startActivity(i);
+            }
+        });
         pdpImagePager.setAdapter(pagerAdapter);
         pdpImagePager.setClipToPadding(false);
         pdpImagePager.setClipChildren(false);
