@@ -38,6 +38,7 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.infowave.sheharsetu.Adapter.DynamicFormAdapter;
+import com.infowave.sheharsetu.core.SessionManager;
 import com.infowave.sheharsetu.net.ApiRoutes;
 import com.infowave.sheharsetu.net.VolleySingleton;
 import com.infowave.sheharsetu.utils.LoadingDialog;
@@ -523,8 +524,14 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                 public Map<String, String> getHeaders() {
                     HashMap<String, String> headers = new HashMap<>();
                     headers.put("Accept", "application/json");
-                    headers.put("Accept-Language", "en");
                     headers.put("Content-Type", "application/json");
+
+                    // JWT Authorization for secure listing creation
+                    SessionManager sm = new SessionManager(DynamicFormActivity.this);
+                    String token = sm.getAccessToken();
+                    if (token != null && !token.isEmpty()) {
+                        headers.put("Authorization", "Bearer " + token);
+                    }
                     return headers;
                 }
             };

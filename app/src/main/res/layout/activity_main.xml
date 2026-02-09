@@ -15,18 +15,18 @@
         android:layout_height="match_parent"
         android:background="?android:attr/colorBackground">
 
-        <!-- ===== HEADER (unchanged) ===== -->
+        <!-- ===== HEADER (banner image) ===== -->
         <ImageView
             android:id="@+id/topImage"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:scaleType="fitXY"
-            android:src="@drawable/hedar2"
+            android:scaleType="centerCrop"
+            android:src="@drawable/header_themed"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHeight_default="percent"
-            app:layout_constraintHeight_percent="0.10" />
+            app:layout_constraintHeight_percent="0.12" />
 
         <!-- Controls overlay (same bounds as header) -->
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -65,12 +65,13 @@
                 android:paddingTop="0dp"
                 android:paddingBottom="0dp"
                 app:boxBackgroundMode="none"
+                app:hintEnabled="false"
                 app:startIconDrawable="@drawable/ic_search_24"
-                app:startIconTint="?attr/colorOnSurface"
+                app:startIconTint="@color/colorTextSecondary"
                 app:startIconMinSize="24dp"
                 app:endIconMode="custom"
                 app:endIconDrawable="@drawable/ic_mic_24"
-                app:endIconTint="@color/white"
+                app:endIconTint="@color/colorTextSecondary"
                 app:endIconMinSize="24dp"
                 app:layout_constraintStart_toEndOf="@id/btnDrawer"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -88,7 +89,7 @@
                     android:singleLine="true"
                     android:textSize="16sp"
                     android:textColor="@color/colorTextPrimary"
-                    android:textColorHint="#CCFFFFFF"
+                    android:textColorHint="@color/colorTextSecondary"
                     android:gravity="center_vertical|start"
                     android:includeFontPadding="false"
                     android:paddingStart="10dp"

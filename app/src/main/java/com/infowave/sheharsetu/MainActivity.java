@@ -146,8 +146,8 @@ public class MainActivity extends AppCompatActivity {
         // Initialize cached user data from session immediately
         initCachedUserData();
 
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
-        getWindow().setStatusBarColor(android.graphics.Color.BLACK);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
         getWindow().setNavigationBarColor(android.graphics.Color.BLACK);
         new androidx.core.view.WindowInsetsControllerCompat(
                 getWindow(), getWindow().getDecorView()).setAppearanceLightStatusBars(false);
@@ -187,7 +187,9 @@ public class MainActivity extends AppCompatActivity {
         if (swipeRefresh != null) {
             swipeRefresh.setColorSchemeResources(R.color.colorPrimary);
             swipeRefresh.setOnRefreshListener(() -> {
-                // Clear cache/state if needed, then re-fetch
+                // Clear cache completely to force fresh fetch from server
+                productCache.evictAll();
+                lastProductsUrl = null;
                 productsInFlight = false;
                 fetchProducts();
             });
@@ -1137,6 +1139,7 @@ public class MainActivity extends AppCompatActivity {
      * ✅ KEPT: Original method - Fetch logged-in user profile from API and update UI
      * Network optimized with caching and proper error handling
      */
+    @SuppressLint("SetTextI18n")
     private void fetchUserProfile(TextView tvUserName, TextView tvUserPhone) {
         String accessToken = session.getAccessToken();
         if (TextUtils.isEmpty(accessToken)) {

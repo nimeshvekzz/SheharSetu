@@ -36,6 +36,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.infowave.sheharsetu.Adapter.ImagePagerAdapter;
+import com.infowave.sheharsetu.Adapter.SimilarAdapter;
 import com.infowave.sheharsetu.Adapter.ThumbAdapter;
 import com.infowave.sheharsetu.net.ApiRoutes;
 import com.infowave.sheharsetu.utils.LoadingDialog;
@@ -75,6 +76,11 @@ public class ProductDetail extends AppCompatActivity {
     // Bottom CTAs
     private MaterialButton pdpCall, pdpCallWhatsapp, pdpViewLocation;
 
+    // Similar listings
+    private RecyclerView pdpSimilarRv;
+    private SimilarAdapter similarAdapter;
+    private View similarSection;
+
     // Data holders (URLs या drawables दोनों सपोर्ट)
     private final List<Object> imageSources = new ArrayList<>();
 
@@ -90,6 +96,7 @@ public class ProductDetail extends AppCompatActivity {
     private String productDesc = "";
     private String sellerPhone = "";
     private int sellerId = 0;
+    private int categoryId = 0;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -103,6 +110,7 @@ public class ProductDetail extends AppCompatActivity {
         setupGalleryShell(); // adapters attach first
         setupStaticUi();
         setupClicks();
+        setupSimilarListings();
 
         // Insets for bottom bar
         View bottomBar = findViewById(R.id.bottomBar);
@@ -166,6 +174,13 @@ public class ProductDetail extends AppCompatActivity {
         pdpCall = findViewById(R.id.pdpCall);
         pdpCallWhatsapp = findViewById(R.id.pdpCallWhatsapp);
         pdpViewLocation = findViewById(R.id.pdpViewLocation);
+
+        // Similar listings
+        pdpSimilarRv = findViewById(R.id.pdpSimilarRv);
+        similarSection = findViewById(R.id.labelSimilar);
+        if (similarSection != null) {
+            similarSection = (View) similarSection.getParent().getParent(); // Get the card
+        }
     }
 
     @SuppressLint("SetTextI18n")
@@ -303,6 +318,7 @@ public class ProductDetail extends AppCompatActivity {
                         productCity = d.optString("city", "");
                         productDesc = d.optString("description", "");
                         postedWhen = d.optString("posted_when", "");
+                        categoryId = d.optInt("category_id", 0);
                         String listingStatus = d.optString("status", "active");
                         boolean isSold = "sold".equalsIgnoreCase(listingStatus);
 
@@ -375,6 +391,9 @@ public class ProductDetail extends AppCompatActivity {
                             // Fallback if no specific attributes found
                             addChip("Verified Listing");
                         }
+
+                        // Fetch similar listings
+                        fetchSimilarListings(listingId, categoryId);
 
                     } catch (Exception e) {
                         Log.e(TAG, "❌ PARSE ERROR: " + e.getMessage());
@@ -514,5 +533,81 @@ public class ProductDetail extends AppCompatActivity {
         } catch (ActivityNotFoundException e) {
             startActivity(new Intent(Intent.ACTION_VIEW, uri));
         }
+    }
+
+    /* -------------------- Similar Listings -------------------- */
+
+    private void setupSimilarListings() {
+        if (pdpSimilarRv == null)
+            return;
+
+        pdpSimilarRv.setLayoutManager(new LinearLayoutManager(this, RecyclerView.HORIZONTAL, false));
+        similarAdapter = new SimilarAdapter(this);
+        pdpSimilarRv.setAdapter(similarAdapter);
+
+        // Hide section initially until we have data
+        if (similarSection != null) {
+            similarSection.setVisibility(View.GONE);
+        }
+    }
+
+    private void fetchSimilarListings(int listingId, int catId) {
+        if (listingId <= 0)
+            return;
+
+        String url = ApiRoutes.BASE_URL + "/get_similar_listings.php?listing_id=" + listingId
+                + "&category_id=" + catId + "&limit=10";
+
+        Log.d(TAG, "Fetching similar listings: " + url);
+
+        StringRequest req = new StringRequest(
+                Request.Method.GET,
+                url,
+                resp -> {
+                    try {
+                        JSONObject root = new JSONObject(resp);
+                        if (!"success".equalsIgnoreCase(root.optString("status"))) {
+                            Log.e(TAG, "Similar listings error: " + root.optString("message"));
+                            return;
+                        }
+
+                        JSONArray arr = root.optJSONArray("data");
+                        if (arr == null || arr.length() == 0) {
+                            // No similar listings - hide section
+                            if (similarSection != null) {
+                                similarSection.setVisibility(View.GONE);
+                            }
+                            return;
+                        }
+
+                        // Parse listings
+                        List<java.util.Map<String, Object>> items = new ArrayList<>();
+                        for (int i = 0; i < arr.length(); i++) {
+                            JSONObject o = arr.getJSONObject(i);
+                            java.util.Map<String, Object> m = new java.util.HashMap<>();
+                            m.put("id", o.optInt("id", 0));
+                            m.put("title", o.optString("title", ""));
+                            m.put("price", o.optString("price", ""));
+                            m.put("city", o.optString("city", ""));
+                            m.put("image_url", o.optString("image_url", ""));
+                            items.add(m);
+                        }
+
+                        // Update adapter and show section
+                        if (similarAdapter != null) {
+                            similarAdapter.setItems(items);
+                        }
+                        if (similarSection != null && !items.isEmpty()) {
+                            similarSection.setVisibility(View.VISIBLE);
+                        }
+
+                    } catch (Exception e) {
+                        Log.e(TAG, "Similar listings parse error: " + e.getMessage());
+                    }
+                },
+                err -> Log.e(TAG, "Similar listings network error: " + err.toString()));
+
+        req.setShouldCache(false);
+        com.infowave.sheharsetu.net.VolleySingleton.queue(this).add(req);
     }
 }

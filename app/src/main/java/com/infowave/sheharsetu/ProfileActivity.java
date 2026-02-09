@@ -31,6 +31,8 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
+import com.infowave.sheharsetu.Adapter.LanguageAdapter;
+import com.infowave.sheharsetu.Adapter.LanguageManager;
 import com.infowave.sheharsetu.Adapter.MyListingsAdapter;
 import com.infowave.sheharsetu.core.SessionManager;
 import com.infowave.sheharsetu.net.ApiRoutes;
@@ -75,6 +77,10 @@ public class ProfileActivity extends AppCompatActivity {
     // Session
     private SessionManager session;
 
+    // Language Settings
+    private View layoutLanguage;
+    private TextView tvLanguageValue;
+
     // Cached user data for edit dialog
     private String cachedFullName = "";
     private String cachedSurname = "";
@@ -105,6 +111,7 @@ public class ProfileActivity extends AppCompatActivity {
         bindViews();
         setupToolbar();
         setupEditFab();
+        setupLanguageSettings();
         setupMyListings();
 
         // Fetch user profile from API
@@ -134,6 +141,10 @@ public class ProfileActivity extends AppCompatActivity {
         // FAB (bottom-right)
         btnEditToggle = findViewById(R.id.btnEditToggle);
 
+        // Language Settings
+        layoutLanguage = findViewById(R.id.layoutLanguage);
+        tvLanguageValue = findViewById(R.id.tvLanguageValue);
+
         // My Listings section
         rvMyListings = findViewById(R.id.rvMyListings);
         cardEmptyListings = findViewById(R.id.cardEmptyListings);
@@ -147,6 +158,150 @@ public class ProfileActivity extends AppCompatActivity {
 
     private void setupEditFab() {
         btnEditToggle.setOnClickListener(v -> showEditProfileBottomSheet());
+    }
+
+    /**
+     * Setup language settings row
+     */
+    private void setupLanguageSettings() {
+        // Show current language
+        if (tvLanguageValue != null) {
+            tvLanguageValue.setText(session.getLangName());
+        }
+
+        // Click listener for language row
+        if (layoutLanguage != null) {
+            layoutLanguage.setOnClickListener(v -> showLanguageBottomSheet());
+        }
+    }
+
+    /**
+     * Show language picker bottom sheet
+     */
+    private void showLanguageBottomSheet() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this,
+                com.google.android.material.R.style.ThemeOverlay_MaterialComponents_BottomSheetDialog);
+
+        View view = LayoutInflater.from(this).inflate(R.layout.sheet_language_picker, null, false);
+        dialog.setContentView(view);
+
+        RecyclerView rvLangs = view.findViewById(R.id.rvLanguages);
+        View progress = view.findViewById(R.id.progressLanguages);
+
+        // Language list
+        java.util.List<String[]> languages = new java.util.ArrayList<>();
+
+        // Adapter with selection callback
+        LanguageAdapter adapter = new LanguageAdapter(languages, lang -> {
+            // lang[0] = code, lang[1] = native_name
+            session.setLang(lang[0], lang[1]);
+
+            // Save to SharedPreferences (same key as LanguageSelection)
+            getSharedPreferences("sheharsetu_prefs", MODE_PRIVATE).edit()
+                    .putString("app_lang_code", lang[0])
+                    .putString("app_lang_name", lang[1])
+                    .apply();
+
+            // Apply language
+            LanguageManager.apply(this, lang[0]);
+
+            dialog.dismiss();
+
+            // Restart app for full effect
+            Toast.makeText(this, "Language changed to " + lang[1], Toast.LENGTH_SHORT).show();
+            restartApp();
+        });
+
+        rvLangs.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(this, 3));
+        rvLangs.setAdapter(adapter);
+
+        // Fetch languages from API
+        fetchLanguagesForPicker(languages, adapter, progress, rvLangs);
+
+        dialog.show();
+    }
+
+    /**
+     * Fetch languages from API for picker
+     */
+    private void fetchLanguagesForPicker(java.util.List<String[]> languages,
+            LanguageAdapter adapter,
+            View progress,
+            RecyclerView rvLangs) {
+        progress.setVisibility(View.VISIBLE);
+        rvLangs.setVisibility(View.INVISIBLE);
+
+        String url = ApiRoutes.GET_LANGUAGES;
+
+        com.android.volley.toolbox.StringRequest req = new com.android.volley.toolbox.StringRequest(
+                Request.Method.GET,
+                url,
+                response -> {
+                    progress.setVisibility(View.GONE);
+                    rvLangs.setVisibility(View.VISIBLE);
+
+                    try {
+                        org.json.JSONObject resp = new org.json.JSONObject(response.trim());
+                        if (!resp.optBoolean("ok", false))
+                            return;
+
+                        org.json.JSONArray arr = resp.optJSONArray("data");
+                        if (arr == null)
+                            return;
+
+                        languages.clear();
+                        int englishIndex = -1;
+
+                        for (int i = 0; i < arr.length(); i++) {
+                            org.json.JSONObject o = arr.optJSONObject(i);
+                            if (o == null)
+                                continue;
+                            if (o.optInt("enabled", 1) != 1)
+                                continue;
+
+                            String code = o.optString("code", "").trim();
+                            String nativeName = o.optString("native_name", "").trim();
+                            String englishName = o.optString("english_name", "").trim();
+
+                            if (code.isEmpty() || nativeName.isEmpty())
+                                continue;
+
+                            languages.add(new String[] { code, nativeName, englishName });
+
+                            if ("en".equalsIgnoreCase(code)) {
+                                englishIndex = languages.size() - 1;
+                            }
+                        }
+
+                        // Move English to top
+                        if (englishIndex > 0) {
+                            String[] en = languages.remove(englishIndex);
+                            languages.add(0, en);
+                        }
+
+                        adapter.notifyDataSetChanged();
+
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error parsing languages: " + e.getMessage());
+                    }
+                },
+                error -> {
+                    progress.setVisibility(View.GONE);
+                    Toast.makeText(this, "Failed to load languages", Toast.LENGTH_SHORT).show();
+                });
+
+        req.setRetryPolicy(new DefaultRetryPolicy(15000, 0, 1.0f));
+        VolleySingleton.getInstance(this).add(req);
+    }
+
+    /**
+     * Restart app to apply language change fully
+     */
+    private void restartApp() {
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        finishAffinity();
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.infowave.sheharsetu.Adapter;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.text.TextUtils;
@@ -62,6 +63,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.VH> {
         return new VH(v);
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     public void onBindViewHolder(@NonNull VH h, int pos) {
         Map<String, Object> p = items.get(pos);
@@ -129,11 +131,11 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.VH> {
                     if (h.vpImages != null && h.vpImages.getAdapter() != null) {
                         currentPage[0] = (currentPage[0] + 1) % imageCount;
                         h.vpImages.setCurrentItem(currentPage[0], true);
-                        autoSlideHandler.postDelayed(this, 3000); // 3 second interval
+                        autoSlideHandler.postDelayed(this, 5000); // 5 second interval
                     }
                 }
             };
-            autoSlideHandler.postDelayed(autoSlideRunnable, 3000);
+            autoSlideHandler.postDelayed(autoSlideRunnable, 5000);
 
             // Pause on touch, resume on release
             h.vpImages.getChildAt(0).setOnTouchListener((v, event) -> {
@@ -143,7 +145,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.VH> {
                         break;
                     case MotionEvent.ACTION_UP:
                     case MotionEvent.ACTION_CANCEL:
-                        autoSlideHandler.postDelayed(autoSlideRunnable, 3000);
+                        autoSlideHandler.postDelayed(autoSlideRunnable, 5000);
                         break;
                 }
                 return false;
