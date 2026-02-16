@@ -8,83 +8,43 @@
  * - listing_media table: media_id, listing_id, sort_order, media_url
  * - listing_attribute_value: lav_id, listing_id, attribute_id, value_text (for photos attribute_id=4006)
  */
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(E_ALL);
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth_middleware.php';
+
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');
 header('Expires: 0');
 
-// ==================== LOGGING SETUP ====================
-$LOG_FILE = __DIR__ . '/logs/get_user_listings.log';
-
-if (!is_dir(__DIR__ . '/logs')) {
-    mkdir(__DIR__ . '/logs', 0755, true);
-}
-
-// Base URL for images - use /api/ path since image paths are relative to API folder
+// Base URL for images
 $BASE_URL = 'https://magenta-owl-444153.hostingersite.com/api/';
 
-function writeLog($message, $level = 'INFO') {
-    global $LOG_FILE;
-    $timestamp = date('Y-m-d H:i:s');
-    $logEntry = "[$timestamp] [$level] $message" . PHP_EOL;
-    file_put_contents($LOG_FILE, $logEntry, FILE_APPEND | LOCK_EX);
+function ensure_absolute_url($path) {
+    if (empty($path)) return "";
+    if (strpos($path, 'http') === 0) return $path;
+    if (strpos($path, 'data:') === 0) return $path;
+    
+    // Detect raw Base64 (common headers: /9j for jpg, iVB for png, R0l for gif)
+    if (preg_match('/^(\/9j|iVB|R0l)/', $path)) {
+        $mime = 'image/jpeg';
+        if (strpos($path, 'iVB') === 0) $mime = 'image/png';
+        if (strpos($path, 'R0l') === 0) $mime = 'image/gif';
+        return "data:$mime;base64," . $path;
+    }
+
+    $base = defined('BASE_URL') ? BASE_URL : "https://magenta-owl-444153.hostingersite.com/api";
+    return $base . '/' . ltrim($path, '/');
 }
 
-// ==================== API START ====================
-writeLog("========== GET USER LISTINGS START ==========");
-writeLog("Request Method: " . $_SERVER['REQUEST_METHOD']);
-
-// Get the Authorization header
-$headers = getallheaders();
-$authHeader = $headers['Authorization'] ?? '';
-
-if (empty($authHeader) || !preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-    writeLog("No valid Bearer token", "ERROR");
-    json_out(['error' => 'Unauthorized - No token provided'], 401);
-}
-
-$token = $matches[1];
-writeLog("Token received");
+// ===================== JWT AUTHENTICATION =====================
+$userId = authenticate();
+// ===================== END JWT AUTHENTICATION =====================
 
 try {
-    // Decode JWT token
-    $parts = explode('.', $token);
-    if (count($parts) !== 3) {
-        json_out(['error' => 'Invalid token format'], 401);
-    }
-    
-    $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/')), true);
-    if (!$payload) {
-        json_out(['error' => 'Invalid token payload'], 401);
-    }
-    
-    // Get user_id from token
-    $userId = $payload['user_id'] ?? $payload['uid'] ?? $payload['sub'] ?? null;
-    writeLog("User ID from token: " . ($userId ?? "NULL"));
-    
-    if (!$userId) {
-        $pdo = pdo();
-        $stmt = $pdo->prepare("SELECT user_id FROM auth_tokens WHERE access_token = :token AND expires_at > NOW()");
-        $stmt->execute(['token' => $token]);
-        $tokenRow = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($tokenRow) {
-            $userId = $tokenRow['user_id'];
-        } else {
-            json_out(['error' => 'Invalid or expired token'], 401);
-        }
-    }
-    
-    writeLog("Fetching listings for user_id: $userId");
-    
     $pdo = pdo();
     
-    // Build main query - only use columns that exist for sure in listing table
+    // Build main query
     $query = "
         SELECT 
             l.listing_id,
@@ -101,13 +61,9 @@ try {
         ORDER BY l.created_at DESC
     ";
     
-    writeLog("Executing main query");
-    
     $stmt = $pdo->prepare($query);
     $stmt->execute(['user_id' => $userId]);
     $listings = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    writeLog("Found " . count($listings) . " listings");
     
     // Check if listing_media table exists and get its columns
     $hasMediaTable = false;
@@ -121,7 +77,6 @@ try {
             while ($row = $mediaColsResult->fetch(PDO::FETCH_ASSOC)) {
                 $mediaCols[] = $row['Field'];
             }
-            writeLog("listing_media columns: " . implode(', ', $mediaCols));
             
             // Find the URL column
             $possibleUrlCols = ['media_url', 'url', 'file_url', 'image_url', 'path', 'file_path'];
@@ -131,10 +86,9 @@ try {
                     break;
                 }
             }
-            writeLog("Media URL column: " . ($mediaUrlCol ?? "NOT FOUND"));
         }
     } catch (Exception $e) {
-        writeLog("Error checking listing_media: " . $e->getMessage(), "WARN");
+        // Ignore media table check errors
     }
     
     // Format listings with images
@@ -143,24 +97,17 @@ try {
         $imageUrl = '';
         $listingId = $listing['listing_id'];
         
-    // Method 1: Try listing_media table
+        // Method 1: Try listing_media table
         if ($hasMediaTable && $mediaUrlCol) {
             try {
                 $mediaStmt = $pdo->prepare("SELECT $mediaUrlCol FROM listing_media WHERE listing_id = :listing_id ORDER BY sort_order ASC LIMIT 1");
                 $mediaStmt->execute(['listing_id' => $listingId]);
                 $mediaRow = $mediaStmt->fetch(PDO::FETCH_ASSOC);
                 if ($mediaRow && !empty($mediaRow[$mediaUrlCol])) {
-                    $rawUrl = $mediaRow[$mediaUrlCol];
-                    // If it's a relative path, prepend base URL
-                    if (!preg_match('/^https?:\/\//i', $rawUrl) && !str_starts_with($rawUrl, 'data:')) {
-                        $imageUrl = rtrim($BASE_URL, '/') . '/' . ltrim($rawUrl, '/');
-                    } else {
-                        $imageUrl = $rawUrl;
-                    }
-                    writeLog("Got image from listing_media for listing $listingId: $imageUrl");
+                    $imageUrl = ensure_absolute_url($mediaRow[$mediaUrlCol]);
                 }
             } catch (Exception $e) {
-                writeLog("Error fetching media: " . $e->getMessage(), "WARN");
+                // Ignore
             }
         }
         
@@ -173,13 +120,11 @@ try {
                 if ($attrRow && !empty($attrRow['value_text'])) {
                     $photoData = json_decode($attrRow['value_text'], true);
                     if ($photoData && isset($photoData['cover'])) {
-                        // It's base64, prepend data URI
-                        $imageUrl = 'data:image/jpeg;base64,' . $photoData['cover'];
-                        writeLog("Got base64 image from attribute for listing $listingId");
+                        $imageUrl = ensure_absolute_url($photoData['cover']);
                     }
                 }
             } catch (Exception $e) {
-                writeLog("Error fetching attribute photo: " . $e->getMessage(), "WARN");
+                // Ignore
             }
         }
         
@@ -207,15 +152,14 @@ try {
         'listings' => $formattedListings
     ];
     
-    writeLog("SUCCESS - Returning " . count($formattedListings) . " listings", "SUCCESS");
     json_out($response, 200);
     
 } catch (PDOException $e) {
-    writeLog("DATABASE ERROR: " . $e->getMessage(), "ERROR");
-    json_out(['error' => 'Database error: ' . $e->getMessage()], 500);
+    error_log("❌ get_user_listings DB: " . $e->getMessage());
+    json_out(['error' => 'Database error'], 500);
 } catch (Exception $e) {
-    writeLog("EXCEPTION: " . $e->getMessage(), "ERROR");
-    json_out(['error' => 'Server error: ' . $e->getMessage()], 500);
+    error_log("❌ get_user_listings: " . $e->getMessage());
+    json_out(['error' => 'Server error'], 500);
 }
 
 function formatTimeAgo($datetime) {

@@ -60,16 +60,14 @@ public class CategorySelectActivity extends AppCompatActivity {
 
     private Category selectedCategory = null;
     private Subcategory selectedSub = null;
-    private String selectedCondition = null; // "new" / "used" / null
+    private String selectedCondition = null;
 
     private CategoryGridAdapter categoryAdapter;
     private SubcategoryGridAdapter subcategoryAdapter;
 
-    // === Locale prefs (same as LanguageSelection / I18n) ===
-    private static final String PREFS = LanguageSelection.PREFS; // "sheharsetu_prefs"
-    private static final String KEY_LANG = LanguageSelection.KEY_LANG_CODE; // "app_lang_code"
+    private static final String PREFS = LanguageSelection.PREFS;
+    private static final String KEY_LANG = LanguageSelection.KEY_LANG_CODE;
 
-    // === Smart caching ===
     private CategoryCache categoryCache;
 
     @Override
@@ -90,10 +88,9 @@ bindViews();
         setupLists();
         setupClicks();
 
-        // Initialize smart cache
         categoryCache = new CategoryCache(this);
 
-        // Smart caching: load cached categories first, then refresh from API
+
         loadCategoriesWithSmartCache();
         updateCtaState();
     }
@@ -261,15 +258,10 @@ startActivity(intent);
         }
     }
 
-    /**
-     * Smart caching: Load from cache first for instant UI, then refresh from API
-     */
     private void loadCategoriesWithSmartCache() {
-// Step 1: Try to load from cache immediately (instant UI)
         List<CategoryCache.CachedCategory> cachedCategories = categoryCache.loadCategories();
 
         if (!cachedCategories.isEmpty()) {
-// Convert cached data to our Category model
             categories.clear();
             List<String> catNameKeys = new ArrayList<>();
             for (CategoryCache.CachedCategory cached : cachedCategories) {
@@ -277,15 +269,12 @@ startActivity(intent);
                 catNameKeys.add(cached.name);
             }
 
-            // Update UI immediately with cached data
             I18n.prefetch(this, catNameKeys, () -> {
                 categoryAdapter.submit(mapToCategoryItems(categories));
 });
 
-            // Step 2: Refresh from API in background (no loading dialog)
             refreshCategoriesFromApi(false);
         } else {
-// No cache - show loading and fetch from API
             refreshCategoriesFromApi(true);
         }
     }
@@ -411,20 +400,14 @@ I18n.prefetch(this, catNameKeys, () -> {
         refreshCategoriesFromApi(true);
     }
 
-    /**
-     * Smart caching for subcategories: load from cache first, then refresh from API
-     */
     private void loadSubcategories(String catId) {
-        // Step 1: Check in-memory cache first (fastest)
         if (subMap.containsKey(catId)) {
             List<Subcategory> cached = subMap.get(catId);
 displaySubcategories(cached);
-            // Still refresh in background for freshness
             refreshSubcategoriesFromApi(catId, false);
             return;
         }
 
-        // Step 2: Check persistent cache (SharedPreferences)
         List<CategoryCache.CachedSubcategory> persistentCached = categoryCache.loadSubcategories(catId);
         if (persistentCached != null && !persistentCached.isEmpty()) {
 // Convert to Subcategory model
@@ -433,24 +416,17 @@ displaySubcategories(cached);
                 subs.add(new Subcategory(cs.id, cs.parentId, cs.name, cs.iconUrl, cs.requiresCondition));
             }
 
-            // Store in memory cache
             subMap.put(catId, subs);
 
-            // Display immediately
             displaySubcategories(subs);
 
-            // Refresh from API in background
             refreshSubcategoriesFromApi(catId, false);
             return;
         }
 
-        // Step 3: No cache found - fetch from API with loading dialog
 refreshSubcategoriesFromApi(catId, true);
     }
 
-    /**
-     * Display subcategories in the RecyclerView
-     */
     private void displaySubcategories(List<Subcategory> subs) {
         if (subs == null || subs.isEmpty()) {
             subcategoryAdapter.submit(new ArrayList<>());
@@ -547,11 +523,8 @@ for (int i = 0; i < dataArr.length(); i++) {
                             }
                         }
 
-                        // Save to persistent cache
                         categoryCache.saveSubcategories(catId, toCache);
-// Save to memory cache
                         subMap.put(catId, subs);
-// Update UI
                         if (showLoader)
                             LoadingDialog.hideLoading();
                         displaySubcategories(subs);

@@ -10,20 +10,16 @@ import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
 
-/**
- * Custom ImageView with support for zooming, panning, and double-tap to zoom.
- */
+
 public class TouchImageView extends androidx.appcompat.widget.AppCompatImageView {
 
     private Matrix matrix;
 
-    // We can be in one of these 3 states
     private static final int NONE = 0;
     private static final int DRAG = 1;
     private static final int ZOOM = 2;
     private int mode = NONE;
 
-    // Remember some things for zooming
     private PointF last = new PointF();
     private PointF start = new PointF();
     private float minScale = 1f;
@@ -99,7 +95,7 @@ public class TouchImageView extends androidx.appcompat.widget.AppCompatImageView
 
                 setImageMatrix(matrix);
                 invalidate();
-                return true; // indicate event was handled
+                return true;
             }
 
         });
@@ -176,9 +172,6 @@ public class TouchImageView extends androidx.appcompat.widget.AppCompatImageView
         viewWidth = MeasureSpec.getSize(widthMeasureSpec);
         viewHeight = MeasureSpec.getSize(heightMeasureSpec);
 
-        //
-        // Rescale image on rotation
-        //
         if (oldMeasuredHeight == viewWidth && oldMeasuredHeight == viewHeight
                 || viewWidth == 0 || viewHeight == 0)
             return;

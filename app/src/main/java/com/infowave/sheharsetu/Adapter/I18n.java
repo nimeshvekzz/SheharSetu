@@ -22,27 +22,15 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-/**
- * I18n helper:
- *  - Local cache (memory + SharedPreferences) for fast translations even on slow networks.
- *  - Bulk Google Translate calls (1 request for many strings).
- *  - Convenience methods to apply translated text/hints.
- *
- * NOTES:
- *  - Keys are the English UI strings (exactly as in XML/text).
- *  - If translation is not ready, t(ctx, key) returns key (English) as graceful fallback.
- */
 public final class I18n {
 
-    // ====== CONFIGURE THIS (you already shared the key) ======
+
     private static final String GOOGLE_TRANSLATE_API_KEY = "AIzaSyCkUxQSJ1jNt0q_CcugieFl5vezsNAUxe0";
     private static final String G_URL = "https://translation.googleapis.com/language/translate/v2";
 
     private static final String SP_NAME = "i18n_cache_v1";
     private static final int VOLLEY_TIMEOUT = 12000;
 
-    // Small in-memory LRU to accelerate repeated lookups during one session
     private static final int MEM_CACHE_CAP = 500;
     private static final Map<String, String> MEM = new LinkedHashMap<String, String>(MEM_CACHE_CAP, 0.75f, true) {
         @Override protected boolean removeEldestEntry(Map.Entry<String, String> eldest) { return size() > MEM_CACHE_CAP; }
@@ -50,14 +38,13 @@ public final class I18n {
 
     private I18n() {}
 
-    /** Current language code saved by your app. Defaults to "en". */
     public static String lang(Context ctx) {
         SharedPreferences sp = ctx.getSharedPreferences("sheharsetu_prefs", Context.MODE_PRIVATE);
         String code = sp.getString("app_lang_code", "en");
         return (code == null || code.trim().isEmpty()) ? "en" : code.trim();
     }
 
-    /** Return translation from cache (or the original key if not translated yet). */
+
     public static String t(Context ctx, String key) {
         if (key == null) return "";
         key = key.trim();
@@ -79,7 +66,6 @@ public final class I18n {
         return v;
     }
 
-    /** Convenience: set translated text to a TextView (uses current text as key). */
     public static void translateAndApplyText(TextView tv, Context ctx) {
         if (tv == null) return;
         CharSequence now = tv.getText();
@@ -87,7 +73,6 @@ public final class I18n {
         tv.setText(tr);
     }
 
-    /** Convenience: set translated hint to TextInputLayout via reflection-free call. */
     public static void translateAndApplyHint(com.google.android.material.textfield.TextInputLayout til, Context ctx) {
         if (til == null) return;
         CharSequence h = til.getHint();
@@ -95,7 +80,6 @@ public final class I18n {
         til.setHint(t(ctx, base));
     }
 
-    /** Prefetch a set of keys. Calls onReady when everything is cached (or immediately if already cached). */
     public static void prefetch(Context ctx, List<String> keys, Runnable onReady) {
         prefetch(ctx, keys, onReady, null);
     }
@@ -130,7 +114,6 @@ public final class I18n {
         }
         if (missing.isEmpty()) { if (onReady != null) onReady.run(); return; }
 
-        // Build one POST with many q=
         final String body;
         try {
             StringBuilder sb = new StringBuilder();
@@ -181,7 +164,6 @@ public final class I18n {
         VolleySingleton.getInstance(ctx).add(req);
     }
 
-    /** Utility to safely combine lists without duplicates. */
     public static List<String> concatUnique(List<String> a, List<String> b) {
         if (a == null && b == null) return Collections.emptyList();
         List<String> out = new ArrayList<>();

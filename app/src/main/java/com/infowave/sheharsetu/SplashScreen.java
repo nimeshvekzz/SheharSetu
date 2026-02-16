@@ -23,7 +23,6 @@ import android.widget.TextView;
 
 public class SplashScreen extends AppCompatActivity {
 
-    // कुल splash time (animation + routing)
     private static final long SPLASH_DELAY = 1800L; // 1.8s
 
     public static final String PREFS          = "sheharsetu_prefs";
@@ -37,16 +36,14 @@ public class SplashScreen extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash_screen);
 
-        // ---------- System UI / Status Bar ----------
-        // Content को edge-to-edge दिखाओ
+
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
 
-        // Status bar को आपके palette से set करो
+
         getWindow().setStatusBarColor(
                 ContextCompat.getColor(this, R.color.splashStatusBar)
         );
 
-        // Light background है, तो status bar पर dark icons
         WindowInsetsControllerCompat controller =
                 new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
         controller.setAppearanceLightStatusBars(true);
@@ -66,13 +63,11 @@ public class SplashScreen extends AppCompatActivity {
         ProgressBar progress = findViewById(R.id.progress);
         TextView tvLoading   = findViewById(R.id.tvLoading);
 
-        // ---------- Initial animation state ----------
-        // Logo card हल्का छोटा + invisible
         logoCard.setScaleX(0.85f);
         logoCard.setScaleY(0.85f);
         logoCard.setAlpha(0f);
 
-        // Texts initially transparent + थोड़ा नीचे
+
         tvAppName.setAlpha(0f);
         tvAppName.setTranslationY(18f);
 
@@ -82,9 +77,6 @@ public class SplashScreen extends AppCompatActivity {
         progress.setAlpha(0f);
         tvLoading.setAlpha(0f);
 
-        // ---------- Animations ----------
-
-        // 1) Logo smooth scale + fade-in
         logoCard.animate()
                 .alpha(1f)
                 .scaleX(1f)
@@ -103,7 +95,6 @@ public class SplashScreen extends AppCompatActivity {
                 .setInterpolator(new DecelerateInterpolator())
                 .start();
 
-        // 3) Tagline slide-up + fade-in
         tvTagline.animate()
                 .alpha(1f)
                 .translationY(0f)
@@ -127,7 +118,6 @@ public class SplashScreen extends AppCompatActivity {
                 .setInterpolator(new AccelerateDecelerateInterpolator())
                 .start();
 
-        // ---------- Navigation after splash delay ----------
         new Handler(Looper.getMainLooper()).postDelayed(this::routeNext, SPLASH_DELAY);
     }
 
@@ -162,7 +152,6 @@ public class SplashScreen extends AppCompatActivity {
         finish();
     }
 
-    /** Saved access token अभी भी valid है या नहीं check करे */
     private boolean hasValidToken(SharedPreferences sp) {
         String token = sp.getString(KEY_ACCESS, null);
         long expAt   = sp.getLong(KEY_ACCESS_EXP, 0L);

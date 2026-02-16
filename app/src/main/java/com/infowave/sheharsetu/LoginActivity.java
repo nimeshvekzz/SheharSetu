@@ -196,7 +196,19 @@ public class LoginActivity extends AppCompatActivity {
                     },
                     err -> {
                         LoadingDialog.hideLoading();
-                        Toast.makeText(this, I18n.t(this, "Network error"), Toast.LENGTH_SHORT).show();
+                        // Handle rate limiting (429) with server message
+                        if (err.networkResponse != null && err.networkResponse.statusCode == 429) {
+                            try {
+                                String body = new String(err.networkResponse.data, "UTF-8");
+                                JSONObject errObj = new JSONObject(body);
+                                String msg = errObj.optString("error", "Too many OTP requests. Please wait.");
+                                Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+                            } catch (Exception e) {
+                                Toast.makeText(this, "Too many OTP requests. Please wait.", Toast.LENGTH_LONG).show();
+                            }
+                        } else {
+                            Toast.makeText(this, I18n.t(this, "Network error"), Toast.LENGTH_SHORT).show();
+                        }
                         setSending(false);
                     }) {
                 @Override

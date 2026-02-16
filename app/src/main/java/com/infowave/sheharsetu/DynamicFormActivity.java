@@ -18,6 +18,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.content.pm.PackageManager;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -45,7 +46,13 @@ import com.infowave.sheharsetu.utils.LoadingDialog;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-
+import com.google.android.gms.common.api.ResolvableApiException;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsResponse;
+import com.google.android.gms.location.SettingsClient;
+import com.google.android.gms.tasks.Task;
+import androidx.activity.result.IntentSenderRequest;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.HashMap;
@@ -66,20 +73,29 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
 
     private DynamicFormAdapter adapter;
 
+    private com.google.android.material.textfield.TextInputEditText etAddress;
+    private com.google.android.material.textfield.TextInputEditText etVillageCity;
+    private com.google.android.material.textfield.TextInputLayout tilVillageCity;
+    private com.google.android.material.button.MaterialButton btnDetectLocation;
+
+    private Double detectedLatitude = null;
+    private Double detectedLongitude = null;
+    private String detectedState = null;
+    private String detectedDistrict = null;
+
     private String currentPhotoFieldKey;
     private String pendingLocationFieldKey;
 
     private FusedLocationProviderClient fused;
 
-    // user + category info (for create_listing.php)
+    private SettingsClient settingsClient;
+    private LocationSettingsRequest locationSettingsRequest;
+
     private long userId;
     private long categoryId;
     private long subcategoryId;
 
-    // Remember category name for title
     private String categoryName;
-
-    /* ---------------- Photo pickers ---------------- */
 
     private final ActivityResultLauncher<String> coverPicker = registerForActivityResult(
             new ActivityResultContracts.GetContent(), uri -> {
@@ -113,14 +129,23 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                 }
             });
 
-    /* ---------------- Permissions ---------------- */
-
     private final ActivityResultLauncher<String> locationPerm = registerForActivityResult(
             new ActivityResultContracts.RequestPermission(), granted -> {
                 if (granted)
-                    fillMyLocation(pendingLocationFieldKey);
+                    checkLocationSettingsAndDetect(pendingLocationFieldKey);
                 else
                     toast("Location permission denied");
+            });
+
+    private final ActivityResultLauncher<IntentSenderRequest> gpsResolutionLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartIntentSenderForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK) {
+                    // User enabled GPS, retry detection
+                    fetchLocationAndProcess(pendingLocationFieldKey);
+                } else {
+                    toast("GPS is required to detect location");
+                }
             });
 
     @SuppressLint("SetTextI18n")
@@ -134,6 +159,26 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         rvForm = findViewById(R.id.rvForm);
         btnSubmit = findViewById(R.id.btnSubmit);
 
+        // Bind location fields
+        etAddress = findViewById(R.id.etAddress);
+        etVillageCity = findViewById(R.id.etVillageCity);
+        tilVillageCity = findViewById(R.id.tilVillageCity);
+        btnDetectLocation = findViewById(R.id.btnDetectLocation);
+
+        // Auto-scroll to location fields when keyboard opens
+        View.OnFocusChangeListener scrollToFocus = (v, hasFocus) -> {
+            if (hasFocus) {
+                // Delay to let the keyboard finish appearing, then scroll into view
+                v.postDelayed(() -> {
+                    android.graphics.Rect rect = new android.graphics.Rect();
+                    v.getDrawingRect(rect);
+                    v.requestRectangleOnScreen(rect, false);
+                }, 350);
+            }
+        };
+        etAddress.setOnFocusChangeListener(scrollToFocus);
+        etVillageCity.setOnFocusChangeListener(scrollToFocus);
+
         // Setup toolbar with back navigation
         toolbar = findViewById(R.id.toolbar);
         if (toolbar != null) {
@@ -141,10 +186,10 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
             toolbar.setNavigationOnClickListener(v -> onBackPressed());
         }
 
-        // XML me agar enabled=false hai to bhi yahan se control lenge
         btnSubmit.setEnabled(false);
 
         fused = LocationServices.getFusedLocationProviderClient(this);
+        setupLocationSettings();
 
         Intent intent = getIntent();
 
@@ -155,8 +200,6 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         categoryName = category;
         tvTitle.setText("Sell in " + categoryName);
 
-        // --------- READ category_id / subcategory_id safely (String or Long)
-        // ----------
         String catIdStr = intent.getStringExtra("category_id");
         String subIdStr = intent.getStringExtra("subcategory_id");
         // if coming as String (current case)
@@ -177,8 +220,6 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
             }
         }
 
-        // ✅ user_id from SharedPreferences (set after login/OTP verify)
-        // Same prefs file as SplashScreen / LoginActivity
         SharedPreferences prefs = getSharedPreferences(SplashScreen.PREFS, MODE_PRIVATE);
         userId = prefs.getLong("user_id", 0L);
         rvForm.setLayoutManager(new LinearLayoutManager(this));
@@ -186,18 +227,42 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         // Load schema from server (DB-based) ONLY.
         loadSchemaFromServer(categoryId, subcategoryId);
 
-        btnSubmit.setOnClickListener(v -> {
+        // Detect My Location button
+        btnDetectLocation.setOnClickListener(v -> {
+            if (ActivityCompat.checkSelfPermission(this,
+                    Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                locationPerm.launch(Manifest.permission.ACCESS_FINE_LOCATION);
+            } else {
+                checkLocationSettingsAndDetect(null);
+            }
+        });
+
+        btnSubmit.setOnClickListener(v ->
+
+        {
             if (adapter == null) {
                 toast("Form is not ready yet, please wait...");
                 Log.e(TAG, "Submit pressed but adapter is null");
                 return;
             }
+
+            // Validate location: Village/City is required
+            String villageCityText = etVillageCity.getText().toString().trim();
+            if (villageCityText.isEmpty()) {
+                tilVillageCity.setError("Please enter village or city name");
+                toast("Village/City is required");
+                return;
+            } else {
+                tilVillageCity.setError(null);
+            }
+
             JSONObject result = adapter.validateAndBuildResult();
             if (result == null) {
                 toast("Please complete required fields correctly.");
                 Log.e(TAG, "validateAndBuildResult() returned null");
                 return;
             }
+            Log.d(TAG, "Final JSON before submit: " + result.toString());
             submitListing(result);
         });
 
@@ -229,11 +294,6 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         }
     }
 
-    /**
-     * Load form schema from backend (get_form_schema.php) using categoryId +
-     * subcategoryId.
-     * Yahin par hum decide karenge ki is_new SWITCH dikhana hai ya nahi.
-     */
     private void loadSchemaFromServer(long categoryId, long subcategoryId) {
         if (categoryId <= 0) {
             String msg = "Category info missing (categoryId<=0). Cannot load dynamic schema.";
@@ -288,7 +348,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                                 supportsCondition = true;
                             }
                         }
-                        // Fallback: agar subcategory me nahi ho to category se dekh lo
+
                         if (!supportsCondition && catObj != null) {
                             int scInt = catObj.optInt("supports_condition", -1);
                             boolean scBool = catObj.optBoolean("supports_condition", false);
@@ -318,9 +378,6 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                             boolean required = field.optBoolean("required", false);
                             String unit = field.optString("unit", "");
 
-                            // 🔥 IMPORTANT:
-                            // Agar yeh is_new field hai aur supportsCondition = false,
-                            // to is field ko UI me show hi nahi karna.
                             if ("is_new".equalsIgnoreCase(key) && !supportsCondition) {
                                 continue;
                             }
@@ -387,6 +444,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                     toast("Unable to load form. Please try again.");
                     btnSubmit.setEnabled(false);
                 }) {
+
             @Override
             public Map<String, String> getHeaders() {
                 HashMap<String, String> headers = new HashMap<>();
@@ -394,12 +452,10 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                 headers.put("Accept-Language", "en");
                 return headers;
             }
-        };
 
+        };
         VolleySingleton.getInstance(this).add(req);
     }
-
-    /* ================== Callbacks from Adapter ================== */
 
     @Override
     public void pickCoverPhoto(String fieldKey) {
@@ -426,8 +482,6 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         toast(msg);
     }
 
-    /* ================== Networking: submit listing ================== */
-
     private void submitListing(JSONObject formResult) {
         long effectiveUserId = userId;
 
@@ -442,42 +496,131 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
             return;
         }
 
+        // Get location text
+        String addressText = etAddress.getText().toString().trim();
+        String villageCityText = etVillageCity.getText().toString().trim();
+
+        // If GPS was NOT used (detectedLatitude is null) and user typed a location,
+        // geocode it on Android side BEFORE sending to backend
+        if ((detectedLatitude == null || detectedLongitude == null) && !villageCityText.isEmpty()) {
+            btnSubmit.setEnabled(false);
+            LoadingDialog.showLoading(this, "Detecting location from text...");
+
+            new Thread(() -> {
+                try {
+                    Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+                    // Add "Gujarat, India" for better accuracy
+                    String searchQuery = villageCityText;
+                    if (!searchQuery.toLowerCase().contains("gujarat")) {
+                        searchQuery += ", Gujarat";
+                    }
+                    if (!searchQuery.toLowerCase().contains("india")) {
+                        searchQuery += ", India";
+                    }
+
+                    Log.d(TAG, "Android Geocoder: searching for '" + searchQuery + "'");
+                    java.util.List<Address> results = geocoder.getFromLocationName(searchQuery, 1);
+
+                    runOnUiThread(() -> {
+                        if (results != null && !results.isEmpty()) {
+                            Address addr = results.get(0);
+                            detectedLatitude = addr.getLatitude();
+                            detectedLongitude = addr.getLongitude();
+
+                            // Also extract state/district if not already set
+                            if (detectedState == null || detectedState.isEmpty()) {
+                                detectedState = addr.getAdminArea();
+                            }
+                            if (detectedDistrict == null || detectedDistrict.isEmpty()) {
+                                detectedDistrict = addr.getSubAdminArea();
+                            }
+
+                            Log.d(TAG, "Android Geocoder: SUCCESS → " + detectedLatitude + ", " + detectedLongitude);
+                            toast("Location found: " + addr.getLocality());
+
+                            // Now proceed with actual submission
+                            LoadingDialog.hideLoading();
+                            doSubmitListing(formResult, addressText, villageCityText);
+                        } else {
+                            Log.w(TAG, "Android Geocoder: no results for '" + villageCityText + "'");
+                            LoadingDialog.hideLoading();
+                            // Still proceed — backend has fallback geocoding
+                            toast("Location not found precisely, submitting anyway...");
+                            doSubmitListing(formResult, addressText, villageCityText);
+                        }
+                    });
+                } catch (Exception e) {
+                    Log.e(TAG, "Android Geocoder failed", e);
+                    runOnUiThread(() -> {
+                        LoadingDialog.hideLoading();
+                        // Proceed anyway — backend will try its own geocoding
+                        toast("Geocoding failed, submitting anyway...");
+                        doSubmitListing(formResult, addressText, villageCityText);
+                    });
+                }
+            }).start();
+        } else {
+            // GPS was used or no location text — submit directly
+            doSubmitListing(formResult, addressText, villageCityText);
+        }
+    }
+
+    /**
+     * Actually send the listing to the backend (called after geocoding if needed)
+     */
+    private void doSubmitListing(JSONObject formResult, String addressText, String villageCityText) {
         try {
             JSONObject payload = new JSONObject();
-            payload.put("user_id", effectiveUserId);
+            payload.put("user_id", userId);
             payload.put("category_id", categoryId);
             if (subcategoryId > 0)
                 payload.put("subcategory_id", subcategoryId);
 
             String title = buildTitleFromForm(formResult);
             payload.put("title", title);
+
+            // Add location data to form_data
+            if (!addressText.isEmpty()) {
+                formResult.put("address", addressText);
+            }
+            if (!villageCityText.isEmpty()) {
+                formResult.put("village_name", villageCityText);
+            }
+
+            // Include lat/lng (from GPS or Android-side geocoding)
+            if (detectedLatitude != null && detectedLongitude != null) {
+                formResult.put("latitude", detectedLatitude);
+                formResult.put("longitude", detectedLongitude);
+            }
+            // Always send state — fallback to "Gujarat" for manual entry (no GPS)
+            if (detectedState != null && !detectedState.isEmpty()) {
+                formResult.put("state", detectedState);
+            } else {
+                formResult.put("state", "Gujarat");
+            }
+            if (detectedDistrict != null && !detectedDistrict.isEmpty()) {
+                formResult.put("district", detectedDistrict);
+            }
+
             payload.put("form_data", formResult);
 
-            // 🔥 NEW/USED handling: read from dynamic form (boolean SWITCH field "is_new")
             int isNewValue = 0; // default = used
-            try {
-                if (formResult.has("is_new")) {
-                    Object v = formResult.get("is_new");
-                    if (v instanceof Boolean) {
-                        isNewValue = ((Boolean) v) ? 1 : 0;
-                    } else {
-                        String s = String.valueOf(v).trim();
-                        if ("1".equals(s) ||
-                                "true".equalsIgnoreCase(s) ||
-                                "yes".equalsIgnoreCase(s) ||
-                                "new".equalsIgnoreCase(s)) {
-                            isNewValue = 1;
-                        } else {
-                            isNewValue = 0;
-                        }
+            if (formResult.has("is_new")) {
+                Object v = formResult.opt("is_new");
+                if (v instanceof Boolean) {
+                    isNewValue = ((Boolean) v) ? 1 : 0;
+                } else {
+                    String s = String.valueOf(v).trim().toLowerCase();
+                    if (s.equals("1") || s.equals("true") || s.equals("yes") || s.equals("new")) {
+                        isNewValue = 1;
                     }
                 }
-            } catch (Exception e) {
-                isNewValue = 0;
             }
             payload.put("is_new", isNewValue);
             btnSubmit.setEnabled(false);
             LoadingDialog.showLoading(this, "Submitting listing...");
+
+            Log.d(TAG, "Final payload: " + payload.toString());
 
             JsonObjectRequest req = new JsonObjectRequest(
                     Request.Method.POST,
@@ -520,6 +663,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                         }
                         toast(errorMsg);
                     }) {
+
                 @Override
                 public Map<String, String> getHeaders() {
                     HashMap<String, String> headers = new HashMap<>();
@@ -545,7 +689,6 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         }
     }
 
-    /** Title helper */
     private String buildTitleFromForm(JSONObject form) {
         try {
             String brand = form.optString("brand", "").trim();
@@ -580,8 +723,6 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         }
     }
 
-    /* ================== Helpers ================== */
-
     private void requestReadPhotoPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT >= 33) {
         } else {
@@ -590,48 +731,211 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         }
     }
 
-    private void fillMyLocation(String fieldKey) {
-        if (fieldKey == null || adapter == null) {
-            Log.e(TAG, "fillMyLocation aborted: fieldKey or adapter is null");
+    private com.google.android.gms.location.LocationCallback locationCallback;
+
+    @SuppressLint("MissingPermission")
+    private void fetchLocationAndProcess(String fieldKey) {
+        // 1. Check Perms
+        if (ActivityCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            this.pendingLocationFieldKey = fieldKey;
+            locationPerm.launch(Manifest.permission.ACCESS_FINE_LOCATION);
             return;
         }
-        try {
-            fused.getLastLocation().addOnSuccessListener(loc -> {
-                if (loc == null) {
-                    toast("Unable to fetch location");
-                    Log.e(TAG, "getLastLocation returned null");
-                    return;
-                }
-                try {
-                    Geocoder geo = new Geocoder(this, Locale.getDefault());
-                    java.util.List<Address> res = geo.getFromLocation(
-                            loc.getLatitude(), loc.getLongitude(), 1);
-                    String addr;
-                    if (res != null && !res.isEmpty()) {
-                        Address a = res.get(0);
-                        String locality = a.getLocality() == null ? "" : a.getLocality();
-                        String admin = a.getAdminArea() == null ? "" : a.getAdminArea();
-                        addr = (locality + (admin.isEmpty() ? "" : ", " + admin)).trim();
-                        if (addr.isEmpty())
-                            addr = a.getFeatureName();
+
+        LocationRequest locationRequest = LocationRequest.create()
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+                .setInterval(1000)
+                .setFastestInterval(500)
+                .setNumUpdates(5); // Try 5 updates then stop
+
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
+                .addLocationRequest(locationRequest);
+
+        settingsClient.checkLocationSettings(builder.build())
+                .addOnSuccessListener(this, locationSettingsResponse -> {
+                    // Settings OK -> Fetch Location
+                    startLocationUpdates(fieldKey);
+                })
+                .addOnFailureListener(this, e -> {
+                    if (e instanceof ResolvableApiException) {
+                        try {
+                            ResolvableApiException resolvable = (ResolvableApiException) e;
+                            this.pendingLocationFieldKey = fieldKey;
+                            IntentSenderRequest isr = new IntentSenderRequest.Builder(resolvable.getResolution())
+                                    .build();
+                            gpsResolutionLauncher.launch(isr);
+                        } catch (Exception sendEx) {
+                            // Ignore
+                        }
                     } else {
-                        addr = loc.getLatitude() + "," + loc.getLongitude();
+                        toast("GPS is off and cannot be resolved");
                     }
-                    adapter.setTextAnswer(fieldKey, addr);
-                    toast("Location set");
-                } catch (Exception e) {
-                    Log.e(TAG, "Geocoder failed", e);
-                    toast("Geocoder failed");
-                }
-            });
-        } catch (SecurityException e) {
-            Log.e(TAG, "SecurityException in fillMyLocation", e);
-        }
+                });
     }
 
-    /**
-     * Convert selected image URI into Base64 (JPEG, resized if very large).
-     */
+    @SuppressLint("MissingPermission")
+    private void startLocationUpdates(String fieldKey) {
+        LoadingDialog.showLoading(this, "Detecting location (Please wait)...");
+
+        // Prepare Request
+        LocationRequest request = LocationRequest.create()
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+                .setInterval(1000)
+                .setNumUpdates(10) // Give it a few tries
+                .setExpirationDuration(15000); // Stop after 15 sec
+
+        locationCallback = new com.google.android.gms.location.LocationCallback() {
+            @Override
+            public void onLocationResult(com.google.android.gms.location.LocationResult locationResult) {
+                if (locationResult == null)
+                    return;
+                for (android.location.Location loc : locationResult.getLocations()) {
+                    if (loc != null) {
+                        // Got a location!
+                        fused.removeLocationUpdates(locationCallback); // Stop updating
+                        processLocation(loc, fieldKey);
+                        return;
+                    }
+                }
+            }
+        };
+
+        fused.requestLocationUpdates(request, locationCallback, android.os.Looper.getMainLooper());
+    }
+
+    private void processLocation(android.location.Location loc, String fieldKey) {
+        if (loc == null) {
+            LoadingDialog.hideLoading();
+            toast("Unable to get current location. Please try again.");
+            return;
+        }
+
+        detectedLatitude = loc.getLatitude();
+        detectedLongitude = loc.getLongitude();
+
+        new Thread(() -> {
+            try {
+                Geocoder geo = new Geocoder(this, Locale.getDefault());
+                java.util.List<Address> res = geo.getFromLocation(
+                        loc.getLatitude(), loc.getLongitude(), 1);
+
+                runOnUiThread(() -> {
+                    LoadingDialog.hideLoading();
+                    if (res != null && !res.isEmpty()) {
+                        Address addr = res.get(0);
+
+                        String locality = addr.getLocality(); // City (e.g. "Ahmedabad")
+                        String subLocality = addr.getSubLocality(); // Area (e.g. "Gota", "SG Highway")
+                        String adminArea = addr.getAdminArea(); // State
+                        String subAdminArea = addr.getSubAdminArea(); // District
+
+                        // Use getAddressLine(0) for the most detailed address
+                        // This often includes nearby landmarks, road names, etc.
+                        String detailedAddress = addr.getAddressLine(0);
+
+                        // Update UI
+                        if (fieldKey != null) {
+                            // Dynamic field (e.g. inside form)
+                            String val = (detailedAddress != null && !detailedAddress.isEmpty())
+                                    ? detailedAddress
+                                    : loc.getLatitude() + "," + loc.getLongitude();
+                            adapter.setTextAnswer(fieldKey, val);
+                            toast("Location captured");
+                        } else {
+                            // Static fields (Listing location)
+                            detectedState = adminArea;
+                            detectedDistrict = subAdminArea;
+
+                            // Village/City: Show the most local area + city
+                            // Priority: subLocality > thoroughfare > featureName > first part of
+                            // addressLine
+                            String areaName = subLocality; // e.g. "Gota", "SG Highway"
+
+                            if (areaName == null || areaName.isEmpty()) {
+                                // Try thoroughfare (street/road name)
+                                areaName = addr.getThoroughfare();
+                            }
+                            if (areaName == null || areaName.isEmpty()) {
+                                // Try featureName (building, POI, landmark)
+                                String feature = addr.getFeatureName();
+                                // Avoid using pure numbers (house numbers) as area name
+                                if (feature != null && !feature.isEmpty() && !feature.matches("\\d+")) {
+                                    areaName = feature;
+                                }
+                            }
+                            if ((areaName == null || areaName.isEmpty()) && detailedAddress != null) {
+                                // Extract first part before the city name from the full address line
+                                // e.g. "Cluster_khodiyar 1 Sardhar Dham, Cluster_khodiyar 1, Ahmedabad..."
+                                // → take "Cluster_khodiyar 1 Sardhar Dham"
+                                String[] parts = detailedAddress.split(",");
+                                if (parts.length >= 2 && locality != null) {
+                                    // Use first segment that is NOT the city, state, or country
+                                    for (String part : parts) {
+                                        String trimmed = part.trim();
+                                        if (!trimmed.isEmpty()
+                                                && !trimmed.equalsIgnoreCase(locality)
+                                                && !trimmed.equalsIgnoreCase(adminArea)
+                                                && !trimmed.equals("India")
+                                                && !trimmed.matches(".*\\d{6}.*")) { // skip pincode segments
+                                            areaName = trimmed;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Build final Village/City string: "Area, City"
+                            StringBuilder villageCityBuilder = new StringBuilder();
+                            if (areaName != null && !areaName.isEmpty()) {
+                                villageCityBuilder.append(areaName);
+                            }
+                            if (locality != null && !locality.isEmpty()) {
+                                // Don't duplicate if area IS the city
+                                if (!locality.equalsIgnoreCase(areaName)) {
+                                    if (villageCityBuilder.length() > 0)
+                                        villageCityBuilder.append(", ");
+                                    villageCityBuilder.append(locality);
+                                }
+                            }
+                            String cityVal = villageCityBuilder.toString();
+                            if (cityVal.isEmpty() && locality != null) {
+                                cityVal = locality;
+                            }
+
+                            if (!cityVal.isEmpty())
+                                etVillageCity.setText(cityVal);
+
+                            // Address: Use the detailed address line with landmarks
+                            if (detailedAddress != null && !detailedAddress.isEmpty()) {
+                                etAddress.setText(detailedAddress);
+                            }
+
+                            toast("Location detected: " + (cityVal.isEmpty() ? "Coordinates set" : cityVal));
+                        }
+                    } else {
+                        // Fallback if geocoding returns empty
+                        if (fieldKey != null) {
+                            adapter.setTextAnswer(fieldKey, loc.getLatitude() + "," + loc.getLongitude());
+                        }
+                        toast("Location coordinates captured (Address not found)");
+                    }
+                });
+
+            } catch (Exception e) {
+                Log.e(TAG, "Geocoder failed", e);
+                runOnUiThread(() -> {
+                    // Fallback on error
+                    if (fieldKey != null) {
+                        adapter.setTextAnswer(fieldKey, loc.getLatitude() + "," + loc.getLongitude());
+                    }
+                    toast("Location captured (Geocoding failed)");
+                    LoadingDialog.hideLoading();
+                });
+            }
+        }).start();
+    }
+
     private String encodeImageToBase64(Uri uri) {
         try {
             InputStream is = getContentResolver().openInputStream(uri);
@@ -662,8 +966,18 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
             }
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 75, baos);
+
+            // Iteratively reduce quality if still > 500KB
+            int quality = 75;
+            while (baos.toByteArray().length > 500 * 1024 && quality > 40) {
+                baos.reset();
+                quality -= 10;
+                bitmap.compress(Bitmap.CompressFormat.JPEG, quality, baos);
+            }
+
             byte[] bytes = baos.toByteArray();
+            Log.d(TAG, "Image compressed: " + bytes.length / 1024 + "KB at quality " + quality);
             String base64 = Base64.encodeToString(bytes, Base64.NO_WRAP);
             return base64;
 
@@ -720,9 +1034,39 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         Toast.makeText(this, s, Toast.LENGTH_SHORT).show();
     }
 
-    /*
-     * NOTE:
-     * Static buildSchema / fallback completely removed.
-     * Ab sirf DB se dynamic schema hi chalega.
-     */
+    private void setupLocationSettings() {
+        settingsClient = LocationServices.getSettingsClient(this);
+        LocationRequest locationRequest = LocationRequest.create();
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        locationRequest.setInterval(10000);
+
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
+                .addLocationRequest(locationRequest);
+        builder.setAlwaysShow(true); // Important: show 'Turn On' dialog even if settings are sufficient
+        locationSettingsRequest = builder.build();
+    }
+
+    private void checkLocationSettingsAndDetect(String fieldKey) {
+        pendingLocationFieldKey = fieldKey;
+        Task<LocationSettingsResponse> task = settingsClient.checkLocationSettings(locationSettingsRequest);
+        task.addOnSuccessListener(this, response -> {
+            // GPS is ALREADY ON -> Proceed to detect
+            fetchLocationAndProcess(fieldKey);
+        });
+
+        task.addOnFailureListener(this, e -> {
+            // GPS is OFF -> Show Popup
+            if (e instanceof ResolvableApiException) {
+                try {
+                    ResolvableApiException resolvable = (ResolvableApiException) e;
+                    IntentSenderRequest isr = new IntentSenderRequest.Builder(resolvable.getResolution()).build();
+                    gpsResolutionLauncher.launch(isr);
+                } catch (Exception sendEx) {
+                    toast("Please turn on GPS manually");
+                }
+            } else {
+                toast("Please turn on GPS manually");
+            }
+        });
+    }
 }

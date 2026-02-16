@@ -58,7 +58,6 @@ public class SubFilterGridAdapter extends RecyclerView.Adapter<SubFilterGridAdap
             h.tv.setText("");
         }
 
-        // Icon: prefer local resource (for "All"), otherwise load URL with Glide
         if (iconRes != 0) {
             h.img.setImageResource(iconRes);
         } else if (!TextUtils.isEmpty(iconUrl)) {

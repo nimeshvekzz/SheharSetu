@@ -55,6 +55,15 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.VH> {
         notifyDataSetChanged();
     }
 
+    /** Append items for infinite scroll pagination */
+    public void addItems(List<Map<String, Object>> list) {
+        if (list == null || list.isEmpty())
+            return;
+        int start = items.size();
+        items.addAll(list);
+        notifyItemRangeInserted(start, list.size());
+    }
+
     @NonNull
     @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -72,34 +81,31 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.VH> {
         String title = getString(p, "title", "");
         String price = getString(p, "price", "");
         String city = getString(p, "city", "");
-        int id = getInt(p, "id", 0); // Try 'id' first
+        int id = getInt(p, "id", 0);
         if (id == 0)
-            id = getInt(p, "listing_id", 0); // Try 'listing_id' fallback
+            id = getInt(p, "listing_id", 0);
 
         h.title.setText(title);
         h.price.setText(price);
         h.city.setText(city);
 
-        // --- SOLD badge ---
         String status = getString(p, "status", "active");
         boolean isSold = "sold".equalsIgnoreCase(status);
         if (h.soldBadge != null) {
             h.soldBadge.setVisibility(isSold ? View.VISIBLE : View.GONE);
         }
 
-        // Posted time
         String posted = getString(p, "posted_when", getString(p, "posted_time", ""));
 
-        // Item click -> PDP (Click on card body, outside slider)
         int finalId = id;
         h.itemView.setOnClickListener(v -> openPdp(finalId, title, price, city, posted, 0));
 
-        // --- Image Slider ---
+        h.cleanup();
+
         List<String> images = (List<String>) p.get("images");
         if (images == null)
             images = new ArrayList<>();
 
-        // Fallback for single image key if list is empty
         if (images.isEmpty()) {
             String singleObj = getString(p, "imageUrl", getString(p, "image_url", ""));
             if (!TextUtils.isEmpty(singleObj)) {
@@ -107,9 +113,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.VH> {
             }
         }
 
-        // If still empty, add a placeholder or let adapter handle empty list
         if (images.isEmpty()) {
-            // We can add a null or empty string to show placeholder in adapter
             images.add("");
         }
 
@@ -123,41 +127,40 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.VH> {
         // Auto-slide functionality
         int imageCount = images.size();
         if (imageCount > 1) {
-            Handler autoSlideHandler = new Handler(Looper.getMainLooper());
             final int[] currentPage = { 0 };
-            Runnable autoSlideRunnable = new Runnable() {
+            h.slideRunnable = new Runnable() {
                 @Override
                 public void run() {
                     if (h.vpImages != null && h.vpImages.getAdapter() != null) {
                         currentPage[0] = (currentPage[0] + 1) % imageCount;
                         h.vpImages.setCurrentItem(currentPage[0], true);
-                        autoSlideHandler.postDelayed(this, 5000); // 5 second interval
+                        h.slideHandler.postDelayed(this, 5000); // 5 second interval
                     }
                 }
             };
-            autoSlideHandler.postDelayed(autoSlideRunnable, 5000);
+            h.slideHandler.postDelayed(h.slideRunnable, 5000);
 
             // Pause on touch, resume on release
             h.vpImages.getChildAt(0).setOnTouchListener((v, event) -> {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
-                        autoSlideHandler.removeCallbacks(autoSlideRunnable);
+                        h.slideHandler.removeCallbacks(h.slideRunnable);
                         break;
                     case MotionEvent.ACTION_UP:
                     case MotionEvent.ACTION_CANCEL:
-                        autoSlideHandler.postDelayed(autoSlideRunnable, 5000);
+                        h.slideHandler.postDelayed(h.slideRunnable, 5000);
                         break;
                 }
                 return false;
             });
 
-            // Update current page when user swipes
-            h.vpImages.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+            h.pageCallback = new ViewPager2.OnPageChangeCallback() {
                 @Override
                 public void onPageSelected(int position) {
                     currentPage[0] = position;
                 }
-            });
+            };
+            h.vpImages.registerOnPageChangeCallback(h.pageCallback);
         }
 
         // Contact button
@@ -171,6 +174,12 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.VH> {
     }
 
     @Override
+    public void onViewRecycled(@NonNull VH holder) {
+        super.onViewRecycled(holder);
+        holder.cleanup();
+    }
+
+    @Override
     public int getItemCount() {
         return items.size();
     }
@@ -181,6 +190,11 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.VH> {
         TextView title, price, city, soldBadge;
         Button btn;
 
+        // Management for auto-slide
+        Handler slideHandler = new Handler(Looper.getMainLooper());
+        Runnable slideRunnable;
+        ViewPager2.OnPageChangeCallback pageCallback;
+
         VH(@NonNull View v) {
             super(v);
             vpImages = v.findViewById(R.id.vpImages);
@@ -189,6 +203,17 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.VH> {
             city = v.findViewById(R.id.tvCity);
             btn = v.findViewById(R.id.btnContact);
             soldBadge = v.findViewById(R.id.tvSoldBadge);
+        }
+
+        void cleanup() {
+            if (slideRunnable != null) {
+                slideHandler.removeCallbacks(slideRunnable);
+                slideRunnable = null;
+            }
+            if (pageCallback != null && vpImages != null) {
+                vpImages.unregisterOnPageChangeCallback(pageCallback);
+                pageCallback = null;
+            }
         }
     }
 

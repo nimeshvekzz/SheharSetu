@@ -920,6 +920,8 @@ public class UserInfoActivity extends AppCompatActivity {
                     return "You are already registered. Please login.";
                 if ("NOT_REGISTERED".equalsIgnoreCase(codeStr))
                     return "This number is not registered.";
+                if ("RATE_LIMITED".equalsIgnoreCase(codeStr))
+                    return msg.isEmpty() ? "Too many OTP requests. Please wait." : msg;
                 if (!msg.isEmpty())
                     return "HTTP " + code + " - " + msg;
             } catch (Exception ignored) {

@@ -81,7 +81,6 @@ public class ProductDetail extends AppCompatActivity {
     private SimilarAdapter similarAdapter;
     private View similarSection;
 
-    // Data holders (URLs या drawables दोनों सपोर्ट)
     private final List<Object> imageSources = new ArrayList<>();
 
     // Palette
@@ -107,12 +106,11 @@ public class ProductDetail extends AppCompatActivity {
         setContentView(R.layout.activity_product_detail);
 
         bindViews();
-        setupGalleryShell(); // adapters attach first
+        setupGalleryShell();
         setupStaticUi();
         setupClicks();
         setupSimilarListings();
 
-        // Insets for bottom bar
         View bottomBar = findViewById(R.id.bottomBar);
         if (bottomBar != null) {
             ViewCompat.setOnApplyWindowInsetsListener(bottomBar, (v, insets) -> {
@@ -123,7 +121,6 @@ public class ProductDetail extends AppCompatActivity {
             });
         }
 
-        // Load from API if listing_id passed; else fallback to Intent text/drawables
         int listingId = getIntent().getIntExtra("listing_id", 0);
         if (listingId > 0) {
             fetchListing(listingId);
@@ -146,8 +143,6 @@ public class ProductDetail extends AppCompatActivity {
             }
         }
     }
-
-    /* -------------------- Bind & setup -------------------- */
 
     private void bindViews() {
         pdpBack = findViewById(R.id.pdpBack);
@@ -175,7 +170,6 @@ public class ProductDetail extends AppCompatActivity {
         pdpCallWhatsapp = findViewById(R.id.pdpCallWhatsapp);
         pdpViewLocation = findViewById(R.id.pdpViewLocation);
 
-        // Similar listings
         pdpSimilarRv = findViewById(R.id.pdpSimilarRv);
         similarSection = findViewById(R.id.labelSimilar);
         if (similarSection != null) {
@@ -185,7 +179,6 @@ public class ProductDetail extends AppCompatActivity {
 
     @SuppressLint("SetTextI18n")
     private void setupStaticUi() {
-        // Header icon tint switch on collapse/expand
         if (appBar != null) {
             applyHeaderStyle(false);
             appBar.addOnOffsetChangedListener((appBarLayout, verticalOffset) -> {
@@ -194,12 +187,10 @@ public class ProductDetail extends AppCompatActivity {
             });
         }
 
-        // Seller placeholders
         pdpSellerAvatar.setImageResource(R.drawable.ic_placeholder_circle);
         pdpSellerName.setText("Seller");
         pdpSellerMeta.setText("");
     }
-
     private void setupGalleryShell() {
         pagerAdapter = new ImagePagerAdapter(this, imageSources, pos -> {
             ArrayList<String> urls = new ArrayList<>();
@@ -207,10 +198,7 @@ public class ProductDetail extends AppCompatActivity {
                 if (obj instanceof String) {
                     urls.add((String) obj);
                 } else {
-                    // It's a resource (Integer)
-                    // We can't easily pass resource IDs to another activity expecting Strings
-                    // unless we handle it
-                    // For now, let's skip resources or convert to string URI
+
                     urls.add("android.resource://" + getPackageName() + "/" + obj);
                 }
             }
@@ -278,15 +266,11 @@ public class ProductDetail extends AppCompatActivity {
         });
     }
 
-    /* -------------------- API -------------------- */
-
     private void fetchListing(int listingId) {
         String url = ApiRoutes.GET_LISTING_DETAILS + "?listing_id=" + listingId;
 
         // 🔍 DEBUG LOGS
         Log.e(TAG, "========== FETCH LISTING START ==========");
-        Log.e(TAG, "URL: " + url);
-        Log.e(TAG, "Listing ID: " + listingId);
 
         LoadingDialog.showLoading(this, "Loading listing...");
 
@@ -309,7 +293,7 @@ public class ProductDetail extends AppCompatActivity {
                             return;
                         }
 
-                        // Proceed to parse data...
+
                         JSONObject d = root.getJSONObject("data");
                         Log.e(TAG, "Data object found. Parsing title/price...");
 
@@ -332,7 +316,6 @@ public class ProductDetail extends AppCompatActivity {
                         pdpMeta.setText(meta);
                         pdpDesc.setText(productDesc);
 
-                        // Show SOLD chip if sold
                         if (pdpSoldChip != null) {
                             pdpSoldChip.setVisibility(isSold ? View.VISIBLE : View.GONE);
                         }
@@ -352,7 +335,6 @@ public class ProductDetail extends AppCompatActivity {
                             sellerPhone = seller.optString("phone", "");
                         }
 
-                        // Images (URLs)
                         JSONArray imgs = d.optJSONArray("images");
                         List<Object> srcs = new ArrayList<>();
                         if (imgs != null && imgs.length() > 0) {
@@ -363,7 +345,6 @@ public class ProductDetail extends AppCompatActivity {
                             }
                         }
                         if (srcs.isEmpty()) {
-                            // fallback single image_url or placeholder
                             String single = d.optString("image_url", "");
                             if (!single.isEmpty())
                                 srcs.add(single);
@@ -372,7 +353,6 @@ public class ProductDetail extends AppCompatActivity {
                         }
                         setGallery(srcs);
 
-                        // 🔥 DYNAMIC ATTRIBUTES BINDING (FIXED)
                         pdpChips.removeAllViews();
                         JSONArray attrs = d.optJSONArray("attributes");
                         if (attrs != null && attrs.length() > 0) {
@@ -388,11 +368,10 @@ public class ProductDetail extends AppCompatActivity {
                                 }
                             }
                         } else {
-                            // Fallback if no specific attributes found
+
                             addChip("Verified Listing");
                         }
 
-                        // Fetch similar listings
                         fetchSimilarListings(listingId, categoryId);
 
                     } catch (Exception e) {
@@ -427,8 +406,6 @@ public class ProductDetail extends AppCompatActivity {
         chip.setChipStrokeWidth(0);
         pdpChips.addView(chip);
     }
-
-    /* -------------------- UI helpers -------------------- */
 
     @SuppressLint("NotifyDataSetChanged")
     private void setGallery(List<Object> sources) {
@@ -535,8 +512,6 @@ public class ProductDetail extends AppCompatActivity {
         }
     }
 
-    /* -------------------- Similar Listings -------------------- */
-
     private void setupSimilarListings() {
         if (pdpSimilarRv == null)
             return;
@@ -545,7 +520,6 @@ public class ProductDetail extends AppCompatActivity {
         similarAdapter = new SimilarAdapter(this);
         pdpSimilarRv.setAdapter(similarAdapter);
 
-        // Hide section initially until we have data
         if (similarSection != null) {
             similarSection.setVisibility(View.GONE);
         }
@@ -580,7 +554,6 @@ public class ProductDetail extends AppCompatActivity {
                             return;
                         }
 
-                        // Parse listings
                         List<java.util.Map<String, Object>> items = new ArrayList<>();
                         for (int i = 0; i < arr.length(); i++) {
                             JSONObject o = arr.getJSONObject(i);
@@ -593,7 +566,7 @@ public class ProductDetail extends AppCompatActivity {
                             items.add(m);
                         }
 
-                        // Update adapter and show section
+
                         if (similarAdapter != null) {
                             similarAdapter.setItems(items);
                         }

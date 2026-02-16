@@ -2,15 +2,20 @@ package com.infowave.sheharsetu;
 
 import static android.widget.Toast.makeText;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.animation.AnimationUtils;
+import android.view.animation.LayoutAnimationController;
 import android.view.inputmethod.EditorInfo;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -19,9 +24,12 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.GravityCompat;
 import androidx.core.view.ViewCompat;
@@ -36,7 +44,12 @@ import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButtonToggleGroup;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -99,6 +112,15 @@ public class MainActivity extends AppCompatActivity {
     private Boolean showNew = null; // null = all, true=new, false=old
     private String searchQuery = "";
 
+    // ===== KM Filter State =====
+    private Integer selectedRadiusKm = null; // null = no distance filter
+    private Double userLat = null;
+    private Double userLng = null;
+    private Chip chipKmFilter;
+    private FusedLocationProviderClient fusedLocationClient;
+    private static final int LOCATION_PERMISSION_REQUEST = 1001;
+    private androidx.activity.result.ActivityResultLauncher<androidx.activity.result.IntentSenderRequest> locationSettingsLauncher;
+
     // ===== Adapters =====
     private CategoryAdapter catAdapter;
     private ProductAdapter productAdapterRef;
@@ -123,11 +145,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // ===== Pagination =====
-    private static final int PAGE = 1;
-    private static final int LIMIT = 50;
+    private int currentPage = 1;
+    private static final int LIMIT = 20;
+    private boolean hasMoreProducts = true;
+    private boolean isLoadingMore = false;
 
     // ✅ Network optimization + correctness
-    // ✅ NETWORK OPTIMIZATION
     private android.util.LruCache<String, JSONObject> productCache;
     private String lastProductsUrl = null;
     private boolean productsInFlight = false;
@@ -145,6 +168,21 @@ public class MainActivity extends AppCompatActivity {
 
         // Initialize cached user data from session immediately
         initCachedUserData();
+
+        // Register location settings launcher (must be before setContentView)
+        locationSettingsLauncher = registerForActivityResult(
+                new androidx.activity.result.contract.ActivityResultContracts.StartIntentSenderForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        // User enabled GPS → retry location fetch
+                        doFetchLocation();
+                    } else {
+                        // User declined → reset filter
+                        makeText(this, "GPS is required for distance filter", Toast.LENGTH_SHORT).show();
+                        selectedRadiusKm = null;
+                        updateKmChipText();
+                    }
+                });
 
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
@@ -207,12 +245,35 @@ public class MainActivity extends AppCompatActivity {
 
         rvCategories.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         rvSubFiltersGrid.setLayoutManager(new GridLayoutManager(this, 3));
-        rvProducts.setLayoutManager(new GridLayoutManager(this, 2));
+        GridLayoutManager productLayoutManager = new GridLayoutManager(this, 2);
+        rvProducts.setLayoutManager(productLayoutManager);
+
+        // ===== Infinite Scroll Listener =====
+        rvProducts.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                if (dy <= 0)
+                    return; // Only on scroll down
+                int totalItems = productLayoutManager.getItemCount();
+                int lastVisible = productLayoutManager.findLastVisibleItemPosition();
+                if (!isLoadingMore && hasMoreProducts && lastVisible >= totalItems - 4) {
+                    loadMoreProducts();
+                }
+            }
+        });
 
         setupAdapters();
 
         btnPost.setOnClickListener(v -> startActivity(new Intent(this, CategorySelectActivity.class)));
         btnHelp.setOnClickListener(v -> startActivity(new Intent(this, HelpActivity.class)));
+
+        // ===== KM Filter Chip =====
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        chipKmFilter = findViewById(R.id.chipKmFilter);
+        if (chipKmFilter != null) {
+            chipKmFilter.setOnClickListener(v -> showKmFilterSheet());
+        }
 
         prefetchAndApplyStaticTexts();
 
@@ -228,6 +289,7 @@ public class MainActivity extends AppCompatActivity {
                 return;
             ensureProductsView();
             showNew = (id == R.id.btnShowNew) ? Boolean.TRUE : Boolean.FALSE;
+            resetPagination();
             fetchProducts();
         });
     }
@@ -319,10 +381,18 @@ public class MainActivity extends AppCompatActivity {
                 searchHandler.removeCallbacks(searchRunnable);
         }
 
+        // Show search progress indicator
+        if (tiSearch != null) {
+            tiSearch.setHelperText("Searching...");
+            tiSearch.setHelperTextEnabled(true);
+        }
+
         searchRunnable = () -> {
+            if (tiSearch != null)
+                tiSearch.setHelperTextEnabled(false);
             ensureProductsView();
             searchQuery = TextUtils.isEmpty(query) ? "" : query.toLowerCase(Locale.ROOT).trim();
-            productsInFlight = false;
+            resetPagination();
             fetchProducts();
         };
         // Debounce: 500ms delay
@@ -511,9 +581,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             // Allow products to refetch after category change
-            productsInFlight = false;
-            lastProductsUrl = null;
-
+            resetPagination();
             if (selectedCategoryId == 0) {
                 // "All Listings" -> Skip subfilter fetch (client side optimization)
                 mapSubFilters.remove(0); // clear if any
@@ -544,7 +612,20 @@ public class MainActivity extends AppCompatActivity {
                 layoutEmptyState.setVisibility(View.GONE);
             if (productAdapterRef != null)
                 productAdapterRef.setItems(items);
+
+            // Replay layout animation for smooth card transitions
+            runLayoutAnimation();
         }
+    }
+
+    /** Replay the fall-down animation on the product grid */
+    private void runLayoutAnimation() {
+        if (rvProducts == null)
+            return;
+        final LayoutAnimationController controller = AnimationUtils.loadLayoutAnimation(this,
+                R.anim.layout_animation_fall_down);
+        rvProducts.setLayoutAnimation(controller);
+        rvProducts.scheduleLayoutAnimation();
     }
 
     private void showSubFilters() {
@@ -587,7 +668,7 @@ public class MainActivity extends AppCompatActivity {
 
     private String urlProducts() {
         StringBuilder sb = new StringBuilder(ApiRoutes.BASE_URL)
-                .append("/list_products.php?page=").append(PAGE)
+                .append("/list_products.php?page=").append(currentPage)
                 .append("&limit=").append(LIMIT)
                 .append("&sort=newest");
 
@@ -600,7 +681,32 @@ public class MainActivity extends AppCompatActivity {
         if (showNew != null)
             sb.append("&is_new=").append(showNew ? "1" : "0");
 
+        // KM distance filter
+        if (selectedRadiusKm != null && userLat != null && userLng != null) {
+            sb.append("&lat=").append(userLat)
+                    .append("&lng=").append(userLng)
+                    .append("&radius=").append(selectedRadiusKm);
+        }
+
         return sb.toString();
+    }
+
+    /** Reset pagination state when filters/search change */
+    private void resetPagination() {
+        currentPage = 1;
+        hasMoreProducts = true;
+        isLoadingMore = false;
+        productsInFlight = false;
+        lastProductsUrl = null;
+    }
+
+    /** Load next page of products (infinite scroll) */
+    private void loadMoreProducts() {
+        if (isLoadingMore || !hasMoreProducts)
+            return;
+        isLoadingMore = true;
+        currentPage++;
+        fetchProducts();
     }
 
     // ================= Network: Fetchers =================
@@ -851,27 +957,28 @@ public class MainActivity extends AppCompatActivity {
 
     private void fetchProducts() {
         final String url = urlProducts();
-        // ✅ CANCEL NON-CRITICAL PREVIOUS REQUESTS
-        if (productsInFlight) {
+        final boolean isAppend = currentPage > 1; // Loading more pages
+
+        // Cancel previous requests only if this is a fresh load (not append)
+        if (!isAppend && productsInFlight) {
             VolleySingleton.getInstance(this).getQueue().cancelAll(TAG_FETCH_PRODUCTS);
         }
         productsInFlight = true;
 
-        // ✅ CHECK MEMORY CACHE
-        JSONObject cachedResp = productCache.get(url);
-        if (cachedResp != null) {
-            try {
-                productsInFlight = false;
-                // Stop refresh if it was triggered
-                if (swipeRefresh != null)
-                    swipeRefresh.setRefreshing(false);
-
-                // Parse cached data
-                parseProductsResponse(cachedResp);
-                lastProductsUrl = url;
-                return;
-            } catch (Exception e) {
-                // error in cache parse? fallback to network
+        // Check memory cache (only for page 1)
+        if (!isAppend) {
+            JSONObject cachedResp = productCache.get(url);
+            if (cachedResp != null) {
+                try {
+                    productsInFlight = false;
+                    if (swipeRefresh != null)
+                        swipeRefresh.setRefreshing(false);
+                    parseProductsResponse(cachedResp, false);
+                    lastProductsUrl = url;
+                    return;
+                } catch (Exception e) {
+                    // fallback to network
+                }
             }
         }
 
@@ -883,29 +990,27 @@ public class MainActivity extends AppCompatActivity {
                 null,
                 resp -> {
                     productsInFlight = false;
+                    isLoadingMore = false;
 
-                    // Stop refresh logic
                     if (swipeRefresh != null)
                         swipeRefresh.setRefreshing(false);
 
                     if (resp != null) {
-                        productCache.put(url, resp);
-                        parseProductsResponse(resp);
+                        if (!isAppend)
+                            productCache.put(url, resp);
+                        parseProductsResponse(resp, isAppend);
                     }
                 },
                 err -> {
                     Log.e(TAG, "fetchProducts() ERROR: " + err.toString());
                     productsInFlight = false;
+                    isLoadingMore = false;
 
-                    // Stop refresh logic on error
                     if (swipeRefresh != null)
                         swipeRefresh.setRefreshing(false);
 
-                    // Show error toast
                     makeText(this, I18n.t(this, "Network error (products)"), Toast.LENGTH_SHORT).show();
 
-                    // If we have no items, ensure empty state is visible (handled by bindProducts
-                    // usually, but if error happens before bind...)
                     if (currentProducts.isEmpty()) {
                         bindProducts(new ArrayList<>());
                     }
@@ -919,31 +1024,251 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        // Standard timeout
         req.setRetryPolicy(new DefaultRetryPolicy(
                 10000,
                 1,
                 DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
 
         req.setShouldCache(false);
-        req.setTag(TAG_FETCH_PRODUCTS); // ✅ TAG FOR CANCELLATION
+        req.setTag(TAG_FETCH_PRODUCTS);
         VolleySingleton.getInstance(this).add(req);
+    }
+
+    // ================= KM Filter Bottom Sheet =================
+
+    private void showKmFilterSheet() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View sheet = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_km_filter, null);
+        dialog.setContentView(sheet);
+
+        ChipGroup chipGroup = sheet.findViewById(R.id.chipGroupKm);
+
+        // Pre-select current value
+        if (selectedRadiusKm == null) {
+            ((Chip) sheet.findViewById(R.id.chipAll)).setChecked(true);
+        } else if (selectedRadiusKm == 5) {
+            ((Chip) sheet.findViewById(R.id.chip5km)).setChecked(true);
+        } else if (selectedRadiusKm == 10) {
+            ((Chip) sheet.findViewById(R.id.chip10km)).setChecked(true);
+        } else if (selectedRadiusKm == 25) {
+            ((Chip) sheet.findViewById(R.id.chip25km)).setChecked(true);
+        } else if (selectedRadiusKm == 50) {
+            ((Chip) sheet.findViewById(R.id.chip50km)).setChecked(true);
+        } else if (selectedRadiusKm == 100) {
+            ((Chip) sheet.findViewById(R.id.chip100km)).setChecked(true);
+        }
+
+        chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            if (checkedIds.isEmpty())
+                return;
+            int checkedId = checkedIds.get(0);
+
+            if (checkedId == R.id.chipAll) {
+                selectedRadiusKm = null;
+                updateKmChipText();
+                dialog.dismiss();
+                applyKmFilter();
+            } else {
+                int km = 10; // default
+                if (checkedId == R.id.chip5km)
+                    km = 5;
+                else if (checkedId == R.id.chip10km)
+                    km = 10;
+                else if (checkedId == R.id.chip25km)
+                    km = 25;
+                else if (checkedId == R.id.chip50km)
+                    km = 50;
+                else if (checkedId == R.id.chip100km)
+                    km = 100;
+
+                selectedRadiusKm = km;
+                updateKmChipText();
+                dialog.dismiss();
+
+                // Need user location to filter by radius
+                if (userLat == null || userLng == null) {
+                    fetchUserLocationThenFilter();
+                } else {
+                    applyKmFilter();
+                }
+            }
+        });
+
+        dialog.show();
+    }
+
+    private void updateKmChipText() {
+        if (chipKmFilter == null)
+            return;
+        if (selectedRadiusKm == null) {
+            chipKmFilter.setText("📍 Nearby");
+        } else {
+            chipKmFilter.setText("📍 " + selectedRadiusKm + " km");
+        }
+    }
+
+    private void applyKmFilter() {
+        ensureProductsView();
+        // Clear cache so new radius is applied
+        productCache.evictAll();
+        lastProductsUrl = null;
+        productsInFlight = false;
+        fetchProducts();
+    }
+
+    @SuppressLint("MissingPermission")
+    private void fetchUserLocationThenFilter() {
+        // 1. Check permission first
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[] { Manifest.permission.ACCESS_FINE_LOCATION },
+                    LOCATION_PERMISSION_REQUEST);
+            return;
+        }
+
+        // 2. Check if GPS/Location services are enabled
+        com.google.android.gms.location.LocationRequest locationRequest = com.google.android.gms.location.LocationRequest
+                .create()
+                .setPriority(com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+        com.google.android.gms.location.LocationSettingsRequest settingsRequest = new com.google.android.gms.location.LocationSettingsRequest.Builder()
+                .addLocationRequest(locationRequest)
+                .setAlwaysShow(true) // Show dialog even if GPS was previously declined
+                .build();
+
+        com.google.android.gms.location.LocationServices.getSettingsClient(this)
+                .checkLocationSettings(settingsRequest)
+                .addOnSuccessListener(this, response -> {
+                    // GPS is ON — go ahead and fetch location
+                    doFetchLocation();
+                })
+                .addOnFailureListener(this, e -> {
+                    if (e instanceof com.google.android.gms.common.api.ResolvableApiException) {
+                        // GPS is OFF — show Google's "Enable Location" dialog
+                        try {
+                            com.google.android.gms.common.api.ResolvableApiException resolvable = (com.google.android.gms.common.api.ResolvableApiException) e;
+                            locationSettingsLauncher.launch(
+                                    new androidx.activity.result.IntentSenderRequest.Builder(
+                                            resolvable.getResolution()).build());
+                        } catch (Exception ex) {
+                            Log.e(TAG, "Could not show location settings dialog", ex);
+                            showManualGpsPrompt();
+                        }
+                    } else {
+                        // Some other settings error
+                        showManualGpsPrompt();
+                    }
+                });
+    }
+
+    /** Fetch location after GPS check passes */
+    @SuppressLint("MissingPermission")
+    private void doFetchLocation() {
+        LoadingDialog.showLoading(this, "Getting your location...");
+        fusedLocationClient.getLastLocation()
+                .addOnSuccessListener(this, location -> {
+                    LoadingDialog.hideLoading();
+                    if (location != null) {
+                        userLat = location.getLatitude();
+                        userLng = location.getLongitude();
+                        Log.d(TAG, "User location: " + userLat + ", " + userLng);
+                        applyKmFilter();
+                    } else {
+                        // Last location is null — request a fresh one
+                        requestFreshLocation();
+                    }
+                })
+                .addOnFailureListener(this, e -> {
+                    LoadingDialog.hideLoading();
+                    Log.e(TAG, "Location fetch failed", e);
+                    makeText(this, "Location error. Please try again.", Toast.LENGTH_SHORT).show();
+                    selectedRadiusKm = null;
+                    updateKmChipText();
+                });
+    }
+
+    /** Request a fresh location when getLastLocation returns null */
+    @SuppressLint("MissingPermission")
+    private void requestFreshLocation() {
+        com.google.android.gms.location.LocationRequest req = com.google.android.gms.location.LocationRequest.create()
+                .setPriority(com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY)
+                .setNumUpdates(1)
+                .setInterval(5000)
+                .setMaxWaitTime(10000);
+
+        fusedLocationClient.requestLocationUpdates(req,
+                new com.google.android.gms.location.LocationCallback() {
+                    @Override
+                    public void onLocationResult(com.google.android.gms.location.LocationResult result) {
+                        fusedLocationClient.removeLocationUpdates(this);
+                        LoadingDialog.hideLoading();
+                        if (result != null && result.getLastLocation() != null) {
+                            userLat = result.getLastLocation().getLatitude();
+                            userLng = result.getLastLocation().getLongitude();
+                            Log.d(TAG, "Fresh location: " + userLat + ", " + userLng);
+                            applyKmFilter();
+                        } else {
+                            makeText(MainActivity.this, "Could not get location. Try again.", Toast.LENGTH_SHORT)
+                                    .show();
+                            selectedRadiusKm = null;
+                            updateKmChipText();
+                        }
+                    }
+                }, android.os.Looper.getMainLooper());
+    }
+
+    /** Fallback: prompt user to open GPS settings manually */
+    private void showManualGpsPrompt() {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Enable Location")
+                .setMessage("GPS is turned off. Please enable location services to filter listings by distance.")
+                .setPositiveButton("Open Settings", (d, w) -> {
+                    Intent intent = new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                    startActivity(intent);
+                })
+                .setNegativeButton("Cancel", (d, w) -> {
+                    selectedRadiusKm = null;
+                    updateKmChipText();
+                })
+                .setCancelable(false)
+                .show();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+            @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == LOCATION_PERMISSION_REQUEST) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission granted, retry location fetch
+                fetchUserLocationThenFilter();
+            } else {
+                makeText(this, "Location permission needed for distance filter", Toast.LENGTH_SHORT).show();
+                selectedRadiusKm = null;
+                updateKmChipText();
+            }
+        }
     }
 
     /**
      * Helper to parse product response - logic extracted for reuse
      */
-    private void parseProductsResponse(JSONObject resp) {
+    private void parseProductsResponse(JSONObject resp, boolean isAppend) {
         try {
             if (!"success".equalsIgnoreCase(resp.optString("status"))) {
                 Log.e(TAG, "parseProductsResponse(): status != success");
                 makeText(this, I18n.t(this, "Products error"), Toast.LENGTH_SHORT).show();
-                bindProducts(new ArrayList<>()); // Force empty
+                if (!isAppend)
+                    bindProducts(new ArrayList<>());
                 return;
             }
 
+            // Read pagination info from response
+            hasMoreProducts = resp.optBoolean("has_more", false);
+
             JSONArray arr = resp.optJSONArray("data");
-            currentProducts.clear();
+            List<Map<String, Object>> newItems = new ArrayList<>();
 
             if (arr != null) {
                 for (int i = 0; i < arr.length(); i++) {
@@ -968,14 +1293,12 @@ public class MainActivity extends AppCompatActivity {
                     m.put("imageUrl", makeAbsoluteImageUrl(imageUrl));
                     m.put("isNew", o.optInt("is_new", 0) == 1);
 
-                    // ✅ Parsing posted_when for ProductAdapter compatibility
                     String posted = o.optString("posted_when", "");
                     if (TextUtils.isEmpty(posted)) {
                         posted = o.optString("posted_time", "");
                     }
                     m.put("posted_when", posted);
 
-                    // ✅ NEW: Parse images array for slider
                     List<String> images = new ArrayList<>();
                     JSONArray imgArr = o.optJSONArray("images");
                     if (imgArr != null) {
@@ -986,22 +1309,33 @@ public class MainActivity extends AppCompatActivity {
                             }
                         }
                     }
-                    // Fallback to single image if array is empty
                     if (images.isEmpty() && !TextUtils.isEmpty(m.get("imageUrl").toString())) {
                         images.add(m.get("imageUrl").toString());
                     }
                     m.put("images", images);
 
-                    currentProducts.add(m);
+                    newItems.add(m);
                 }
             }
 
-            bindProducts(new ArrayList<>(currentProducts));
+            if (isAppend) {
+                // Infinite scroll: append to existing list
+                currentProducts.addAll(newItems);
+                if (productAdapterRef != null) {
+                    productAdapterRef.addItems(newItems);
+                }
+            } else {
+                // Fresh load: replace entire list
+                currentProducts.clear();
+                currentProducts.addAll(newItems);
+                bindProducts(new ArrayList<>(currentProducts));
+            }
             LoadingDialog.hideLoading();
 
         } catch (Exception e) {
             Log.e(TAG, "parseProductsResponse(): exception", e);
-            bindProducts(new ArrayList<>()); // Force empty on error
+            if (!isAppend)
+                bindProducts(new ArrayList<>());
         }
     }
 
