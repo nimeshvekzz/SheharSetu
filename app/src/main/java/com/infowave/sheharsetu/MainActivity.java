@@ -489,7 +489,7 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(new Intent(MainActivity.this, CategorySelectActivity.class));
 
             } else if (id == R.id.nav_my_ads) {
-                Toast.makeText(MainActivity.this, I18n.t(this, "My Ads"), Toast.LENGTH_SHORT).show();
+                startActivity(new Intent(MainActivity.this, MyAdsActivity.class));
 
             } else if (id == R.id.nav_notifications) {
                 Toast.makeText(MainActivity.this, I18n.t(this, "Notifications"), Toast.LENGTH_SHORT).show();

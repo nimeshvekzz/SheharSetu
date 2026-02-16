@@ -37,6 +37,10 @@
             android:exported="false" />
 
         <activity
+            android:name=".MyAdsActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".LoginActivity"
             android:exported="false"
             android:theme="@style/Theme.SheharSetu.M3"/>

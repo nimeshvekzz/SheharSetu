@@ -32,6 +32,8 @@ public final class ApiRoutes {
     // My Listings
     public static final String GET_USER_LISTINGS = BASE_URL + "/get_user_listings.php";
     public static final String MARK_LISTING_SOLD = BASE_URL + "/mark_listing_sold.php";
+    public static final String DELETE_LISTING = BASE_URL + "/delete_listing.php";
+    public static final String REPOST_LISTING = BASE_URL + "/repost_listing.php";
 
     private ApiRoutes() {
     }

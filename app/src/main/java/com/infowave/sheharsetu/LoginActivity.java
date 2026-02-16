@@ -57,7 +57,7 @@ public class LoginActivity extends AppCompatActivity {
     private boolean isSendingOtp = false;
     private String btnIdleText; // original button label
 
-    @SuppressLint("MissingInflatedId")
+    @SuppressLint({"MissingInflatedId", "SetTextI18n"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -239,7 +239,7 @@ public class LoginActivity extends AppCompatActivity {
 
         otpDialog = new BottomSheetDialog(this,
                 com.google.android.material.R.style.ThemeOverlay_Material3_BottomSheetDialog);
-        View sheet = LayoutInflater.from(this).inflate(R.layout.sheet_otp, null, false);
+        @SuppressLint("InflateParams") View sheet = LayoutInflater.from(this).inflate(R.layout.sheet_otp, null, false);
         otpDialog.setContentView(sheet);
         otpDialog.setCancelable(false);
         otpDialog.setCanceledOnTouchOutside(false);
