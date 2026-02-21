@@ -1,5 +1,6 @@
 package com.infowave.sheharsetu;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -114,6 +115,7 @@ public class SellerProfileActivity extends AppCompatActivity {
         VolleySingleton.queue(this).add(req);
     }
 
+    @SuppressLint("SetTextI18n")
     private void populateProfile(JSONObject p) {
         if (p == null)
             return;

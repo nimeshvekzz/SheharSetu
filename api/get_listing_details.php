@@ -304,6 +304,7 @@ try {
             if ($val !== '' && !in_array($rec['code'], ['description', 'listing_photos', 'price'])) {
                 $attributes[] = [
                     "label" => $rec['label'],
+                    "code"  => $rec['code'] ?? "",
                     "value" => $val,
                     "unit"  => $rec['unit'] ?? ""
                 ];

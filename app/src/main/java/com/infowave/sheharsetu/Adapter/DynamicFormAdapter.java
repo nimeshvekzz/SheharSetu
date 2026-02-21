@@ -70,6 +70,7 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
     private final Map<String, Object> answers = new HashMap<>();
     private final SimpleDateFormat df = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault());
     private final Callbacks callbacks;
+    private boolean isBinding = false; // Suppress listener callbacks during bind
 
     public DynamicFormAdapter(List<Map<String, Object>> fields, Callbacks callbacks) {
         this.fields = fields != null ? fields : new ArrayList<>();
@@ -171,6 +172,7 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         String label = s(f.get("label"));
         String hint = s(f.get("hint"));
         String type = s(f.get("type"));
+        isBinding = true;
         if (h instanceof VHText) {
             VHText vh = (VHText) h;
             vh.tvLabel.setText(label + (req(f) ? " *" : ""));
@@ -185,14 +187,20 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 vh.etValue.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
             }
             vh.etValue.setText(s(answers.get(key)));
-            vh.etValue.addTextChangedListener(new SimpleTextWatcher(s -> answers.put(key, s)));
+            vh.etValue.addTextChangedListener(new SimpleTextWatcher(s -> {
+                if (!isBinding)
+                    answers.put(key, s);
+            }));
 
         } else if (h instanceof VHTextArea) {
             VHTextArea vh = (VHTextArea) h;
             vh.tvLabel.setText(label + (req(f) ? " *" : ""));
             vh.etValue.setHint(hint);
             vh.etValue.setText(s(answers.get(key)));
-            vh.etValue.addTextChangedListener(new SimpleTextWatcher(s -> answers.put(key, s)));
+            vh.etValue.addTextChangedListener(new SimpleTextWatcher(s -> {
+                if (!isBinding)
+                    answers.put(key, s);
+            }));
 
         } else if (h instanceof VHCurrencies) {
             VHCurrencies vh = (VHCurrencies) h;
@@ -200,7 +208,10 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             vh.etValue.setHint(hint);
             vh.etValue.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
             vh.etValue.setText(s(answers.get(key)));
-            vh.etValue.addTextChangedListener(new SimpleTextWatcher(s -> answers.put(key, s)));
+            vh.etValue.addTextChangedListener(new SimpleTextWatcher(s -> {
+                if (!isBinding)
+                    answers.put(key, s);
+            }));
 
         } else if (h instanceof VHDate) {
             VHDate vh = (VHDate) h;
@@ -295,10 +306,13 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             int idxSaved = finalValues.indexOf(saved);
             if (idxSaved < 0)
                 idxSaved = 0;
+            vh.spinner.setOnItemSelectedListener(null); // Prevent listener fire during setSelection
             vh.spinner.setSelection(idxSaved);
             vh.spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    if (isBinding)
+                        return;
                     if (position == 0) {
                         answers.put(key, "");
                     } else {
@@ -327,19 +341,23 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             VHCheckbox vh = (VHCheckbox) h;
             vh.tvLabel.setText(label + (req(f) ? " *" : ""));
             vh.cb.setText(hint);
+            vh.cb.setOnCheckedChangeListener(null); // Prevent fire during setChecked
             boolean checked = answers.get(key) instanceof Boolean && (Boolean) answers.get(key);
             vh.cb.setChecked(checked);
             vh.cb.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                answers.put(key, isChecked);
+                if (!isBinding)
+                    answers.put(key, isChecked);
             });
 
         } else if (h instanceof VHSwitch) {
             VHSwitch vh = (VHSwitch) h;
             vh.tvLabel.setText(label + (req(f) ? " *" : ""));
+            vh.sw.setOnCheckedChangeListener(null); // Prevent fire during setChecked
             boolean on = answers.get(key) instanceof Boolean && (Boolean) answers.get(key);
             vh.sw.setChecked(on);
             vh.sw.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                answers.put(key, isChecked);
+                if (!isBinding)
+                    answers.put(key, isChecked);
             });
 
         } else if (h instanceof VHLocation) {
@@ -348,14 +366,18 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             vh.etLocation.setHint(hint);
             vh.etLocation.setText(s(answers.get(key)));
             vh.etLocation.addTextChangedListener(new SimpleTextWatcher(s -> {
-                answers.put(key, s);
+                if (!isBinding)
+                    answers.put(key, s);
             }));
+
             vh.btnUseMyLocation.setOnClickListener(v -> {
                 if (callbacks != null)
                     callbacks.requestMyLocation(key);
             });
 
-        } else if (h instanceof VHPhotos) {
+        } else if (h instanceof VHPhotos)
+
+        {
             VHPhotos vh = (VHPhotos) h;
             vh.tvLabel.setText(label + (req(f) ? " *" : ""));
             vh.tvHelper.setText(TextUtils.isEmpty(hint) ? "Clear, no blur" : hint);
@@ -403,6 +425,7 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                     + "   |   More: " + more.size() + " selected";
             vh.tvPhotoStatus.setText(msg);
         }
+        isBinding = false;
     }
 
     @Override
@@ -478,6 +501,41 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         notifyDataSetChanged();
     }
 
+    /**
+     * Batch pre-fill answers for edit mode. Handles type-aware values:
+     * - Boolean for SWITCH/CHECKBOX fields
+     * - String for all other fields
+     * Calls notifyDataSetChanged() only once at the end.
+     */
+    @SuppressLint("NotifyDataSetChanged")
+    public void prefillAnswers(Map<String, String> values) {
+        // Build a map of key -> field type for proper type handling
+        Map<String, String> fieldTypes = new HashMap<>();
+        for (Map<String, Object> f : fields) {
+            String key = s(f.get("key"));
+            String type = s(f.get("type")).toUpperCase(Locale.ROOT);
+            fieldTypes.put(key, type);
+        }
+
+        for (Map.Entry<String, String> entry : values.entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue();
+            if (key == null || key.isEmpty())
+                continue;
+
+            String fieldType = fieldTypes.get(key);
+            if ("SWITCH".equals(fieldType) || "CHECKBOX".equals(fieldType)) {
+                // Convert string value to Boolean
+                boolean boolVal = "1".equals(value) || "true".equalsIgnoreCase(value)
+                        || "yes".equalsIgnoreCase(value) || "new".equalsIgnoreCase(value);
+                answers.put(key, boolVal);
+            } else {
+                answers.put(key, value == null ? "" : value);
+            }
+        }
+        notifyDataSetChanged();
+    }
+
     @SuppressLint("NotifyDataSetChanged")
     public void setCoverPhoto(String fieldKey, String base64) {
         if (TextUtils.isEmpty(base64))
@@ -509,8 +567,12 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         }
 
         boolean coverWasEmpty = TextUtils.isEmpty(cover);
+        // Also treat URL-based covers (from edit mode prefill) as replaceable
+        // since base64 images should always take priority over old URLs
+        boolean coverIsUrl = !coverWasEmpty && cover.startsWith("http");
 
-        if (coverWasEmpty) {
+        if (coverWasEmpty || coverIsUrl) {
+            // Replace the old cover (empty or URL) with the first new photo
             ph.put("cover", base64List.get(0));
             for (int i = 1; i < base64List.size(); i++) {
                 String b64 = base64List.get(i);
@@ -524,11 +586,53 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             }
         }
         notifyDataSetChanged();
-        if (coverWasEmpty) {
+        if (coverWasEmpty || coverIsUrl) {
             toast("First photo set as cover. Tap any thumbnail to change or remove.");
         } else {
             toast("Added " + base64List.size() + " photo(s). Tap a thumbnail to set cover or remove.");
         }
+    }
+
+    /**
+     * Pre-fill photos from existing image URLs (for edit mode).
+     * First URL becomes the cover, rest go to "more" list.
+     */
+    @SuppressLint("NotifyDataSetChanged")
+    public void prefillPhotos(String fieldKey, List<String> imageUrls) {
+        if (imageUrls == null || imageUrls.isEmpty())
+            return;
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> ph = (Map<String, Object>) answers.get(fieldKey);
+        if (ph == null) {
+            ph = new java.util.HashMap<>();
+            answers.put(fieldKey, ph);
+        }
+
+        // First image = cover, rest = more
+        ph.put("cover", imageUrls.get(0));
+        List<String> more = new ArrayList<>();
+        for (int i = 1; i < imageUrls.size(); i++) {
+            String url = imageUrls.get(i);
+            if (!TextUtils.isEmpty(url))
+                more.add(url);
+        }
+        ph.put("more", more);
+        notifyDataSetChanged();
+    }
+
+    /**
+     * Get the field key for the PHOTOS type field from the schema.
+     * Returns null if no PHOTOS field is found.
+     */
+    public String getPhotosFieldKey() {
+        for (Map<String, Object> f : fields) {
+            String type = s(f.get("type")).toUpperCase(Locale.ROOT);
+            if ("PHOTOS".equals(type)) {
+                return s(f.get("key"));
+            }
+        }
+        return null;
     }
 
     /* ================= Validation & JSON ================= */
@@ -565,9 +669,15 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                         Map<String, Object> ph = (Map<String, Object>) val;
                         String cover = ph == null ? "" : s(ph.get("cover"));
                         if (TextUtils.isEmpty(cover)) {
-                            toast("Please add a cover photo");
-                            Log.e(TAG, "Validation failed: no cover photo for " + key);
-                            return null;
+                            // Also check if there are any URL-based photos in more list
+                            @SuppressWarnings("unchecked")
+                            List<String> morePhotos = ph == null ? null : (List<String>) ph.get("more");
+                            boolean hasAnyPhoto = (morePhotos != null && !morePhotos.isEmpty());
+                            if (!hasAnyPhoto) {
+                                toast("Please add a cover photo");
+                                Log.e(TAG, "Validation failed: no cover photo for " + key);
+                                return null;
+                            }
                         }
                     } else {
                         if (TextUtils.isEmpty(sval)) {
@@ -705,17 +815,43 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
             VHT vh = (VHT) holder;
 
-            // Decode Base64 -> Bitmap for preview
+            // Decode image — supports both Base64 and HTTP URLs
             try {
                 if (!TextUtils.isEmpty(base64)) {
-                    byte[] data = Base64.decode(base64, Base64.DEFAULT);
-                    Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length);
-                    vh.iv.setImageBitmap(bmp);
+                    if (base64.startsWith("http://") || base64.startsWith("https://")) {
+                        // Load URL image asynchronously
+                        final String imageUrl = base64;
+                        vh.iv.setImageResource(R.drawable.ic_launcher_foreground); // placeholder
+                        vh.iv.setTag(imageUrl); // tag to prevent recycling issues
+                        new Thread(() -> {
+                            try {
+                                java.net.URL url = new java.net.URL(imageUrl);
+                                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+                                conn.setDoInput(true);
+                                conn.setConnectTimeout(5000);
+                                conn.setReadTimeout(5000);
+                                conn.connect();
+                                java.io.InputStream is = conn.getInputStream();
+                                Bitmap bmp = BitmapFactory.decodeStream(is);
+                                is.close();
+                                if (bmp != null && imageUrl.equals(vh.iv.getTag())) {
+                                    vh.iv.post(() -> vh.iv.setImageBitmap(bmp));
+                                }
+                            } catch (Exception e) {
+                                Log.e(TAG, "Failed to load image URL: " + imageUrl, e);
+                            }
+                        }).start();
+                    } else {
+                        // Base64 image
+                        byte[] data = Base64.decode(base64, Base64.DEFAULT);
+                        Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length);
+                        vh.iv.setImageBitmap(bmp);
+                    }
                 } else {
                     vh.iv.setImageDrawable(null);
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Failed to decode base64 image for thumbnails", e);
+                Log.e(TAG, "Failed to decode image for thumbnails", e);
                 vh.iv.setImageDrawable(null);
             }
 

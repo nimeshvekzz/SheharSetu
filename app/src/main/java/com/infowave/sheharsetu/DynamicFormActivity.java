@@ -55,7 +55,10 @@ import com.google.android.gms.tasks.Task;
 import androidx.activity.result.IntentSenderRequest;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -96,6 +99,10 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
     private long subcategoryId;
 
     private String categoryName;
+
+    // Edit mode
+    private int editListingId = 0;
+    private boolean isEditMode = false;
 
     private final ActivityResultLauncher<String> coverPicker = registerForActivityResult(
             new ActivityResultContracts.GetContent(), uri -> {
@@ -198,7 +205,17 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         if (category == null)
             category = "General";
         categoryName = category;
-        tvTitle.setText("Sell in " + categoryName);
+
+        // Check for edit mode
+        editListingId = intent.getIntExtra("edit_listing_id", 0);
+        isEditMode = editListingId > 0;
+
+        if (isEditMode) {
+            tvTitle.setText("Edit in " + categoryName);
+            btnSubmit.setText("Update Listing");
+        } else {
+            tvTitle.setText("Sell in " + categoryName);
+        }
 
         String catIdStr = intent.getStringExtra("category_id");
         String subIdStr = intent.getStringExtra("subcategory_id");
@@ -415,11 +432,15 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                             Log.e(TAG, "Schema list is empty, not setting adapter");
                             btnSubmit.setEnabled(false);
                         } else {
-                            adapter = new DynamicFormAdapter(schema, this);
+                            adapter = new DynamicFormAdapter(schema, DynamicFormActivity.this);
                             rvForm.setAdapter(adapter);
-                            // Ab form ready hai, button enable karo
                             btnSubmit.setEnabled(true);
                             LoadingDialog.hideLoading();
+
+                            // If edit mode, fetch existing data and pre-fill
+                            if (isEditMode) {
+                                fetchAndPrefillListingData(editListingId);
+                            }
                         }
 
                     } catch (Exception e) {
@@ -454,6 +475,140 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
             }
 
         };
+        VolleySingleton.getInstance(this).add(req);
+    }
+
+    /**
+     * Fetch existing listing data and pre-fill the form for edit mode.
+     */
+    private void fetchAndPrefillListingData(int listingId) {
+        String url = ApiRoutes.GET_LISTING_DETAILS + "?listing_id=" + listingId;
+        Log.d(TAG, "fetchAndPrefillListingData: listingId=" + listingId + " url=" + url);
+        LoadingDialog.showLoading(this, "Loading listing data...");
+
+        JsonObjectRequest req = new JsonObjectRequest(
+                Request.Method.GET,
+                url,
+                null,
+                response -> {
+                    LoadingDialog.hideLoading();
+                    try {
+                        String status = response.optString("status", "");
+                        if (!"success".equals(status)) {
+                            toast("Could not load listing data");
+                            return;
+                        }
+
+                        JSONObject data = response.optJSONObject("data");
+                        if (data == null)
+                            return;
+
+                        // Batch all values into a map, then call prefillAnswers once
+                        Map<String, String> prefillValues = new HashMap<>();
+
+                        // Basic fields
+                        String title = data.optString("title", "");
+                        if (!title.isEmpty())
+                            prefillValues.put("title", title);
+
+                        String description = data.optString("description", "");
+                        if (!description.isEmpty())
+                            prefillValues.put("description", description);
+
+                        // Price — strip ₹ prefix and fill ALL price variant keys
+                        // (form schema may use "price", "price_per_unit", or "price_per_kg")
+                        String price = data.optString("price", "");
+                        if (!price.isEmpty()) {
+                            price = price.replaceAll("[₹\\s,]", "").trim();
+                            prefillValues.put("price", price);
+                            prefillValues.put("price_per_unit", price);
+                            prefillValues.put("price_per_kg", price);
+                        }
+
+                        // is_new (condition switch)
+                        int isNew = data.optInt("is_new", 0);
+                        prefillValues.put("is_new", isNew == 1 ? "1" : "0");
+
+                        // Dynamic attributes from the attributes array
+                        JSONArray attributes = data.optJSONArray("attributes");
+                        if (attributes != null) {
+                            for (int i = 0; i < attributes.length(); i++) {
+                                JSONObject attr = attributes.optJSONObject(i);
+                                if (attr == null)
+                                    continue;
+
+                                String code = attr.optString("code", "");
+                                String value = attr.optString("value", "");
+                                if (!code.isEmpty() && !value.isEmpty()) {
+                                    prefillValues.put(code, value);
+                                }
+                            }
+                        }
+
+                        // Apply all to form at once (single notifyDataSetChanged)
+                        Log.d(TAG, "Prefill values: " + prefillValues.keySet());
+                        if (adapter != null && !prefillValues.isEmpty()) {
+                            adapter.prefillAnswers(prefillValues);
+                        }
+
+                        // Pre-fill existing images into the photo adapter
+                        JSONArray images = data.optJSONArray("images");
+                        if (adapter != null && images != null && images.length() > 0) {
+                            String photosKey = adapter.getPhotosFieldKey();
+                            if (photosKey != null && !photosKey.isEmpty()) {
+                                List<String> imageUrls = new ArrayList<>();
+                                for (int i = 0; i < images.length(); i++) {
+                                    String imgUrl = images.optString(i, "");
+                                    if (!imgUrl.isEmpty()) {
+                                        imageUrls.add(imgUrl);
+                                    }
+                                }
+                                if (!imageUrls.isEmpty()) {
+                                    Log.d(TAG, "Prefilling " + imageUrls.size() + " images to key: " + photosKey);
+                                    adapter.prefillPhotos(photosKey, imageUrls);
+                                }
+                            }
+                        }
+
+                        // Pre-fill location fields (these are Activity-level, not adapter)
+                        String villageName = data.optString("village_name", "");
+                        if (!villageName.isEmpty()) {
+                            etVillageCity.setText(villageName);
+                        }
+
+                        String district = data.optString("district", "");
+                        String state = data.optString("state", "");
+                        String addressParts = "";
+                        if (!district.isEmpty())
+                            addressParts = district;
+                        if (!state.isEmpty()) {
+                            if (!addressParts.isEmpty())
+                                addressParts += ", ";
+                            addressParts += state;
+                        }
+                        if (!addressParts.isEmpty()) {
+                            etAddress.setText(addressParts);
+                        }
+
+                        Log.d(TAG, "Edit mode: pre-filled form with existing data");
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error pre-filling form", e);
+                        toast("Error loading listing data");
+                    }
+                },
+                error -> {
+                    LoadingDialog.hideLoading();
+                    Log.e(TAG, "Error fetching listing details: " + error.toString());
+                    toast("Could not load listing data for editing");
+                }) {
+            @Override
+            public Map<String, String> getHeaders() {
+                HashMap<String, String> headers = new HashMap<>();
+                headers.put("Accept", "application/json");
+                return headers;
+            }
+        };
+
         VolleySingleton.getInstance(this).add(req);
     }
 
@@ -618,22 +773,58 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
             }
             payload.put("is_new", isNewValue);
             btnSubmit.setEnabled(false);
-            LoadingDialog.showLoading(this, "Submitting listing...");
 
-            Log.d(TAG, "Final payload: " + payload.toString());
+            Log.d(TAG, "Final payload keys: " + payload.keys().toString());
+            // Log photo data summary (without dumping full base64)
+            if (formResult.has("listing_photos")) {
+                try {
+                    JSONObject photos = formResult.optJSONObject("listing_photos");
+                    if (photos != null) {
+                        String cover = photos.optString("cover", "");
+                        boolean coverIsUrl = cover.startsWith("http");
+                        boolean coverIsBase64 = !cover.isEmpty() && !coverIsUrl;
+                        JSONArray moreArr = photos.optJSONArray("more");
+                        int moreCount = moreArr != null ? moreArr.length() : 0;
+                        Log.d(TAG, "Photo data: coverIsUrl=" + coverIsUrl + " coverIsBase64=" + coverIsBase64
+                                + " coverLen=" + cover.length() + " moreCount=" + moreCount);
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Error logging photo data", e);
+                }
+            } else {
+                Log.d(TAG, "No listing_photos key in formResult");
+            }
+
+            // Add listing_id for edit mode
+            if (isEditMode && editListingId > 0) {
+                payload.put("listing_id", editListingId);
+            }
+
+            String apiUrl = isEditMode ? ApiRoutes.UPDATE_LISTING : ApiRoutes.CREATE_LISTING;
+            String loadingMsg = isEditMode ? "Updating listing..." : "Submitting listing...";
+            LoadingDialog.showLoading(this, loadingMsg);
 
             JsonObjectRequest req = new JsonObjectRequest(
                     Request.Method.POST,
-                    ApiRoutes.CREATE_LISTING,
+                    apiUrl,
                     payload,
                     response -> {
                         LoadingDialog.hideLoading();
                         btnSubmit.setEnabled(true);
                         boolean success = response.optBoolean("success", false);
+                        String defaultMsg = isEditMode ? "Listing updated" : "Listing created";
+                        String failMsg = isEditMode ? "Failed to update listing" : "Failed to create listing";
                         String message = response.optString("message",
-                                success ? "Listing created" : "Failed to create listing");
+                                success ? defaultMsg : failMsg);
 
                         toast(message);
+                        Log.d(TAG, "Server response: " + response.toString());
+
+                        // Log photo debug info from server
+                        JSONObject photoDebug = response.optJSONObject("photo_debug");
+                        if (photoDebug != null) {
+                            Log.d(TAG, "📸 PHOTO DEBUG from server: " + photoDebug.toString());
+                        }
 
                         if (success) {
                             Intent i = new Intent(DynamicFormActivity.this, MainActivity.class);
@@ -679,6 +870,12 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                     return headers;
                 }
             };
+
+            // Set generous timeout for large payloads (base64 images can be large)
+            req.setRetryPolicy(new com.android.volley.DefaultRetryPolicy(
+                    30000, // 30 second timeout
+                    0, // no retries
+                    1.0f));
 
             VolleySingleton.getInstance(this).add(req);
 

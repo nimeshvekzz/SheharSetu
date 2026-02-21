@@ -28,6 +28,7 @@ public final class ApiRoutes {
     public static final String UPDATE_USER_PROFILE = BASE_URL + "/update_user_profile.php";
 
     public static final String CREATE_LISTING = BASE_URL + "/create_listing.php";
+    public static final String UPDATE_LISTING = BASE_URL + "/update_listing.php";
 
     // My Listings
     public static final String GET_USER_LISTINGS = BASE_URL + "/get_user_listings.php";

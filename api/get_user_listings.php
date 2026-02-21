@@ -48,10 +48,13 @@ try {
     $query = "
         SELECT 
             l.listing_id,
+            l.category_id,
+            l.subcategory_id,
             l.title,
             l.price,
             l.status,
             l.created_at,
+            l.repost_count,
             c.name AS category_name,
             s.name AS subcategory_name
         FROM listing l
@@ -133,16 +136,19 @@ try {
         
         $formattedListings[] = [
             'listing_id' => (int)$listingId,
+            'category_id' => (int)($listing['category_id'] ?? 0),
+            'subcategory_id' => (int)($listing['subcategory_id'] ?? 0),
             'title' => $listing['title'] ?? 'Untitled',
             'price' => $listing['price'] ?? '0',
-            'city' => '', // Not in schema
+            'city' => '',
             'category' => $listing['category_name'] ?? '',
             'subcategory' => $listing['subcategory_name'] ?? '',
             'image_url' => $imageUrl,
             'is_sold' => $isSold,
             'status' => $listing['status'] ?? 'active',
             'created_at' => $listing['created_at'] ?? '',
-            'posted_when' => formatTimeAgo($listing['created_at'] ?? '')
+            'posted_when' => formatTimeAgo($listing['created_at'] ?? ''),
+            'repost_count' => (int)($listing['repost_count'] ?? 0)
         ];
     }
     

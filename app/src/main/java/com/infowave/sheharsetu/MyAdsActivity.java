@@ -197,6 +197,16 @@ public class MyAdsActivity extends AppCompatActivity implements MyAdsAdapter.OnA
     }
 
     @Override
+    public void onEditClick(MyListingsAdapter.ListingItem item) {
+        Intent intent = new Intent(this, DynamicFormActivity.class);
+        intent.putExtra(DynamicFormActivity.EXTRA_CATEGORY, item.category);
+        intent.putExtra("category_id", String.valueOf(item.categoryId));
+        intent.putExtra("subcategory_id", String.valueOf(item.subcategoryId));
+        intent.putExtra("edit_listing_id", item.listingId);
+        startActivity(intent);
+    }
+
+    @Override
     public void onDeleteClick(int listingId) {
         new AlertDialog.Builder(this)
                 .setTitle("Delete Listing")
@@ -272,8 +282,9 @@ public class MyAdsActivity extends AppCompatActivity implements MyAdsAdapter.OnA
                     try {
                         JSONObject json = new JSONObject(response);
                         if (json.optBoolean("success", false)) {
-                            // Move item to top of list
-                            adapter.moveItemToTop(listingId, "Just now");
+                            // Move item to top of list with updated repost count
+                            int repostCount = json.optInt("repost_count", 0);
+                            adapter.moveItemToTop(listingId, "Just now", repostCount);
                             rvMyAds.scrollToPosition(0);
                             Toast.makeText(this, "Ad reposted! It will appear at the top of the feed.",
                                     Toast.LENGTH_LONG).show();

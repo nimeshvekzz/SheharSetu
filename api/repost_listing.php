@@ -47,23 +47,47 @@ try {
 
     // Update created_at to NOW() so it appears at top of feed
     // Also set status to 'active' (in case it was sold/paused)
+    // And increment repost_count for tracking
     $stmt = $pdo->prepare("
         UPDATE listing 
         SET created_at = NOW(), 
             updated_at = NOW(), 
-            status = 'active' 
+            status = 'active',
+            repost_count = repost_count + 1
         WHERE listing_id = :listing_id
     ");
     $stmt->execute(['listing_id' => $listingId]);
 
+    // Log the repost event for future billing/analytics
+    $ipAddress = $_SERVER['HTTP_X_FORWARDED_FOR'] 
+        ?? $_SERVER['HTTP_X_REAL_IP'] 
+        ?? $_SERVER['REMOTE_ADDR'] 
+        ?? null;
+
+    $stmt = $pdo->prepare("
+        INSERT INTO listing_repost_log (listing_id, user_id, ip_address, reposted_at)
+        VALUES (:listing_id, :user_id, :ip_address, NOW())
+    ");
+    $stmt->execute([
+        'listing_id' => $listingId,
+        'user_id'    => $userId,
+        'ip_address' => $ipAddress
+    ]);
+
+    // Get the updated repost count
+    $stmt = $pdo->prepare("SELECT repost_count FROM listing WHERE listing_id = :listing_id");
+    $stmt->execute(['listing_id' => $listingId]);
+    $repostCount = (int)$stmt->fetchColumn();
+
     $newDate = date('Y-m-d H:i:s');
 
     json_out([
-        'success' => true,
-        'message' => 'Listing reposted successfully! It will now appear at the top.',
-        'listing_id' => $listingId,
-        'new_date' => $newDate,
-        'status' => 'active'
+        'success'      => true,
+        'message'      => 'Listing reposted successfully! It will now appear at the top.',
+        'listing_id'   => $listingId,
+        'new_date'     => $newDate,
+        'status'       => 'active',
+        'repost_count' => $repostCount
     ], 200);
 
 } catch (PDOException $e) {

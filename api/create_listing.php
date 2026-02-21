@@ -225,8 +225,36 @@ try {
         throw new RuntimeException('Failed to create listing in DB');
     }
 
-    // [Attributes Logic - Unchanged... skipping to Images]
-// ... (omitting attributes logic for brevity, see execution) ...
+    // ----------------------------------------------------
+    // 7) Save dynamic attributes from form_data
+    // ----------------------------------------------------
+    $skipKeys = ['listing_photos', 'description', 'price', 'price_per_unit', 'price_per_kg',
+                 'address', 'village_name', 'state', 'district', 'pincode',
+                 'latitude', 'longitude', 'is_new'];
+
+    $stmtAttrLookup = $pdo->prepare("SELECT attribute_id FROM attribute WHERE code = :code LIMIT 1");
+    $stmtAttrInsert = $pdo->prepare("
+        INSERT INTO listing_attribute_value (listing_id, attribute_id, value_text)
+        VALUES (:lid, :aid, :val)
+    ");
+
+    foreach ($formData as $key => $value) {
+        if (in_array($key, $skipKeys, true)) continue;
+        if ($value === null || $value === '') continue;
+
+        $stmtAttrLookup->execute(['code' => $key]);
+        $attrRow = $stmtAttrLookup->fetch(PDO::FETCH_ASSOC);
+        if (!$attrRow) continue;
+
+        $attrId = (int)$attrRow['attribute_id'];
+        $valText = is_array($value) || is_object($value) ? json_encode($value) : (string)$value;
+
+        $stmtAttrInsert->execute([
+            'lid' => $listingId,
+            'aid' => $attrId,
+            'val' => $valText,
+        ]);
+    }
 
     // ----------------------------------------------------
     // 9) Photos – listing_photos ko listing_media me save karna

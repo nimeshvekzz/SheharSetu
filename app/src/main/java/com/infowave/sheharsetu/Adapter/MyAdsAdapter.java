@@ -32,6 +32,8 @@ public class MyAdsAdapter extends RecyclerView.Adapter<MyAdsAdapter.ViewHolder> 
 
         void onRepostClick(int listingId);
 
+        void onEditClick(MyListingsAdapter.ListingItem item);
+
         void onDeleteClick(int listingId);
     }
 
@@ -78,12 +80,13 @@ public class MyAdsAdapter extends RecyclerView.Adapter<MyAdsAdapter.ViewHolder> 
     }
 
     /** Move a reposted listing to top and mark as active */
-    public void moveItemToTop(int listingId, String newPostedWhen) {
+    public void moveItemToTop(int listingId, String newPostedWhen, int repostCount) {
         for (int i = 0; i < items.size(); i++) {
             if (items.get(i).listingId == listingId) {
                 MyListingsAdapter.ListingItem item = items.remove(i);
                 item.isSold = false;
                 item.postedWhen = newPostedWhen;
+                item.repostCount = repostCount;
                 items.add(0, item);
                 notifyItemMoved(i, 0);
                 notifyItemChanged(0);
@@ -131,6 +134,17 @@ public class MyAdsAdapter extends RecyclerView.Adapter<MyAdsAdapter.ViewHolder> 
         holder.tvCategory.setText(categoryText);
         holder.tvPosted.setText(item.postedWhen);
 
+        // Repost count
+        if (item.repostCount > 0) {
+            holder.tvRepostCount.setVisibility(View.VISIBLE);
+            String countText = item.repostCount == 1
+                    ? "Reposted 1 time"
+                    : "Reposted " + item.repostCount + " times";
+            holder.tvRepostCount.setText(countText);
+        } else {
+            holder.tvRepostCount.setVisibility(View.GONE);
+        }
+
         // Status chip
         if (item.isSold) {
             holder.tvStatus.setText("SOLD");
@@ -166,6 +180,11 @@ public class MyAdsAdapter extends RecyclerView.Adapter<MyAdsAdapter.ViewHolder> 
                 listener.onRepostClick(item.listingId);
         });
 
+        holder.btnEdit.setOnClickListener(v -> {
+            if (listener != null)
+                listener.onEditClick(item);
+        });
+
         holder.btnDelete.setOnClickListener(v -> {
             if (listener != null)
                 listener.onDeleteClick(item.listingId);
@@ -180,8 +199,8 @@ public class MyAdsAdapter extends RecyclerView.Adapter<MyAdsAdapter.ViewHolder> 
     static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView imgListing;
         FrameLayout soldOverlay;
-        TextView tvTitle, tvPrice, tvCategory, tvPosted, tvStatus;
-        MaterialButton btnMarkSold, btnRepost, btnDelete;
+        TextView tvTitle, tvPrice, tvCategory, tvPosted, tvStatus, tvRepostCount;
+        MaterialButton btnMarkSold, btnRepost, btnEdit, btnDelete;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -192,8 +211,10 @@ public class MyAdsAdapter extends RecyclerView.Adapter<MyAdsAdapter.ViewHolder> 
             tvCategory = itemView.findViewById(R.id.tvCategory);
             tvPosted = itemView.findViewById(R.id.tvPosted);
             tvStatus = itemView.findViewById(R.id.tvStatus);
+            tvRepostCount = itemView.findViewById(R.id.tvRepostCount);
             btnMarkSold = itemView.findViewById(R.id.btnMarkSold);
             btnRepost = itemView.findViewById(R.id.btnRepost);
+            btnEdit = itemView.findViewById(R.id.btnEdit);
             btnDelete = itemView.findViewById(R.id.btnDelete);
         }
     }

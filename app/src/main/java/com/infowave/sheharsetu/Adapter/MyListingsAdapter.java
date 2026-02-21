@@ -149,6 +149,8 @@ public class MyListingsAdapter extends RecyclerView.Adapter<MyListingsAdapter.Vi
      */
     public static class ListingItem {
         public int listingId;
+        public int categoryId;
+        public int subcategoryId;
         public String title;
         public String price;
         public String city;
@@ -157,6 +159,7 @@ public class MyListingsAdapter extends RecyclerView.Adapter<MyListingsAdapter.Vi
         public String imageUrl;
         public boolean isSold;
         public String postedWhen;
+        public int repostCount;
 
         public ListingItem() {
         }
@@ -164,6 +167,8 @@ public class MyListingsAdapter extends RecyclerView.Adapter<MyListingsAdapter.Vi
         public static ListingItem fromJson(org.json.JSONObject json) {
             ListingItem item = new ListingItem();
             item.listingId = json.optInt("listing_id", 0);
+            item.categoryId = json.optInt("category_id", 0);
+            item.subcategoryId = json.optInt("subcategory_id", 0);
             item.title = json.optString("title", "");
             item.price = json.optString("price", "");
             item.city = json.optString("city", "");
@@ -172,6 +177,7 @@ public class MyListingsAdapter extends RecyclerView.Adapter<MyListingsAdapter.Vi
             item.imageUrl = json.optString("image_url", "");
             item.isSold = json.optBoolean("is_sold", false);
             item.postedWhen = json.optString("posted_when", "");
+            item.repostCount = json.optInt("repost_count", 0);
             return item;
         }
     }

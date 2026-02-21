@@ -135,6 +135,18 @@
 
                 </LinearLayout>
 
+                <!-- Repost count -->
+                <TextView
+                    android:id="@+id/tvRepostCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:drawablePadding="4dp"
+                    android:textColor="@color/colorTextSecondary"
+                    android:textSize="10sp"
+                    android:visibility="gone"
+                    tools:text="Reposted 2 times" />
+
             </LinearLayout>
         </LinearLayout>
 
@@ -184,6 +196,22 @@
                 app:iconGravity="textStart"
                 app:iconSize="16dp"
                 app:iconTint="@color/colorPrimary" />
+
+            <!-- Edit -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnEdit"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="Edit"
+                android:textAllCaps="false"
+                android:textSize="12sp"
+                app:cornerRadius="8dp"
+                app:icon="@drawable/ic_form_edit"
+                app:iconGravity="textStart"
+                app:iconSize="16dp"
+                app:iconTint="@color/colorTextSecondary" />
 
             <!-- Delete -->
             <com.google.android.material.button.MaterialButton
