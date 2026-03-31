@@ -20,14 +20,12 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Top: Image + Info row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:minHeight="140dp">
 
-            <!-- Elegant Image Frame (Left aligned with card bounds) -->
             <FrameLayout
                 android:layout_width="135dp"
                 android:layout_height="match_parent"
@@ -41,7 +39,6 @@
                     android:src="@drawable/ic_placeholder_circle"
                     android:contentDescription="Listing image" />
 
-                <!-- SOLD overlay badge -->
                 <FrameLayout
                     android:id="@+id/soldOverlay"
                     android:layout_width="match_parent"
@@ -64,7 +61,6 @@
                 </FrameLayout>
             </FrameLayout>
 
-            <!-- Info Area (Right) -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
@@ -109,7 +105,6 @@
                     android:textSize="12sp"
                     tools:text="Electronics • Mobile" />
 
-                <!-- Space to push bottom info down -->
                 <Space
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
@@ -131,7 +126,6 @@
                         android:textSize="11sp"
                         tools:text="2d ago" />
 
-                    <!-- Status chip -->
                     <TextView
                         android:id="@+id/tvStatus"
                         android:layout_width="wrap_content"
@@ -148,7 +142,6 @@
 
                 </LinearLayout>
 
-                <!-- Repost count -->
                 <TextView
                     android:id="@+id/tvRepostCount"
                     android:layout_width="wrap_content"
@@ -163,13 +156,11 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Elegant Divider -->
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:background="#E5E7EB" />
 
-        <!-- Crisp Action Buttons Row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -179,7 +170,6 @@
             android:baselineAligned="false"
             android:weightSum="4">
 
-            <!-- Mark Sold / Mark Available -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -189,9 +179,11 @@
                 android:paddingVertical="8dp">
 
                 <ImageView
+                    android:id="@+id/ivMarkSold"
                     android:layout_width="22dp"
                     android:layout_height="22dp"
                     android:src="@drawable/ic_check_circle_24"
+                    android:contentDescription="Mark sold"
                     app:tint="#4B5563" />
 
                 <com.google.android.material.button.MaterialButton
@@ -210,7 +202,6 @@
                     app:rippleColor="#1A000000" />
             </LinearLayout>
 
-            <!-- Repost -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -220,9 +211,11 @@
                 android:paddingVertical="8dp">
 
                 <ImageView
+                    android:id="@+id/ivRepost"
                     android:layout_width="22dp"
                     android:layout_height="22dp"
                     android:src="@drawable/ic_refresh_24"
+                    android:contentDescription="Repost"
                     app:tint="@color/colorPrimary" />
 
                 <com.google.android.material.button.MaterialButton
@@ -241,7 +234,6 @@
                     app:rippleColor="#1A000000" />
             </LinearLayout>
 
-            <!-- Edit -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -251,9 +243,11 @@
                 android:paddingVertical="8dp">
 
                 <ImageView
+                    android:id="@+id/ivEdit"
                     android:layout_width="22dp"
                     android:layout_height="22dp"
                     android:src="@drawable/ic_form_edit"
+                    android:contentDescription="Edit"
                     app:tint="#4B5563" />
 
                 <com.google.android.material.button.MaterialButton
@@ -272,7 +266,6 @@
                     app:rippleColor="#1A000000" />
             </LinearLayout>
 
-            <!-- Delete -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -282,9 +275,11 @@
                 android:paddingVertical="8dp">
 
                 <ImageView
+                    android:id="@+id/ivDelete"
                     android:layout_width="22dp"
                     android:layout_height="22dp"
                     android:src="@drawable/ic_delete_24"
+                    android:contentDescription="Delete"
                     app:tint="#DC2626" />
 
                 <com.google.android.material.button.MaterialButton

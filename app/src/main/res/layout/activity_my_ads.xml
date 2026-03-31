@@ -23,7 +23,7 @@
         android:id="@+id/toolbar"
         android:layout_width="0dp"
         android:layout_height="?attr/actionBarSize"
-        android:background="@color/teal_premium"
+        android:background="@color/colorPrimary"
         android:elevation="0dp"
         app:navigationIcon="@drawable/ic_arrow_back_24"
         app:navigationIconTint="#FFFFFF"

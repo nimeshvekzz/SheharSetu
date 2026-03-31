@@ -27,13 +27,9 @@ public class MyAdsAdapter extends RecyclerView.Adapter<MyAdsAdapter.ViewHolder> 
 
     public interface OnAdActionListener {
         void onAdClick(int listingId);
-
         void onMarkSoldClick(int listingId, boolean currentlySold);
-
         void onRepostClick(int listingId);
-
         void onEditClick(MyListingsAdapter.ListingItem item);
-
         void onDeleteClick(int listingId);
     }
 
@@ -57,7 +53,6 @@ public class MyAdsAdapter extends RecyclerView.Adapter<MyAdsAdapter.ViewHolder> 
         notifyDataSetChanged();
     }
 
-    /** Remove an item by listing ID (after successful delete) */
     public void removeItem(int listingId) {
         for (int i = 0; i < items.size(); i++) {
             if (items.get(i).listingId == listingId) {
@@ -68,7 +63,6 @@ public class MyAdsAdapter extends RecyclerView.Adapter<MyAdsAdapter.ViewHolder> 
         }
     }
 
-    /** Update sold status for a single item */
     public void updateItemSoldStatus(int listingId, boolean isSold) {
         for (int i = 0; i < items.size(); i++) {
             if (items.get(i).listingId == listingId) {
@@ -79,7 +73,6 @@ public class MyAdsAdapter extends RecyclerView.Adapter<MyAdsAdapter.ViewHolder> 
         }
     }
 
-    /** Move a reposted listing to top and mark as active */
     public void moveItemToTop(int listingId, String newPostedWhen, int repostCount) {
         for (int i = 0; i < items.size(); i++) {
             if (items.get(i).listingId == listingId) {
@@ -111,7 +104,6 @@ public class MyAdsAdapter extends RecyclerView.Adapter<MyAdsAdapter.ViewHolder> 
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         MyListingsAdapter.ListingItem item = items.get(position);
 
-        // Load image
         if (!TextUtils.isEmpty(item.imageUrl)) {
             Glide.with(context)
                     .load(item.imageUrl)
@@ -123,7 +115,6 @@ public class MyAdsAdapter extends RecyclerView.Adapter<MyAdsAdapter.ViewHolder> 
             holder.imgListing.setImageResource(R.drawable.ic_placeholder_circle);
         }
 
-        // Text
         holder.tvTitle.setText(item.title);
         holder.tvPrice.setText(item.price);
 
@@ -134,7 +125,6 @@ public class MyAdsAdapter extends RecyclerView.Adapter<MyAdsAdapter.ViewHolder> 
         holder.tvCategory.setText(categoryText);
         holder.tvPosted.setText(item.postedWhen);
 
-        // Repost count
         if (item.repostCount > 0) {
             holder.tvRepostCount.setVisibility(View.VISIBLE);
             String countText = item.repostCount == 1
@@ -145,49 +135,86 @@ public class MyAdsAdapter extends RecyclerView.Adapter<MyAdsAdapter.ViewHolder> 
             holder.tvRepostCount.setVisibility(View.GONE);
         }
 
-        // Status chip
         if (item.isSold) {
             holder.tvStatus.setText(I18n.t(context, "SOLD"));
             holder.tvStatus.setTextColor(0xFFFF5252);
             holder.tvStatus.setBackgroundColor(0x1AFF5252);
             holder.soldOverlay.setVisibility(View.VISIBLE);
+
             holder.btnMarkSold.setText(I18n.t(context, "Available"));
+
             holder.btnRepost.setAlpha(0.5f);
             holder.btnRepost.setEnabled(false);
+
+            holder.ivRepost.setAlpha(0.5f);
+            holder.ivRepost.setEnabled(false);
         } else {
             holder.tvStatus.setText(I18n.t(context, "ACTIVE"));
             holder.tvStatus.setTextColor(0xFF4CAF50);
             holder.tvStatus.setBackgroundColor(0x1A4CAF50);
             holder.soldOverlay.setVisibility(View.GONE);
+
             holder.btnMarkSold.setText(I18n.t(context, "Sold"));
+
             holder.btnRepost.setAlpha(1.0f);
             holder.btnRepost.setEnabled(true);
+
+            holder.ivRepost.setAlpha(1.0f);
+            holder.ivRepost.setEnabled(true);
         }
 
-        // Click listeners
         holder.itemView.setOnClickListener(v -> {
-            if (listener != null)
+            if (listener != null) {
                 listener.onAdClick(item.listingId);
+            }
         });
 
         holder.btnMarkSold.setOnClickListener(v -> {
-            if (listener != null)
+            if (listener != null) {
                 listener.onMarkSoldClick(item.listingId, item.isSold);
+            }
+        });
+
+        holder.ivMarkSold.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onMarkSoldClick(item.listingId, item.isSold);
+            }
         });
 
         holder.btnRepost.setOnClickListener(v -> {
-            if (listener != null)
+            if (listener != null && holder.btnRepost.isEnabled()) {
                 listener.onRepostClick(item.listingId);
+            }
+        });
+
+        holder.ivRepost.setOnClickListener(v -> {
+            if (listener != null && holder.ivRepost.isEnabled()) {
+                listener.onRepostClick(item.listingId);
+            }
         });
 
         holder.btnEdit.setOnClickListener(v -> {
-            if (listener != null)
+            if (listener != null) {
                 listener.onEditClick(item);
+            }
+        });
+
+        holder.ivEdit.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onEditClick(item);
+            }
         });
 
         holder.btnDelete.setOnClickListener(v -> {
-            if (listener != null)
+            if (listener != null) {
                 listener.onDeleteClick(item.listingId);
+            }
+        });
+
+        holder.ivDelete.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onDeleteClick(item.listingId);
+            }
         });
     }
 
@@ -198,6 +225,7 @@ public class MyAdsAdapter extends RecyclerView.Adapter<MyAdsAdapter.ViewHolder> 
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView imgListing;
+        ImageView ivMarkSold, ivRepost, ivEdit, ivDelete;
         FrameLayout soldOverlay;
         TextView tvTitle, tvPrice, tvCategory, tvPosted, tvStatus, tvRepostCount;
         MaterialButton btnMarkSold, btnRepost, btnEdit, btnDelete;
@@ -206,16 +234,23 @@ public class MyAdsAdapter extends RecyclerView.Adapter<MyAdsAdapter.ViewHolder> 
             super(itemView);
             imgListing = itemView.findViewById(R.id.imgListing);
             soldOverlay = itemView.findViewById(R.id.soldOverlay);
+
             tvTitle = itemView.findViewById(R.id.tvTitle);
             tvPrice = itemView.findViewById(R.id.tvPrice);
             tvCategory = itemView.findViewById(R.id.tvCategory);
             tvPosted = itemView.findViewById(R.id.tvPosted);
             tvStatus = itemView.findViewById(R.id.tvStatus);
             tvRepostCount = itemView.findViewById(R.id.tvRepostCount);
+
             btnMarkSold = itemView.findViewById(R.id.btnMarkSold);
             btnRepost = itemView.findViewById(R.id.btnRepost);
             btnEdit = itemView.findViewById(R.id.btnEdit);
             btnDelete = itemView.findViewById(R.id.btnDelete);
+
+            ivMarkSold = itemView.findViewById(R.id.ivMarkSold);
+            ivRepost = itemView.findViewById(R.id.ivRepost);
+            ivEdit = itemView.findViewById(R.id.ivEdit);
+            ivDelete = itemView.findViewById(R.id.ivDelete);
         }
     }
 }

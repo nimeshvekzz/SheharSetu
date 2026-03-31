@@ -3,70 +3,78 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="120dp"
-    android:layout_margin="8dp"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="6dp"
-    app:strokeWidth="1dp"
-    app:strokeColor="@color/colorPrimaryMedium"
+    android:layout_height="130dp"
+    android:layout_margin="6dp"
     android:foreground="?attr/selectableItemBackground"
-    android:clipToPadding="false"
-    android:clipChildren="false">
+    app:cardCornerRadius="14dp"
+    app:cardElevation="6dp"
+    app:strokeWidth="0dp"
+    app:cardBackgroundColor="@color/premium_surface">
 
-    <FrameLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:padding="8dp">
 
-        <!-- Premium Image -->
-        <ImageView
-            android:id="@+id/imgIcon"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scaleType="centerCrop"
-            android:contentDescription="@null" />
+        <FrameLayout
+            android:id="@+id/iconContainer"
+            android:layout_width="54dp"
+            android:layout_height="54dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_circle_surface"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Soft gradient overlay -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="55dp"
-            android:layout_gravity="bottom"
-            android:background="@drawable/bg_sub_premium_scrim" />
+            <ImageView
+                android:id="@+id/imgIcon"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_gravity="center"
+                android:scaleType="centerInside"
+                android:contentDescription="@null"
+                app:tint="@color/colorPrimary" />
 
-        <!-- Glass Label Title -->
+        </FrameLayout>
+
         <TextView
             android:id="@+id/tvName"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom"
-            android:layout_margin="10dp"
-            android:paddingVertical="6dp"
-            android:paddingHorizontal="10dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
             android:gravity="center"
-            android:maxLines="1"
+            android:maxLines="2"
             android:ellipsize="end"
-            android:textColor="@android:color/white"
-            android:textStyle="bold"
-            android:textSize="14sp"
-            android:background="@drawable/bg_glass_label_sub" />
+            android:textColor="@color/premium_text_main"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif-medium"
+            android:lineSpacingMultiplier="1.1"
+            app:layout_constraintTop_toBottomOf="@id/iconContainer"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
-        <!-- Selection badge -->
         <FrameLayout
             android:id="@+id/badge"
-            android:layout_width="26dp"
-            android:layout_height="26dp"
-            android:layout_gravity="top|end"
-            android:layout_margin="8dp"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginTop="-4dp"
+            android:layout_marginEnd="-4dp"
             android:visibility="gone"
-            android:background="@drawable/bg_check_badge_sub">
+            android:background="@drawable/bg_check_badge_premium"
+            app:layout_constraintTop_toTopOf="@id/iconContainer"
+            app:layout_constraintEnd_toEndOf="@id/iconContainer">
 
             <ImageView
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:padding="5dp"
+                android:padding="3dp"
                 android:src="@drawable/ic_check_24"
                 app:tint="@android:color/white" />
+
         </FrameLayout>
 
-    </FrameLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </com.google.android.material.card.MaterialCardView>
