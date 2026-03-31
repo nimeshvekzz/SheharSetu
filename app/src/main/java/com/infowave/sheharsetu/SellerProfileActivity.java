@@ -9,7 +9,11 @@ import android.util.Log;
 import android.view.View;
 import android.widget.*;
 
+import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -17,6 +21,8 @@ import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.bumptech.glide.Glide;
+import com.infowave.sheharsetu.Adapter.I18n;
+import com.infowave.sheharsetu.Adapter.LanguageManager;
 import com.infowave.sheharsetu.Adapter.ProductAdapter;
 import com.infowave.sheharsetu.net.ApiRoutes;
 import com.infowave.sheharsetu.net.VolleySingleton;
@@ -34,7 +40,7 @@ public class SellerProfileActivity extends AppCompatActivity {
     private static final String TAG = "SellerProfileActivity";
 
     // UI Components
-    private TextView tvSellerName, tvMemberSince;
+    private TextView tvSellerName, tvMemberSince, tvAvatarLetter;
     private View tvNoListings;
     private ImageView ivSellerAvatar;
     private View btnCall, btnWhatsapp, btnLocation;
@@ -49,12 +55,38 @@ public class SellerProfileActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        EdgeToEdge.enable(this);
+        LanguageManager.apply(this,
+                getSharedPreferences(com.infowave.sheharsetu.core.SessionManager.PREFS, MODE_PRIVATE)
+                        .getString("app_lang_code", "en"));
+        getWindow().setStatusBarColor(ContextCompat.getColor(this, android.R.color.black));
+        getWindow().setNavigationBarColor(ContextCompat.getColor(this, android.R.color.black));
         setContentView(R.layout.activity_seller_profile);
+
+        // Apply status bar and nav bar heights to the background views
+        View viewStatusBarBg = findViewById(R.id.viewStatusBarBackground);
+        View viewNavBarBg = findViewById(R.id.viewNavBarBackground);
+        View rootView = findViewById(R.id.root);
+        if (rootView != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, insets) -> {
+                androidx.core.graphics.Insets systemBars = insets.getInsets(
+                        WindowInsetsCompat.Type.systemBars());
+                if (viewStatusBarBg != null) {
+                    viewStatusBarBg.getLayoutParams().height = systemBars.top;
+                    viewStatusBarBg.requestLayout();
+                }
+                if (viewNavBarBg != null) {
+                    viewNavBarBg.getLayoutParams().height = systemBars.bottom;
+                    viewNavBarBg.requestLayout();
+                }
+                return insets;
+            });
+        }
 
         // Get Seller ID
         sellerId = getIntent().getIntExtra("seller_id", 0);
         if (sellerId <= 0) {
-            Toast.makeText(this, "Invalid Seller ID", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, I18n.t(this, "Invalid Seller ID"), Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
@@ -71,6 +103,7 @@ public class SellerProfileActivity extends AppCompatActivity {
         tvSellerName = findViewById(R.id.tvSellerName);
         tvMemberSince = findViewById(R.id.tvMemberSince);
         ivSellerAvatar = findViewById(R.id.ivSellerAvatar);
+        tvAvatarLetter = findViewById(R.id.tvAvatarLetter);
 
         // Buttons
         btnCall = findViewById(R.id.btnCall);
@@ -92,7 +125,7 @@ public class SellerProfileActivity extends AppCompatActivity {
     }
 
     private void fetchSellerDetails() {
-        LoadingDialog.showLoading(this, "Loading profile...");
+        LoadingDialog.showLoading(this, I18n.t(this, "Loading profile..."));
 
         String url = ApiRoutes.BASE_URL + "/get_seller_details.php?user_id=" + sellerId;
         JsonObjectRequest req = new JsonObjectRequest(Request.Method.GET, url, null, resp -> {
@@ -108,7 +141,7 @@ public class SellerProfileActivity extends AppCompatActivity {
             }
         }, err -> {
             LoadingDialog.hideLoading();
-            Toast.makeText(this, "Network Error", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, I18n.t(this, "Network Error"), Toast.LENGTH_SHORT).show();
         });
 
         req.setRetryPolicy(new DefaultRetryPolicy(10000, 1, 1.0f));
@@ -122,13 +155,23 @@ public class SellerProfileActivity extends AppCompatActivity {
 
         String capsName = p.optString("name", "Seller");
         tvSellerName.setText(capsName);
-        tvMemberSince.setText("Member since " + p.optString("member_since"));
+        tvMemberSince.setText(I18n.t(this, "Member since") + " " + p.optString("member_since"));
+
+        // Setup Avatar Letter
+        if (!capsName.isEmpty()) {
+            tvAvatarLetter.setText(String.valueOf(capsName.charAt(0)).toUpperCase());
+        } else {
+            tvAvatarLetter.setText("S");
+        }
 
         sellerPhone = p.optString("phone", "");
 
         String ava = p.optString("avatar_url", "");
         if (!ava.isEmpty()) {
+            ivSellerAvatar.setVisibility(View.VISIBLE);
             Glide.with(this).load(ava).placeholder(R.drawable.ic_placeholder_circle).into(ivSellerAvatar);
+        } else {
+            ivSellerAvatar.setVisibility(View.INVISIBLE);
         }
     }
 
@@ -182,26 +225,26 @@ public class SellerProfileActivity extends AppCompatActivity {
 
     private void actionCall() {
         if (sellerPhone.isEmpty()) {
-            Toast.makeText(this, "No phone number available", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, I18n.t(this, "No phone number available"), Toast.LENGTH_SHORT).show();
             return;
         }
         try {
             startActivity(new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + sellerPhone)));
         } catch (Exception e) {
-            Toast.makeText(this, "Could not open dialer", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, I18n.t(this, "Could not open dialer"), Toast.LENGTH_SHORT).show();
         }
     }
 
     private void actionWhatsApp() {
         if (sellerPhone.isEmpty()) {
-            Toast.makeText(this, "No phone number available", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, I18n.t(this, "No phone number available"), Toast.LENGTH_SHORT).show();
             return;
         }
         String url = "https://api.whatsapp.com/send?phone=" + sellerPhone;
         try {
             startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
         } catch (Exception e) {
-            Toast.makeText(this, "WhatsApp not installed", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, I18n.t(this, "WhatsApp not installed"), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -209,6 +252,6 @@ public class SellerProfileActivity extends AppCompatActivity {
         // Location logic: we don't have exact lat/long in profile API currently.
         // We can use the city/district to open maps.
         // For now, let's toast if no data, or open maps query.
-        Toast.makeText(this, "Location details coming soon", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, I18n.t(this, "Location details coming soon"), Toast.LENGTH_SHORT).show();
     }
 }

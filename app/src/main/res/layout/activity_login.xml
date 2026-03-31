@@ -1,187 +1,191 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/rootLogin"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_splash">
+    android:background="#000000"
+    android:fitsSystemWindows="false">
 
-    <androidx.core.widget.NestedScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true"
-        android:overScrollMode="ifContentScrolls"
-        android:clipToPadding="false">
+    <View
+        android:id="@+id/viewStatusBarBackground"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:background="#000000"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-        <LinearLayout
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:id="@+id/rootLogin"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/bg_splash"
+        app:layout_constraintTop_toBottomOf="@id/viewStatusBarBackground"
+        app:layout_constraintBottom_toTopOf="@id/viewNavBarBackground"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <androidx.core.widget.NestedScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="top"
-            android:paddingStart="@dimen/page_hpad"
-            android:paddingEnd="@dimen/page_hpad"
-            android:paddingTop="@dimen/page_vpad"
-            android:paddingBottom="120dp">
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:overScrollMode="ifContentScrolls"
+            android:clipToPadding="false">
 
-            <!-- Language badge (kept commented for now, as in your original) -->
-            <!--
-            <TextView
-                android:id="@+id/tvLangBadge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/badge_language"
-                android:textStyle="bold"
-                android:textColor="@android:color/white"
-                android:background="#331F2933"
-                android:paddingStart="10dp"
-                android:paddingEnd="10dp"
-                android:paddingTop="4dp"
-                android:paddingBottom="4dp"
-                android:textSize="11sp"
-                android:layout_marginBottom="10dp"
-                android:letterSpacing="0.03" />
-            -->
-
-            <!-- Header -->
-            <TextView
-                android:id="@+id/tvTitle"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/title_login"
-                android:textSize="@dimen/title_text"
-                android:textStyle="bold"
-                android:textColor="@android:color/white"
-                android:letterSpacing="0.02"
-                android:layout_marginTop="40dp"
-                android:layout_marginBottom="6dp" />
+                android:orientation="vertical"
+                android:gravity="top"
+                android:paddingStart="@dimen/page_hpad"
+                android:paddingEnd="@dimen/page_hpad"
+                android:paddingTop="@dimen/page_vpad"
+                android:paddingBottom="120dp">
 
-            <!-- Subtitle -->
-            <TextView
-                android:id="@+id/tvSubtitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/login_subtitle"
-                android:textColor="#E6FFFFFF"
-                android:textSize="13sp"
-                android:lineSpacingExtra="2dp"
-                android:layout_marginBottom="18dp" />
-
-            <!-- Glass Card -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="14dp"
-                app:cardUseCompatPadding="true"
-                app:cardElevation="10dp"
-                app:cardCornerRadius="22dp"
-                app:cardBackgroundColor="@color/colorSurface"
-                app:strokeColor="@color/colorDivider"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
+                <!-- Header -->
+                <TextView
+                    android:id="@+id/tvTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="@dimen/panel_pad">
+                    android:text="Login"
+                    android:textSize="@dimen/title_text"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/white"
+                    android:letterSpacing="0.02"
+                    android:layout_marginTop="40dp"
+                    android:layout_marginBottom="6dp" />
 
-                    <!-- Section title -->
-                    <TextView
-                        android:id="@+id/tvSectionTitle"
+                <!-- Subtitle -->
+                <TextView
+                    android:id="@+id/tvSubtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Enter your mobile number to continue"
+                    android:textColor="#E6FFFFFF"
+                    android:textSize="13sp"
+                    android:lineSpacingExtra="2dp"
+                    android:layout_marginBottom="18dp" />
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="14dp"
+                    app:cardUseCompatPadding="true"
+                    app:cardElevation="10dp"
+                    app:cardCornerRadius="22dp"
+                    app:cardBackgroundColor="@color/colorSurface"
+                    app:strokeColor="@color/colorDivider"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/login_section_title"
-                        android:textStyle="bold"
-                        android:textSize="15sp"
-                        android:textColor="@color/colorTextPrimary"
-                        android:layout_marginBottom="6dp" />
+                        android:orientation="vertical"
+                        android:padding="@dimen/panel_pad">
 
-                    <!-- Small helper line inside card -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/login_mobile_helper"
-                        android:textColor="@color/colorTextSecondary"
-                        android:textSize="11sp"
-                        android:layout_marginBottom="14dp" />
-
-                    <!-- Mobile -->
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="@string/hint_mobile"
-                        app:boxStrokeWidth="1dp"
-                        app:boxStrokeWidthFocused="2dp"
-                        app:boxCornerRadiusTopStart="12dp"
-                        app:boxCornerRadiusTopEnd="12dp"
-                        app:boxCornerRadiusBottomStart="12dp"
-                        app:boxCornerRadiusBottomEnd="12dp"
-                        app:boxBackgroundColor="@color/colorSurface"
-                        app:boxStrokeColor="@color/colorDivider"
-                        app:hintTextColor="@color/colorTextSecondary"
-                        app:startIconDrawable="@drawable/ic_phone"
-                        app:startIconTint="@color/colorPrimary">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etMobile"
+                        <TextView
+                            android:id="@+id/tvSectionTitle"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:singleLine="true"
-                            android:inputType="phone"
-                            android:maxLength="10"
+                            android:text="Mobile verification"
+                            android:textStyle="bold"
+                            android:textSize="15sp"
                             android:textColor="@color/colorTextPrimary"
-                            android:textSize="14sp"
-                            android:paddingTop="12dp"
-                            android:paddingBottom="12dp" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                            android:layout_marginBottom="6dp" />
 
-                    <!-- Helper (kept as in your original) -->
-                    <TextView
-                        android:id="@+id/tvHelper"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/login_mobile_helper"
-                        android:textColor="@color/colorTextSecondary"
-                        android:textSize="11sp"
-                        android:layout_marginTop="6dp" />
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="We will send an OTP to your mobile number"
+                            android:textColor="@color/colorTextSecondary"
+                            android:textSize="11sp"
+                            android:layout_marginBottom="14dp" />
 
-            <!-- Register link -->
-            <TextView
-                android:id="@+id/tvGoRegister"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="@string/cta_register"
-                android:gravity="center"
-                android:textStyle="bold"
-                android:textSize="13sp"
-                android:letterSpacing="0.02"
-                android:textColor="@android:color/white" />
-        </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Mobile number"
+                            app:boxStrokeWidth="1dp"
+                            app:boxStrokeWidthFocused="2dp"
+                            app:boxCornerRadiusTopStart="12dp"
+                            app:boxCornerRadiusTopEnd="12dp"
+                            app:boxCornerRadiusBottomStart="12dp"
+                            app:boxCornerRadiusBottomEnd="12dp"
+                            app:boxBackgroundColor="@color/colorSurface"
+                            app:boxStrokeColor="@color/colorDivider"
+                            app:hintTextColor="@color/colorTextSecondary"
+                            app:startIconDrawable="@drawable/ic_phone"
+                            app:startIconTint="@color/colorPrimary">
 
-    <!-- Sticky CTA -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnSendOtp"
-        style="@style/Widget.Material3.Button"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:layout_gravity="bottom"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="18dp"
-        android:text="@string/btn_send_otp"
-        android:textAllCaps="false"
-        android:textStyle="bold"
-        android:textSize="15sp"
-        android:letterSpacing="0.02"
-        android:elevation="8dp"
-        android:backgroundTint="@color/colorPrimary"
-        android:textColor="@color/colorSurface"
-        app:cornerRadius="20dp"
-        app:rippleColor="@color/colorPrimaryMedium" />
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etMobile"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:singleLine="true"
+                                android:inputType="phone"
+                                android:maxLength="10"
+                                android:textColor="@color/colorTextPrimary"
+                                android:textSize="14sp"
+                                android:paddingTop="12dp"
+                                android:paddingBottom="12dp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <TextView
+                            android:id="@+id/tvHelper"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="We will send an OTP to your mobile number"
+                            android:textColor="@color/colorTextSecondary"
+                            android:textSize="11sp"
+                            android:layout_marginTop="6dp" />
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <TextView
+                    android:id="@+id/tvGoRegister"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="New user? Register"
+                    android:gravity="center"
+                    android:textStyle="bold"
+                    android:textSize="13sp"
+                    android:letterSpacing="0.02"
+                    android:textColor="@android:color/white" />
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSendOtp"
+            style="@style/Widget.Material3.Button"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_gravity="bottom"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="18dp"
+            android:text="Send OTP"
+            android:textAllCaps="false"
+            android:textStyle="bold"
+            android:textSize="15sp"
+            android:letterSpacing="0.02"
+            android:elevation="8dp"
+            android:backgroundTint="@color/colorSurface"
+            android:textColor="@color/colorPrimary"
+            app:cornerRadius="20dp"
+            app:rippleColor="@color/colorPrimaryMedium" />
+
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+    <View
+        android:id="@+id/viewNavBarBackground"
+        android:layout_width="0dp"
+        android:layout_height="20dp"
+        android:background="#000000"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

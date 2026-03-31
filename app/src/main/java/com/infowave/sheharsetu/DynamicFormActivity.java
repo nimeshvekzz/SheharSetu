@@ -39,6 +39,8 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.infowave.sheharsetu.Adapter.DynamicFormAdapter;
+import com.infowave.sheharsetu.Adapter.I18n;
+import com.infowave.sheharsetu.Adapter.LanguageManager;
 import com.infowave.sheharsetu.core.SessionManager;
 import com.infowave.sheharsetu.net.ApiRoutes;
 import com.infowave.sheharsetu.net.VolleySingleton;
@@ -100,6 +102,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
 
     private String categoryName;
 
+
     // Edit mode
     private int editListingId = 0;
     private boolean isEditMode = false;
@@ -159,6 +162,11 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        String langCode = getSharedPreferences(SessionManager.PREFS, MODE_PRIVATE)
+                .getString("app_lang_code", "en");
+        LanguageManager.apply(this, langCode);
+
         setContentView(R.layout.activity_dynamic_form);
         applyThemeBarsAndWidgets();
 
@@ -210,12 +218,8 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         editListingId = intent.getIntExtra("edit_listing_id", 0);
         isEditMode = editListingId > 0;
 
-        if (isEditMode) {
-            tvTitle.setText("Edit in " + categoryName);
-            btnSubmit.setText("Update Listing");
-        } else {
-            tvTitle.setText("Sell in " + categoryName);
-        }
+        applyTranslatedScreenTexts();
+
 
         String catIdStr = intent.getStringExtra("category_id");
         String subIdStr = intent.getStringExtra("subcategory_id");
@@ -258,7 +262,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
 
         {
             if (adapter == null) {
-                toast("Form is not ready yet, please wait...");
+                toast(I18n.t(this, "Form is not ready yet, please wait..."));
                 Log.e(TAG, "Submit pressed but adapter is null");
                 return;
             }
@@ -283,22 +287,35 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
             submitListing(result);
         });
 
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
-        getWindow().setStatusBarColor(android.graphics.Color.BLACK);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
 
         WindowInsetsControllerCompat wic = new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
         wic.setAppearanceLightStatusBars(false);
+        wic.setAppearanceLightNavigationBars(false);
 
-        View root = findViewById(R.id.root);
-        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
-            Insets bars = insets.getInsets(WindowInsetsCompat.Type.statusBars());
-            v.setPadding(
-                    v.getPaddingLeft(),
-                    bars.top,
-                    v.getPaddingRight(),
-                    v.getPaddingBottom());
-            return insets;
-        });
+        View rootContainer = findViewById(R.id.rootContainer);
+        View viewStatusBarBackground = findViewById(R.id.viewStatusBarBackground);
+        View viewNavBarBackground = findViewById(R.id.viewNavBarBackground);
+
+        if (rootContainer != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(rootContainer, (v, insets) -> {
+                Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+                if (viewStatusBarBackground != null) {
+                    viewStatusBarBackground.getLayoutParams().height = systemBars.top;
+                    viewStatusBarBackground.requestLayout();
+                }
+
+                if (viewNavBarBackground != null) {
+                    viewNavBarBackground.getLayoutParams().height = systemBars.bottom;
+                    viewNavBarBackground.requestLayout();
+                }
+
+                return insets;
+            });
+        }
     }
 
     private long parseLongSafe(String s) {
@@ -310,6 +327,83 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
             return 0L;
         }
     }
+
+    private String safeTrim(String s) {
+        return s == null ? "" : s.trim();
+    }
+
+    private boolean isTruthy(@Nullable Object raw) {
+        if (raw == null) return false;
+        if (raw instanceof Boolean) return (Boolean) raw;
+        if (raw instanceof Number) return ((Number) raw).intValue() != 0;
+        String s = String.valueOf(raw).trim().toLowerCase(Locale.US);
+        return "1".equals(s) || "true".equals(s) || "yes".equals(s) || "on".equals(s) || "new".equals(s);
+    }
+
+    private int resolveIsNewValue(JSONObject formResult) {
+        if (formResult == null) return 0;
+        Object raw = null;
+        if (formResult.has("is_new")) {
+            raw = formResult.opt("is_new");
+        } else if (formResult.has("is_new_item")) {
+            raw = formResult.opt("is_new_item");
+        }
+        return isTruthy(raw) ? 1 : 0;
+    }
+
+    private void applyExistingLocationFromResponse(JSONObject data) {
+        if (data == null) return;
+
+        String state = safeTrim(data.optString("state", ""));
+        String district = safeTrim(data.optString("district", ""));
+        String village = safeTrim(data.optString("village_name", ""));
+        String address = safeTrim(data.optString("address", ""));
+        String latRaw = safeTrim(data.optString("latitude", ""));
+        String lngRaw = safeTrim(data.optString("longitude", ""));
+
+        if (!state.isEmpty()) detectedState = state;
+        if (!district.isEmpty()) detectedDistrict = district;
+
+        if (!latRaw.isEmpty() && !lngRaw.isEmpty()) {
+            try {
+                detectedLatitude = Double.parseDouble(latRaw);
+                detectedLongitude = Double.parseDouble(lngRaw);
+            } catch (Exception e) {
+                Log.w(TAG, "applyExistingLocationFromResponse: invalid lat/lng in response", e);
+            }
+        }
+
+        if (!village.isEmpty()) {
+            etVillageCity.setText(village);
+        }
+
+        if (TextUtils.isEmpty(address)) {
+            StringBuilder sb = new StringBuilder();
+            if (!district.isEmpty()) sb.append(district);
+            if (!state.isEmpty()) {
+                if (sb.length() > 0) sb.append(", ");
+                sb.append(state);
+            }
+            address = sb.toString();
+        }
+
+        if (!address.isEmpty()) {
+            etAddress.setText(address);
+        }
+
+        Log.d(TAG, "applyExistingLocationFromResponse: state=" + state
+                + " district=" + district
+                + " village=" + village
+                + " hasLatLng=" + (detectedLatitude != null && detectedLongitude != null));
+    }
+
+    private void normalizeEditToggles(Map<String, String> prefillValues, JSONObject data) {
+        int isNew = data == null ? 0 : data.optInt("is_new", 0);
+        String normalized = isNew == 1 ? "1" : "0";
+        prefillValues.put("is_new", normalized);
+        prefillValues.put("is_new_item", normalized);
+    }
+
 
     private void loadSchemaFromServer(long categoryId, long subcategoryId) {
         if (categoryId <= 0) {
@@ -325,10 +419,10 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         if (subcategoryId > 0) {
             urlBuilder.append("&subcategory_id=").append(subcategoryId);
         }
-        urlBuilder.append("&lang=en");
+        urlBuilder.append("&lang=").append(I18n.lang(DynamicFormActivity.this));
 
         String url = urlBuilder.toString();
-        LoadingDialog.showLoading(this, "Loading form...");
+        LoadingDialog.showLoading(this, I18n.t(this, "Loading form..."));
 
         JsonObjectRequest req = new JsonObjectRequest(
                 Request.Method.GET,
@@ -432,15 +526,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                             Log.e(TAG, "Schema list is empty, not setting adapter");
                             btnSubmit.setEnabled(false);
                         } else {
-                            adapter = new DynamicFormAdapter(schema, DynamicFormActivity.this);
-                            rvForm.setAdapter(adapter);
-                            btnSubmit.setEnabled(true);
-                            LoadingDialog.hideLoading();
-
-                            // If edit mode, fetch existing data and pre-fill
-                            if (isEditMode) {
-                                fetchAndPrefillListingData(editListingId);
-                            }
+                            translateSchemaAndBind(schema);
                         }
 
                     } catch (Exception e) {
@@ -470,7 +556,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
             public Map<String, String> getHeaders() {
                 HashMap<String, String> headers = new HashMap<>();
                 headers.put("Accept", "application/json");
-                headers.put("Accept-Language", "en");
+                headers.put("Accept-Language", I18n.lang(DynamicFormActivity.this));
                 return headers;
             }
 
@@ -484,7 +570,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
     private void fetchAndPrefillListingData(int listingId) {
         String url = ApiRoutes.GET_LISTING_DETAILS + "?listing_id=" + listingId;
         Log.d(TAG, "fetchAndPrefillListingData: listingId=" + listingId + " url=" + url);
-        LoadingDialog.showLoading(this, "Loading listing data...");
+        LoadingDialog.showLoading(this, I18n.t(this, "Loading listing data..."));
 
         JsonObjectRequest req = new JsonObjectRequest(
                 Request.Method.GET,
@@ -500,8 +586,14 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                         }
 
                         JSONObject data = response.optJSONObject("data");
-                        if (data == null)
+                        if (data == null) {
+                            Log.e(TAG, "fetchAndPrefillListingData: data object missing for listingId=" + listingId);
                             return;
+                        }
+
+                        Log.d(TAG, "fetchAndPrefillListingData: title=" + data.optString("title", "")
+                                + " images=" + (data.optJSONArray("images") != null ? data.optJSONArray("images").length() : 0)
+                                + " attrs=" + (data.optJSONArray("attributes") != null ? data.optJSONArray("attributes").length() : 0));
 
                         // Batch all values into a map, then call prefillAnswers once
                         Map<String, String> prefillValues = new HashMap<>();
@@ -525,28 +617,40 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                             prefillValues.put("price_per_kg", price);
                         }
 
-                        // is_new (condition switch)
-                        int isNew = data.optInt("is_new", 0);
-                        prefillValues.put("is_new", isNew == 1 ? "1" : "0");
+                        normalizeEditToggles(prefillValues, data);
 
                         // Dynamic attributes from the attributes array
                         JSONArray attributes = data.optJSONArray("attributes");
                         if (attributes != null) {
                             for (int i = 0; i < attributes.length(); i++) {
                                 JSONObject attr = attributes.optJSONObject(i);
-                                if (attr == null)
-                                    continue;
+                                if (attr == null) continue;
 
-                                String code = attr.optString("code", "");
-                                String value = attr.optString("value", "");
-                                if (!code.isEmpty() && !value.isEmpty()) {
-                                    prefillValues.put(code, value);
+                                String code = safeTrim(attr.optString("code", ""));
+                                String value = safeTrim(attr.optString("value", ""));
+
+                                if (code.isEmpty() || value.isEmpty()) {
+                                    continue;
+                                }
+
+                                if ("listing_photos".equalsIgnoreCase(code)) {
+                                    Log.d(TAG, "fetchAndPrefillListingData: skipping listing_photos in attributes, handled via images[]");
+                                    continue;
+                                }
+
+                                Log.d(TAG, "fetchAndPrefillListingData: attribute code=" + code + " value=" + value);
+                                prefillValues.put(code, value);
+
+                                // Normalize both keys so SWITCH field works regardless of schema key
+                                if ("is_new".equalsIgnoreCase(code) || "is_new_item".equalsIgnoreCase(code)) {
+                                    String normalized = isTruthy(value) ? "1" : "0";
+                                    prefillValues.put("is_new", normalized);
+                                    prefillValues.put("is_new_item", normalized);
                                 }
                             }
                         }
 
-                        // Apply all to form at once (single notifyDataSetChanged)
-                        Log.d(TAG, "Prefill values: " + prefillValues.keySet());
+                        Log.d(TAG, "fetchAndPrefillListingData: prefill keys=" + prefillValues.keySet());
                         if (adapter != null && !prefillValues.isEmpty()) {
                             adapter.prefillAnswers(prefillValues);
                         }
@@ -555,42 +659,27 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                         JSONArray images = data.optJSONArray("images");
                         if (adapter != null && images != null && images.length() > 0) {
                             String photosKey = adapter.getPhotosFieldKey();
-                            if (photosKey != null && !photosKey.isEmpty()) {
+                            if (!TextUtils.isEmpty(photosKey)) {
                                 List<String> imageUrls = new ArrayList<>();
                                 for (int i = 0; i < images.length(); i++) {
-                                    String imgUrl = images.optString(i, "");
+                                    String imgUrl = safeTrim(images.optString(i, ""));
                                     if (!imgUrl.isEmpty()) {
                                         imageUrls.add(imgUrl);
                                     }
                                 }
                                 if (!imageUrls.isEmpty()) {
-                                    Log.d(TAG, "Prefilling " + imageUrls.size() + " images to key: " + photosKey);
+                                    Log.d(TAG, "fetchAndPrefillListingData: prefilling " + imageUrls.size() + " image(s) to key=" + photosKey);
                                     adapter.prefillPhotos(photosKey, imageUrls);
                                 }
                             }
+                        } else {
+                            Log.d(TAG, "fetchAndPrefillListingData: no images[] returned for listing=" + listingId);
                         }
 
-                        // Pre-fill location fields (these are Activity-level, not adapter)
-                        String villageName = data.optString("village_name", "");
-                        if (!villageName.isEmpty()) {
-                            etVillageCity.setText(villageName);
-                        }
+                        // Pre-fill location fields and preserve existing state/district for resubmit
+                        applyExistingLocationFromResponse(data);
 
-                        String district = data.optString("district", "");
-                        String state = data.optString("state", "");
-                        String addressParts = "";
-                        if (!district.isEmpty())
-                            addressParts = district;
-                        if (!state.isEmpty()) {
-                            if (!addressParts.isEmpty())
-                                addressParts += ", ";
-                            addressParts += state;
-                        }
-                        if (!addressParts.isEmpty()) {
-                            etAddress.setText(addressParts);
-                        }
-
-                        Log.d(TAG, "Edit mode: pre-filled form with existing data");
+                        Log.d(TAG, "Edit mode: pre-filled form with existing data for listingId=" + listingId);
                     } catch (Exception e) {
                         Log.e(TAG, "Error pre-filling form", e);
                         toast("Error loading listing data");
@@ -615,6 +704,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
     @Override
     public void pickCoverPhoto(String fieldKey) {
         currentPhotoFieldKey = fieldKey;
+        Log.d(TAG, "pickCoverPhoto: fieldKey=" + fieldKey);
         requestReadPhotoPermissionIfNeeded();
         coverPicker.launch("image/*");
     }
@@ -622,6 +712,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
     @Override
     public void pickMorePhotos(String fieldKey) {
         currentPhotoFieldKey = fieldKey;
+        Log.d(TAG, "pickMorePhotos: fieldKey=" + fieldKey);
         requestReadPhotoPermissionIfNeeded();
         morePicker.launch("image/*");
     }
@@ -659,7 +750,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
         // geocode it on Android side BEFORE sending to backend
         if ((detectedLatitude == null || detectedLongitude == null) && !villageCityText.isEmpty()) {
             btnSubmit.setEnabled(false);
-            LoadingDialog.showLoading(this, "Detecting location from text...");
+            LoadingDialog.showLoading(this, I18n.t(this, "Detecting location from text..."));
 
             new Thread(() -> {
                 try {
@@ -742,57 +833,72 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
                 formResult.put("village_name", villageCityText);
             }
 
-            // Include lat/lng (from GPS or Android-side geocoding)
+            // Include lat/lng (from existing listing, GPS, or Android-side geocoding)
             if (detectedLatitude != null && detectedLongitude != null) {
                 formResult.put("latitude", detectedLatitude);
                 formResult.put("longitude", detectedLongitude);
             }
-            // Always send state — fallback to "Gujarat" for manual entry (no GPS)
-            if (detectedState != null && !detectedState.isEmpty()) {
+
+            // Preserve detected / prefilled location instead of blindly forcing Gujarat on edit
+            if (!TextUtils.isEmpty(detectedState)) {
                 formResult.put("state", detectedState);
-            } else {
+            } else if (!isEditMode) {
                 formResult.put("state", "Gujarat");
             }
-            if (detectedDistrict != null && !detectedDistrict.isEmpty()) {
+            if (!TextUtils.isEmpty(detectedDistrict)) {
                 formResult.put("district", detectedDistrict);
             }
 
-            payload.put("form_data", formResult);
+            int isNewValue = resolveIsNewValue(formResult);
+            String normalizedToggle = isNewValue == 1 ? "1" : "0";
+            formResult.put("is_new", normalizedToggle);
+            formResult.put("is_new_item", normalizedToggle);
 
-            int isNewValue = 0; // default = used
-            if (formResult.has("is_new")) {
-                Object v = formResult.opt("is_new");
-                if (v instanceof Boolean) {
-                    isNewValue = ((Boolean) v) ? 1 : 0;
-                } else {
-                    String s = String.valueOf(v).trim().toLowerCase();
-                    if (s.equals("1") || s.equals("true") || s.equals("yes") || s.equals("new")) {
-                        isNewValue = 1;
-                    }
-                }
-            }
+            payload.put("form_data", formResult);
             payload.put("is_new", isNewValue);
             btnSubmit.setEnabled(false);
 
-            Log.d(TAG, "Final payload keys: " + payload.keys().toString());
+            Log.d(TAG, "doSubmitListing: listingId=" + editListingId
+                    + " isEditMode=" + isEditMode
+                    + " categoryId=" + categoryId
+                    + " subcategoryId=" + subcategoryId
+                    + " hasLatLng=" + (detectedLatitude != null && detectedLongitude != null)
+                    + " state=" + safeTrim(detectedState)
+                    + " district=" + safeTrim(detectedDistrict)
+                    + " isNew=" + isNewValue);
             // Log photo data summary (without dumping full base64)
             if (formResult.has("listing_photos")) {
                 try {
                     JSONObject photos = formResult.optJSONObject("listing_photos");
                     if (photos != null) {
-                        String cover = photos.optString("cover", "");
+                        String cover = safeTrim(photos.optString("cover", ""));
                         boolean coverIsUrl = cover.startsWith("http");
+                        boolean coverHasDataPrefix = cover.startsWith("data:image/");
                         boolean coverIsBase64 = !cover.isEmpty() && !coverIsUrl;
                         JSONArray moreArr = photos.optJSONArray("more");
                         int moreCount = moreArr != null ? moreArr.length() : 0;
-                        Log.d(TAG, "Photo data: coverIsUrl=" + coverIsUrl + " coverIsBase64=" + coverIsBase64
-                                + " coverLen=" + cover.length() + " moreCount=" + moreCount);
+                        int remoteMore = 0;
+                        int newMore = 0;
+                        if (moreArr != null) {
+                            for (int i = 0; i < moreArr.length(); i++) {
+                                String item = safeTrim(moreArr.optString(i, ""));
+                                if (item.startsWith("http")) remoteMore++;
+                                else if (!item.isEmpty()) newMore++;
+                            }
+                        }
+                        Log.d(TAG, "doSubmitListing: listing_photos coverLen=" + cover.length()
+                                + " coverIsUrl=" + coverIsUrl
+                                + " coverHasDataPrefix=" + coverHasDataPrefix
+                                + " coverIsBase64=" + coverIsBase64
+                                + " moreCount=" + moreCount
+                                + " remoteMore=" + remoteMore
+                                + " newMore=" + newMore);
                     }
                 } catch (Exception e) {
                     Log.e(TAG, "Error logging photo data", e);
                 }
             } else {
-                Log.d(TAG, "No listing_photos key in formResult");
+                Log.d(TAG, "doSubmitListing: no listing_photos key in formResult");
             }
 
             // Add listing_id for edit mode
@@ -801,7 +907,7 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
             }
 
             String apiUrl = isEditMode ? ApiRoutes.UPDATE_LISTING : ApiRoutes.CREATE_LISTING;
-            String loadingMsg = isEditMode ? "Updating listing..." : "Submitting listing...";
+            String loadingMsg = isEditMode ? I18n.t(this, "Updating listing...") : I18n.t(this, "Submitting listing...");
             LoadingDialog.showLoading(this, loadingMsg);
 
             JsonObjectRequest req = new JsonObjectRequest(
@@ -1229,6 +1335,124 @@ public class DynamicFormActivity extends AppCompatActivity implements DynamicFor
 
     private void toast(String s) {
         Toast.makeText(this, s, Toast.LENGTH_SHORT).show();
+    }
+
+
+    private void applyTranslatedScreenTexts() {
+        String translatedCategory = I18n.t(this, categoryName == null ? "General" : categoryName);
+
+        if (tvTitle != null) {
+            String prefix = I18n.t(this, isEditMode ? "Edit in" : "Sell in");
+            tvTitle.setText(prefix + " " + translatedCategory);
+        }
+
+        if (btnSubmit != null) {
+            String submitLabel = isEditMode ? "Update Listing"
+                    : (btnSubmit.getText() == null ? "Submit" : btnSubmit.getText().toString());
+            btnSubmit.setText(I18n.t(this, submitLabel));
+        }
+
+        if (btnDetectLocation != null && btnDetectLocation.getText() != null) {
+            btnDetectLocation.setText(I18n.t(this, btnDetectLocation.getText().toString()));
+        }
+
+        if (etAddress != null && etAddress.getHint() != null) {
+            etAddress.setHint(I18n.t(this, etAddress.getHint().toString()));
+        }
+
+        if (tilVillageCity != null && tilVillageCity.getHint() != null) {
+            tilVillageCity.setHint(I18n.t(this, tilVillageCity.getHint().toString()));
+        } else if (etVillageCity != null && etVillageCity.getHint() != null) {
+            etVillageCity.setHint(I18n.t(this, etVillageCity.getHint().toString()));
+        }
+    }
+
+    private void translateSchemaAndBind(List<Map<String, Object>> schema) {
+        List<String> keys = new ArrayList<>();
+        keys.add(categoryName == null ? "General" : categoryName);
+        keys.add(isEditMode ? "Edit in" : "Sell in");
+        keys.add(isEditMode ? "Update Listing" : (btnSubmit != null && btnSubmit.getText() != null ? btnSubmit.getText().toString() : "Submit"));
+        keys.add("Select...");
+        keys.add("Cover photo");
+        keys.add("Photo removed.");
+        keys.add("Cover removed. Promoted next image as cover.");
+
+        if (btnDetectLocation != null && btnDetectLocation.getText() != null) {
+            keys.add(btnDetectLocation.getText().toString());
+        }
+        if (etAddress != null && etAddress.getHint() != null) {
+            keys.add(etAddress.getHint().toString());
+        }
+        if (tilVillageCity != null && tilVillageCity.getHint() != null) {
+            keys.add(tilVillageCity.getHint().toString());
+        } else if (etVillageCity != null && etVillageCity.getHint() != null) {
+            keys.add(etVillageCity.getHint().toString());
+        }
+
+        for (Map<String, Object> field : schema) {
+            Object labelObj = field.get("label");
+            if (labelObj instanceof String && !((String) labelObj).trim().isEmpty()) {
+                keys.add(((String) labelObj).trim());
+            }
+
+            Object hintObj = field.get("hint");
+            if (hintObj instanceof String && !((String) hintObj).trim().isEmpty()) {
+                keys.add(((String) hintObj).trim());
+            }
+
+            Object optionsObj = field.get("options");
+            if (optionsObj instanceof List) {
+                for (Object optionObj : (List<?>) optionsObj) {
+                    if (optionObj instanceof Map) {
+                        Object optionLabel = ((Map<?, ?>) optionObj).get("label");
+                        if (optionLabel instanceof String && !((String) optionLabel).trim().isEmpty()) {
+                            keys.add(((String) optionLabel).trim());
+                        }
+                    }
+                }
+            }
+        }
+
+        I18n.prefetch(this, keys, () -> bindTranslatedSchema(schema), () -> bindTranslatedSchema(schema));
+    }
+
+    @SuppressWarnings("unchecked")
+    private void bindTranslatedSchema(List<Map<String, Object>> schema) {
+        applyTranslatedScreenTexts();
+
+        for (Map<String, Object> field : schema) {
+            Object labelObj = field.get("label");
+            if (labelObj instanceof String) {
+                field.put("label", I18n.t(this, (String) labelObj));
+            }
+
+            Object hintObj = field.get("hint");
+            if (hintObj instanceof String) {
+                field.put("hint", I18n.t(this, (String) hintObj));
+            }
+
+            Object optionsObj = field.get("options");
+            if (optionsObj instanceof List) {
+                for (Object optionObj : (List<?>) optionsObj) {
+                    if (optionObj instanceof Map) {
+                        Map<Object, Object> optionMap = (Map<Object, Object>) optionObj;
+                        Object optionLabel = optionMap.get("label");
+                        if (optionLabel instanceof String) {
+                            optionMap.put("label", I18n.t(this, (String) optionLabel));
+                        }
+                    }
+                }
+            }
+        }
+
+        adapter = new DynamicFormAdapter(schema, DynamicFormActivity.this);
+        rvForm.setAdapter(adapter);
+        btnSubmit.setEnabled(true);
+        LoadingDialog.hideLoading();
+
+        if (isEditMode) {
+            fetchAndPrefillListingData(editListingId);
+        }
     }
 
     private void setupLocationSettings() {

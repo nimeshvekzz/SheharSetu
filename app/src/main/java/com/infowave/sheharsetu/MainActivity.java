@@ -7,6 +7,8 @@ import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
 import android.text.TextUtils;
@@ -35,6 +37,7 @@ import androidx.core.view.GravityCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -46,13 +49,13 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
-import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.android.material.textfield.TextInputLayout;
+
 import com.infowave.sheharsetu.Adapter.CategoryAdapter;
 import com.infowave.sheharsetu.Adapter.I18n;
 import com.infowave.sheharsetu.Adapter.LanguageManager;
@@ -75,26 +78,27 @@ import java.util.Map;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
-    private static final String TAG_FETCH_PRODUCTS = "TAG_FETCH_PRODUCTS"; // Tag for cancelling requests
+    private static final String TAG_FETCH_PRODUCTS = "TAG_FETCH_PRODUCTS";
 
     // ===== Views (Header) =====
-    private ImageView btnDrawer;
-    private TextInputLayout tiSearch;
+    private ImageView btnDrawer, btnVoiceSearch;
     private TextInputEditText etSearch;
+    private TextView tvSectionTitle;
+    private TextView tvLocation;
     private ActivityResultLauncher<Intent> speechLauncher;
 
     // ===== Lists =====
     private RecyclerView rvCategories, rvSubFiltersGrid, rvProducts;
-    private MaterialButtonToggleGroup toggleNewOld;
-    private TextView tvSectionTitle;
+    private Chip chipCondition;
 
     // ===== Bottom banner =====
     private ImageButton btnPost, btnHelp;
     private TextView tvMarquee;
     private androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefresh;
     private View layoutEmptyState;
-    private android.os.Handler searchHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final android.os.Handler searchHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable searchRunnable;
+    private boolean ignoreSearchTextChanges = false;
 
     // ===== Drawer =====
     private DrawerLayout drawerLayout;
@@ -108,18 +112,19 @@ public class MainActivity extends AppCompatActivity {
 
     // ===== State =====
     private int selectedCategoryId = -1;
-    private int selectedSubFilterId = -1; // -1 = none (sub grid hidden), 0 = ALL
+    private int selectedSubFilterId = -1; // -1 = none, 0 = ALL
     private Boolean showNew = null; // null = all, true=new, false=old
     private String searchQuery = "";
 
     // ===== KM Filter State =====
-    private Integer selectedRadiusKm = null; // null = no distance filter
+    private Integer selectedRadiusKm = null;
     private Double userLat = null;
     private Double userLng = null;
     private Chip chipKmFilter;
     private FusedLocationProviderClient fusedLocationClient;
     private static final int LOCATION_PERMISSION_REQUEST = 1001;
-    private androidx.activity.result.ActivityResultLauncher<androidx.activity.result.IntentSenderRequest> locationSettingsLauncher;
+    private static final int HEADER_LOCATION_PERMISSION_REQUEST = 1002;
+    private ActivityResultLauncher<androidx.activity.result.IntentSenderRequest> locationSettingsLauncher;
 
     // ===== Adapters =====
     private CategoryAdapter catAdapter;
@@ -135,14 +140,8 @@ public class MainActivity extends AppCompatActivity {
     // ===== User Profile Cache =====
     private String cachedUserName = "User";
     private String cachedUserPhone = "";
-    private TextView tvNavUserName; // Reference to nav header TextView
-    private TextView tvNavUserPhone; // Reference to nav header TextView
-
-    // Initialize cached values from session on startup
-    private void initCachedUserData() {
-        cachedUserName = session.getCachedUserName();
-        cachedUserPhone = session.getCachedUserPhone();
-    }
+    private TextView tvNavUserName;
+    private TextView tvNavUserPhone;
 
     // ===== Pagination =====
     private int currentPage = 1;
@@ -150,74 +149,90 @@ public class MainActivity extends AppCompatActivity {
     private boolean hasMoreProducts = true;
     private boolean isLoadingMore = false;
 
-    // ✅ Network optimization + correctness
+    // ===== Network correctness =====
     private android.util.LruCache<String, JSONObject> productCache;
     private String lastProductsUrl = null;
     private boolean productsInFlight = false;
+
+    private void initCachedUserData() {
+        cachedUserName = session.getCachedUserName();
+        cachedUserPhone = session.getCachedUserPhone();
+    }
 
     @SuppressLint("SetTextI18n")
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // Apply saved locale first
+
         applySavedLocale();
         session = new SessionManager(this);
+        getWindow().getDecorView().setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
 
-        // Cache: 20 responses max
         productCache = new android.util.LruCache<>(20);
-
-        // Initialize cached user data from session immediately
         initCachedUserData();
 
-        // Register location settings launcher (must be before setContentView)
         locationSettingsLauncher = registerForActivityResult(
-                new androidx.activity.result.contract.ActivityResultContracts.StartIntentSenderForResult(),
+                new ActivityResultContracts.StartIntentSenderForResult(),
                 result -> {
                     if (result.getResultCode() == RESULT_OK) {
-                        // User enabled GPS → retry location fetch
                         doFetchLocation();
                     } else {
-                        // User declined → reset filter
-                        makeText(this, "GPS is required for distance filter", Toast.LENGTH_SHORT).show();
+                        makeText(this, I18n.t(this, "GPS is required for distance filter"), Toast.LENGTH_SHORT).show();
                         selectedRadiusKm = null;
                         updateKmChipText();
                     }
                 });
 
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-        getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
-        getWindow().setNavigationBarColor(android.graphics.Color.BLACK);
-        new androidx.core.view.WindowInsetsControllerCompat(
-                getWindow(), getWindow().getDecorView()).setAppearanceLightStatusBars(false);
+        WindowInsetsControllerCompat windowInsetsController =
+                WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        if (windowInsetsController != null) {
+            windowInsetsController.setAppearanceLightStatusBars(false);
+            windowInsetsController.setAppearanceLightNavigationBars(false);
+        }
 
         setContentView(R.layout.activity_main);
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets sys = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(sys.left, sys.top, sys.right, sys.bottom);
-            return insets;
-        });
+        View viewStatusBarBackground = findViewById(R.id.viewStatusBarBackground);
+        View viewNavBarBackground = findViewById(R.id.viewNavBarBackground);
+
+        View rootContainer = findViewById(R.id.rootContainer);
+        if (rootContainer != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(rootContainer, (v, insets) -> {
+                Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+                if (viewStatusBarBackground != null) {
+                    viewStatusBarBackground.getLayoutParams().height = systemBars.top;
+                    viewStatusBarBackground.requestLayout();
+                }
+
+                if (viewNavBarBackground != null) {
+                    viewNavBarBackground.getLayoutParams().height = systemBars.bottom;
+                    viewNavBarBackground.requestLayout();
+                }
+
+                return insets;
+            });
+        }
 
         bindHeader();
 
         rvCategories = findViewById(R.id.rvCategories);
         rvSubFiltersGrid = findViewById(R.id.rvSubFiltersGrid);
         rvProducts = findViewById(R.id.rvProducts);
-        toggleNewOld = findViewById(R.id.toggleNewOld);
+        chipCondition = findViewById(R.id.chipCondition);
         tvSectionTitle = findViewById(R.id.tvSectionTitle);
 
-        // Initial state of New/Old toggle
-        if (toggleNewOld != null) {
-            toggleNewOld.setVisibility(View.GONE);
-            toggleNewOld.clearChecked();
+        if (chipCondition != null) {
+            chipCondition.setVisibility(View.GONE);
+            chipCondition.setOnClickListener(v -> showConditionPopup());
             showNew = null;
         }
 
         btnPost = findViewById(R.id.btnPost);
         btnHelp = findViewById(R.id.btnHelp);
         tvMarquee = findViewById(R.id.tvMarquee);
-        if (tvMarquee != null)
-            tvMarquee.setSelected(true);
+        if (tvMarquee != null) tvMarquee.setSelected(true);
 
         swipeRefresh = findViewById(R.id.swipeRefresh);
         layoutEmptyState = findViewById(R.id.layoutEmptyState);
@@ -225,10 +240,10 @@ public class MainActivity extends AppCompatActivity {
         if (swipeRefresh != null) {
             swipeRefresh.setColorSchemeResources(R.color.colorPrimary);
             swipeRefresh.setOnRefreshListener(() -> {
-                // Clear cache completely to force fresh fetch from server
                 productCache.evictAll();
                 lastProductsUrl = null;
                 productsInFlight = false;
+                resetPagination();
                 fetchProducts();
             });
         }
@@ -245,18 +260,26 @@ public class MainActivity extends AppCompatActivity {
 
         rvCategories.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         rvSubFiltersGrid.setLayoutManager(new GridLayoutManager(this, 3));
-        GridLayoutManager productLayoutManager = new GridLayoutManager(this, 2);
-        rvProducts.setLayoutManager(productLayoutManager);
+        rvProducts.setLayoutManager(new GridLayoutManager(this, 2));
 
-        // ===== Infinite Scroll Listener =====
         rvProducts.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
-                if (dy <= 0)
-                    return; // Only on scroll down
-                int totalItems = productLayoutManager.getItemCount();
-                int lastVisible = productLayoutManager.findLastVisibleItemPosition();
+                if (dy <= 0) return;
+
+                RecyclerView.LayoutManager lm = rvProducts.getLayoutManager();
+                if (lm == null) return;
+
+                int totalItems = lm.getItemCount();
+                int lastVisible = 0;
+
+                if (lm instanceof GridLayoutManager) {
+                    lastVisible = ((GridLayoutManager) lm).findLastVisibleItemPosition();
+                } else if (lm instanceof LinearLayoutManager) {
+                    lastVisible = ((LinearLayoutManager) lm).findLastVisibleItemPosition();
+                }
+
                 if (!isLoadingMore && hasMoreProducts && lastVisible >= totalItems - 4) {
                     loadMoreProducts();
                 }
@@ -265,43 +288,90 @@ public class MainActivity extends AppCompatActivity {
 
         setupAdapters();
 
-        btnPost.setOnClickListener(v -> startActivity(new Intent(this, CategorySelectActivity.class)));
-        btnHelp.setOnClickListener(v -> startActivity(new Intent(this, HelpActivity.class)));
+        if (btnPost != null) {
+            btnPost.setOnClickListener(v ->
+                    startActivity(new Intent(this, CategorySelectActivity.class)));
+        }
+        if (btnHelp != null) {
+            btnHelp.setOnClickListener(v ->
+                    startActivity(new Intent(this, HelpActivity.class)));
+        }
 
-        // ===== KM Filter Chip =====
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         chipKmFilter = findViewById(R.id.chipKmFilter);
         if (chipKmFilter != null) {
             chipKmFilter.setOnClickListener(v -> showKmFilterSheet());
         }
 
+        fetchAndDisplayHeaderLocation();
+
         prefetchAndApplyStaticTexts();
 
-        // Load data
         showProducts();
         LoadingDialog.showLoading(this, "Loading data...");
         fetchCategories();
-        fetchProducts(); // featured on first load
-        fetchUserProfileOnStartup(); // Fetch user profile immediately on app start
+        fetchProducts();
+        fetchUserProfileOnStartup();
 
-        toggleNewOld.addOnButtonCheckedListener((g, id, checked) -> {
-            if (!checked)
-                return;
-            ensureProductsView();
-            showNew = (id == R.id.btnShowNew) ? Boolean.TRUE : Boolean.FALSE;
-            resetPagination();
-            fetchProducts();
-        });
+        AppBarLayout appBarLayout = findViewById(R.id.appBarLayout);
+        ImageView btnSearchSmall = findViewById(R.id.btnSearchSmall);
+        View tvToolbarTitle = findViewById(R.id.tvToolbarTitle);
+        androidx.appcompat.widget.Toolbar toolbar = findViewById(R.id.toolbar);
+
+        if (appBarLayout != null && btnSearchSmall != null) {
+            appBarLayout.addOnOffsetChangedListener((appBarLayout1, verticalOffset) -> {
+                int scrollRange = appBarLayout1.getTotalScrollRange();
+                if (scrollRange == 0) return;
+
+                float fraction = (float) Math.abs(verticalOffset) / (float) scrollRange;
+
+                if (fraction > 0.8f) {
+                    float alpha = (fraction - 0.8f) * 5f;
+                    btnSearchSmall.setVisibility(View.VISIBLE);
+                    btnSearchSmall.setAlpha(alpha);
+                    if (tvToolbarTitle != null) {
+                        tvToolbarTitle.setVisibility(View.VISIBLE);
+                        tvToolbarTitle.setAlpha(alpha);
+                    }
+                } else {
+                    btnSearchSmall.setVisibility(View.GONE);
+                    btnSearchSmall.setAlpha(0f);
+                    if (tvToolbarTitle != null) {
+                        tvToolbarTitle.setVisibility(View.GONE);
+                        tvToolbarTitle.setAlpha(0f);
+                    }
+                }
+
+                if (toolbar != null) {
+                    if (fraction > 0.9f) {
+                        toolbar.setBackgroundColor(
+                                ContextCompat.getColor(MainActivity.this, R.color.colorPrimary));
+                    } else {
+                        toolbar.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+                    }
+                }
+            });
+
+            btnSearchSmall.setOnClickListener(v -> {
+                appBarLayout.setExpanded(true, true);
+                if (etSearch != null) {
+                    etSearch.requestFocus();
+                    android.view.inputmethod.InputMethodManager imm =
+                            (android.view.inputmethod.InputMethodManager)
+                                    getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+                    if (imm != null) {
+                        imm.showSoftInput(etSearch,
+                                android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+                    }
+                }
+            });
+        }
     }
 
-    // ================= ✅ NEW HELPER METHODS FOR IMAGE FIXES =================
+    // ================= Helpers =================
 
-    /**
-     * ✅ NEW: Helper to remove leading slashes from string
-     */
     private static String ltrim(String str, char ch) {
-        if (str == null || str.isEmpty())
-            return str;
+        if (str == null || str.isEmpty()) return str;
         while (str.length() > 0 && str.charAt(0) == ch) {
             str = str.substring(1);
         }
@@ -309,63 +379,161 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String makeAbsoluteImageUrl(String imagePath) {
-        if (TextUtils.isEmpty(imagePath)) {
-            return "";
-        }
+        if (TextUtils.isEmpty(imagePath)) return "";
 
-        // Already absolute URL - return as-is
         if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
             return imagePath;
         }
 
-        // Relative path - convert to absolute
         String cleanPath = ltrim(imagePath, '/');
         return ApiRoutes.BASE_URL + "/" + cleanPath;
     }
 
-    // ================= Header/Search/Voice =================
+    // ================= Header =================
 
     private void bindHeader() {
         btnDrawer = findViewById(R.id.btnDrawer);
-        tiSearch = findViewById(R.id.tiSearch);
+        btnVoiceSearch = findViewById(R.id.btnVoiceSearch);
         etSearch = findViewById(R.id.etSearch);
+        tvLocation = findViewById(R.id.tvlocation);
+
+        ImageView headerOverlay = findViewById(R.id.headerOverlay);
+        if (headerOverlay != null) {
+            headerOverlay.setOnClickListener(v ->
+                    startActivity(new Intent(MainActivity.this, ProfileActivity.class)));
+        }
     }
+
+    // ================= Header Location =================
+
+    private void fetchAndDisplayHeaderLocation() {
+        if (tvLocation == null || fusedLocationClient == null) return;
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    HEADER_LOCATION_PERMISSION_REQUEST
+            );
+            return;
+        }
+
+        fusedLocationClient.getLastLocation()
+                .addOnSuccessListener(this, location -> {
+                    if (location != null) {
+                        updateHeaderLocationText(location.getLatitude(), location.getLongitude());
+                    } else {
+                        requestFreshHeaderLocation();
+                    }
+                })
+                .addOnFailureListener(this, e ->
+                        Log.e(TAG, "Header location fetch failed", e));
+    }
+
+    @SuppressLint("MissingPermission")
+    private void requestFreshHeaderLocation() {
+        com.google.android.gms.location.LocationRequest req =
+                com.google.android.gms.location.LocationRequest.create()
+                        .setPriority(com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY)
+                        .setNumUpdates(1)
+                        .setInterval(3000)
+                        .setMaxWaitTime(8000);
+
+        fusedLocationClient.requestLocationUpdates(
+                req,
+                new com.google.android.gms.location.LocationCallback() {
+                    @Override
+                    public void onLocationResult(com.google.android.gms.location.LocationResult result) {
+                        fusedLocationClient.removeLocationUpdates(this);
+
+                        if (result != null && result.getLastLocation() != null) {
+                            updateHeaderLocationText(
+                                    result.getLastLocation().getLatitude(),
+                                    result.getLastLocation().getLongitude()
+                            );
+                        }
+                    }
+                },
+                android.os.Looper.getMainLooper()
+        );
+    }
+
+    private void updateHeaderLocationText(double lat, double lng) {
+        new Thread(() -> {
+            String finalLocation = "";
+
+            try {
+                Geocoder geocoder = new Geocoder(MainActivity.this, Locale.getDefault());
+                List<Address> addresses = geocoder.getFromLocation(lat, lng, 1);
+
+                if (addresses != null && !addresses.isEmpty()) {
+                    Address address = addresses.get(0);
+
+                    String district = firstNonEmpty(
+                            address.getSubAdminArea(),
+                            address.getLocality(),
+                            address.getSubLocality()
+                    );
+
+                    String state = firstNonEmpty(address.getAdminArea());
+
+                    if (!TextUtils.isEmpty(district) && !TextUtils.isEmpty(state)) {
+                        finalLocation = district + ", " + state;
+                    } else if (!TextUtils.isEmpty(state)) {
+                        finalLocation = state;
+                    } else if (!TextUtils.isEmpty(district)) {
+                        finalLocation = district;
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Geocoder failed", e);
+            }
+
+            final String textToShow = finalLocation;
+            runOnUiThread(() -> {
+                if (tvLocation != null && !TextUtils.isEmpty(textToShow)) {
+                    tvLocation.setText(textToShow);
+                }
+            });
+        }).start();
+    }
+
+    private String firstNonEmpty(String... values) {
+        if (values == null) return "";
+        for (String value : values) {
+            if (!TextUtils.isEmpty(value)) {
+                return value.trim();
+            }
+        }
+        return "";
+    }
+
+    // ================= Voice =================
 
     private void setupVoiceLauncher() {
         speechLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        ArrayList<String> list = result.getData()
-                                .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                        ArrayList<String> list =
+                                result.getData().getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
                         if (list != null && !list.isEmpty()) {
                             etSearch.setText(list.get(0));
                             performSearch(list.get(0));
                         }
                     }
                 });
-        if (tiSearch != null) {
-            tiSearch.setEndIconOnClickListener(v -> startVoiceInput());
-        }
-    }
 
-    private void setupSearch() {
-        if (etSearch == null)
-            return;
-        etSearch.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_SEARCH
-                    || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
-                String q = etSearch.getText() == null ? "" : etSearch.getText().toString().trim();
-                performSearch(q);
-                return true;
-            }
-            return false;
-        });
+        if (btnVoiceSearch != null) {
+            btnVoiceSearch.setOnClickListener(v -> startVoiceInput());
+        }
     }
 
     private void startVoiceInput() {
         Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-        i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
         i.putExtra(RecognizerIntent.EXTRA_PROMPT, I18n.t(this, "Speak to search…"));
         try {
@@ -375,27 +543,77 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void performSearch(String query) {
-        if (searchHandler != null) {
-            if (searchRunnable != null)
-                searchHandler.removeCallbacks(searchRunnable);
-        }
+    // ================= Search =================
 
-        // Show search progress indicator
-        if (tiSearch != null) {
-            tiSearch.setHelperText("Searching...");
-            tiSearch.setHelperTextEnabled(true);
+    private void setupSearch() {
+        if (etSearch == null) return;
+
+        etSearch.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEARCH
+                    || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
+                String q = etSearch.getText() == null ? "" : etSearch.getText().toString().trim();
+                performSearch(q);
+
+                android.view.inputmethod.InputMethodManager imm =
+                        (android.view.inputmethod.InputMethodManager)
+                                getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+                if (imm != null) {
+                    imm.hideSoftInputFromWindow(etSearch.getWindowToken(), 0);
+                }
+                return true;
+            }
+            return false;
+        });
+
+        etSearch.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                if (ignoreSearchTextChanges) return;
+
+                String q = s == null ? "" : s.toString().trim();
+                performSearch(q);
+            }
+        });
+    }
+
+    private void cancelPendingSearch() {
+        if (searchRunnable != null) {
+            searchHandler.removeCallbacks(searchRunnable);
+            searchRunnable = null;
         }
+    }
+
+    private void clearSearchSilently() {
+        cancelPendingSearch();
+        searchQuery = "";
+
+        if (etSearch != null) {
+            ignoreSearchTextChanges = true;
+            etSearch.setText("");
+            ignoreSearchTextChanges = false;
+        }
+    }
+
+    private void clearSearch() {
+        clearSearchSilently();
+    }
+
+    private void performSearch(String query) {
+        cancelPendingSearch();
 
         searchRunnable = () -> {
-            if (tiSearch != null)
-                tiSearch.setHelperTextEnabled(false);
             ensureProductsView();
             searchQuery = TextUtils.isEmpty(query) ? "" : query.toLowerCase(Locale.ROOT).trim();
             resetPagination();
             fetchProducts();
         };
-        // Debounce: 500ms delay
+
         searchHandler.postDelayed(searchRunnable, 500);
     }
 
@@ -405,13 +623,15 @@ public class MainActivity extends AppCompatActivity {
         LanguageManager.apply(this, lang);
     }
 
+    // ================= Language / Drawer =================
+
     private void setupLanguageToggle() {
-        if (btnDrawer == null)
-            return;
+        if (btnDrawer == null) return;
 
         btnDrawer.setOnClickListener(v -> {
-            if (drawerLayout != null)
+            if (drawerLayout != null) {
                 drawerLayout.openDrawer(GravityCompat.START);
+            }
         });
 
         btnDrawer.setOnLongClickListener(v -> {
@@ -433,17 +653,13 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // ================= Drawer =================
-
     private void setupAppDrawer() {
         drawerLayout = findViewById(R.id.drawerLayout);
         navigationView = findViewById(R.id.navView);
-        if (drawerLayout == null || navigationView == null) {
-            return;
-        }
+        if (drawerLayout == null || navigationView == null) return;
 
         drawerToggle = new ActionBarDrawerToggle(this, drawerLayout,
-                R.string.drawer_open, R.string.drawer_close);
+                android.R.string.ok, android.R.string.cancel);
         drawerLayout.addDrawerListener(drawerToggle);
         drawerToggle.syncState();
 
@@ -453,27 +669,22 @@ public class MainActivity extends AppCompatActivity {
             tvNavUserName = header.findViewById(R.id.tvUserName);
             tvNavUserPhone = header.findViewById(R.id.tvUserPhone);
             ImageView ivEdit = header.findViewById(R.id.ivEdit);
-            // Display cached user data (will be updated when API response arrives)
+
             if (tvNavUserName != null) {
-                tvNavUserName.setText(cachedUserName);
+                tvNavUserName.setText(I18n.t(this, cachedUserName));
             }
             if (tvNavUserPhone != null) {
                 tvNavUserPhone.setText(cachedUserPhone);
             }
 
-            View.OnClickListener openProfileClick = v -> {
-                Intent i = new Intent(MainActivity.this, ProfileActivity.class);
-                startActivity(i);
-            };
+            View.OnClickListener openProfileClick = v ->
+                    startActivity(new Intent(MainActivity.this, ProfileActivity.class));
 
             header.setOnClickListener(openProfileClick);
-            if (ivProfile != null)
-                ivProfile.setOnClickListener(openProfileClick);
-            if (ivEdit != null)
-                ivEdit.setOnClickListener(openProfileClick);
+            if (ivProfile != null) ivProfile.setOnClickListener(openProfileClick);
+            if (ivEdit != null) ivEdit.setOnClickListener(openProfileClick);
         }
 
-        // ✅ FIX: Ensure icons always show their original colors (not tinted grey)
         navigationView.setItemIconTintList(null);
 
         navigationView.setNavigationItemSelectedListener(item -> {
@@ -515,9 +726,22 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void applyDrawerMenuTranslations() {
+        if (navigationView == null) return;
+        android.view.Menu menu = navigationView.getMenu();
+        if (menu == null) return;
+
+        for (int i = 0; i < menu.size(); i++) {
+            android.view.MenuItem item = menu.getItem(i);
+            if (item != null && item.getTitle() != null) {
+                item.setTitle(I18n.t(this, item.getTitle().toString()));
+            }
+        }
+    }
+
     private void doLogout() {
         getSharedPreferences("user", MODE_PRIVATE).edit().clear().apply();
-        makeText(this, "Logged out", Toast.LENGTH_SHORT).show();
+        makeText(this, I18n.t(this, "Logged out"), Toast.LENGTH_SHORT).show();
 
         Intent i = new Intent(this, LanguageSelection.class);
         i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -525,17 +749,14 @@ public class MainActivity extends AppCompatActivity {
         finish();
     }
 
-    // ================= Static UI translation =================
+    // ================= Static text prefetch =================
 
     private void prefetchAndApplyStaticTexts() {
         List<String> keys = new ArrayList<>();
 
-        if (tiSearch != null && tiSearch.getHint() != null)
-            keys.add(tiSearch.getHint().toString());
-        if (tvSectionTitle != null && tvSectionTitle.getText() != null)
-            keys.add(tvSectionTitle.getText().toString());
-        if (tvMarquee != null && tvMarquee.getText() != null)
-            keys.add(tvMarquee.getText().toString());
+        if (etSearch != null && etSearch.getHint() != null) keys.add(etSearch.getHint().toString());
+        if (tvSectionTitle != null && tvSectionTitle.getText() != null) keys.add(tvSectionTitle.getText().toString());
+        if (tvMarquee != null && tvMarquee.getText() != null) keys.add(tvMarquee.getText().toString());
 
         keys.add("Speak to search…");
         keys.add("Voice search not available");
@@ -554,15 +775,46 @@ public class MainActivity extends AppCompatActivity {
         keys.add("Network error (products)");
         keys.add("Share via");
         keys.add("No app found to share");
+        keys.add("Condition: All");
+        keys.add("Condition: New");
+        keys.add("Condition: Used");
+        keys.add("New Items Only");
+        keys.add("Used Items Only");
+        keys.add("Logged out");
+        keys.add("Nearby");
+        keys.add("Getting your location...");
+        keys.add("Location error. Please try again.");
+        keys.add("Could not get location. Try again.");
+        keys.add("Enable Location");
+        keys.add("GPS is turned off. Please enable location services to filter listings by distance.");
+        keys.add("Open Settings");
+        keys.add("Cancel");
+        keys.add("Location permission needed for distance filter");
+        keys.add("GPS is required for distance filter");
+
+        if (navigationView != null && navigationView.getMenu() != null) {
+            android.view.Menu menu = navigationView.getMenu();
+            for (int i = 0; i < menu.size(); i++) {
+                android.view.MenuItem item = menu.getItem(i);
+                if (item != null && item.getTitle() != null) {
+                    keys.add(item.getTitle().toString());
+                }
+            }
+        }
 
         I18n.prefetch(this, keys, () -> {
-            if (tiSearch != null)
-                I18n.translateAndApplyHint(tiSearch, this);
+            if (etSearch != null && etSearch.getHint() != null) {
+                etSearch.setHint(I18n.t(this, etSearch.getHint().toString()));
+            }
             if (tvSectionTitle != null && tvSectionTitle.getText() != null) {
                 tvSectionTitle.setText(I18n.t(this, tvSectionTitle.getText().toString()));
             }
             if (tvMarquee != null && tvMarquee.getText() != null) {
                 tvMarquee.setText(I18n.t(this, tvMarquee.getText().toString()));
+            }
+            applyDrawerMenuTranslations();
+            if (chipCondition != null && chipCondition.getText() != null) {
+                chipCondition.setText(I18n.t(this, chipCondition.getText().toString()));
             }
         });
     }
@@ -574,89 +826,116 @@ public class MainActivity extends AppCompatActivity {
             selectedCategoryId = toInt(cat.get("id"), -1);
             selectedSubFilterId = -1;
             showNew = null;
-            clearSearch();
-            if (toggleNewOld != null) {
-                toggleNewOld.setVisibility(View.GONE);
-                toggleNewOld.clearChecked();
+
+            clearSearchSilently();
+
+            if (chipCondition != null) {
+                chipCondition.setVisibility(View.GONE);
+                chipCondition.setText(I18n.t(this, "Condition: All"));
+                showNew = null;
             }
 
-            // Allow products to refetch after category change
             resetPagination();
+
+            // Important: stop any old product requests so they do not overwrite the subcategory screen
+            VolleySingleton.getInstance(this).getQueue().cancelAll(TAG_FETCH_PRODUCTS);
+            productsInFlight = false;
+            lastProductsUrl = null;
+
             if (selectedCategoryId == 0) {
-                // "All Listings" -> Skip subfilter fetch (client side optimization)
-                mapSubFilters.remove(0); // clear if any
+                mapSubFilters.remove(0);
                 showProducts();
                 fetchProducts();
             } else {
                 fetchSubFilters(selectedCategoryId);
             }
         });
+
         rvCategories.setAdapter(catAdapter);
 
         productAdapterRef = new ProductAdapter(this);
         rvProducts.setAdapter(productAdapterRef);
     }
 
+    private void bindSubFilters(List<Map<String, Object>> subs) {
+        rvSubFiltersGrid.setAdapter(new SubFilterGridAdapter(subs, sub -> {
+            selectedSubFilterId = toInt(sub.get("id"), 0);
+
+            clearSearchSilently();
+            showProducts();
+
+            if (selectedSubFilterId > 0) {
+                boolean hasNewOld = toBool(sub.get("hasNewOld"), false);
+                if (hasNewOld && chipCondition != null) {
+                    chipCondition.setVisibility(View.VISIBLE);
+                } else if (chipCondition != null) {
+                    chipCondition.setVisibility(View.GONE);
+                    showNew = null;
+                    chipCondition.setText(I18n.t(this, "Condition: All"));
+                }
+            } else {
+                if (chipCondition != null) {
+                    chipCondition.setVisibility(View.GONE);
+                    showNew = null;
+                    chipCondition.setText(I18n.t(this, "Condition: All"));
+                }
+            }
+
+            productCache.evictAll();
+            resetPagination();
+            fetchProducts();
+        }));
+
+        showSubFilters();
+        if (catAdapter != null) {
+            catAdapter.setSelectedId(selectedCategoryId);
+        }
+    }
+
     private void bindProducts(List<Map<String, Object>> items) {
-        // Stop refresh animation
-        if (swipeRefresh != null)
-            swipeRefresh.setRefreshing(false);
+        if (swipeRefresh != null) swipeRefresh.setRefreshing(false);
 
         if (items == null || items.isEmpty()) {
             rvProducts.setVisibility(View.GONE);
-            if (layoutEmptyState != null)
-                layoutEmptyState.setVisibility(View.VISIBLE);
+            if (layoutEmptyState != null) layoutEmptyState.setVisibility(View.VISIBLE);
         } else {
             rvProducts.setVisibility(View.VISIBLE);
-            if (layoutEmptyState != null)
-                layoutEmptyState.setVisibility(View.GONE);
-            if (productAdapterRef != null)
-                productAdapterRef.setItems(items);
-
-            // Replay layout animation for smooth card transitions
+            if (layoutEmptyState != null) layoutEmptyState.setVisibility(View.GONE);
+            if (productAdapterRef != null) productAdapterRef.setItems(items);
             runLayoutAnimation();
         }
     }
 
-    /** Replay the fall-down animation on the product grid */
     private void runLayoutAnimation() {
-        if (rvProducts == null)
-            return;
-        final LayoutAnimationController controller = AnimationUtils.loadLayoutAnimation(this,
-                R.anim.layout_animation_fall_down);
+        if (rvProducts == null) return;
+        final LayoutAnimationController controller = AnimationUtils.loadLayoutAnimation(
+                this, R.anim.layout_animation_fall_down);
         rvProducts.setLayoutAnimation(controller);
         rvProducts.scheduleLayoutAnimation();
     }
 
     private void showSubFilters() {
         rvProducts.setVisibility(View.GONE);
-        if (tvSectionTitle != null)
-            tvSectionTitle.setVisibility(View.GONE);
+        if (tvSectionTitle != null) tvSectionTitle.setVisibility(View.GONE);
         rvSubFiltersGrid.setVisibility(View.VISIBLE);
     }
 
     private void showProducts() {
         rvSubFiltersGrid.setVisibility(View.GONE);
-        if (tvSectionTitle != null)
-            tvSectionTitle.setVisibility(View.VISIBLE);
-        rvProducts.setVisibility(View.VISIBLE);
         if (tvSectionTitle != null) {
-            tvSectionTitle.setText(I18n.t(this, getString(R.string.featured_listings)));
+            tvSectionTitle.setVisibility(View.VISIBLE);
+            tvSectionTitle.setText(I18n.t(this, "Featured Listings"));
         }
+        rvProducts.setVisibility(View.VISIBLE);
     }
 
     private void ensureProductsView() {
-        if (rvSubFiltersGrid.getVisibility() == View.VISIBLE)
+        if (rvSubFiltersGrid != null && rvSubFiltersGrid.getVisibility() == View.VISIBLE) {
             showProducts();
+        }
     }
 
-    private void clearSearch() {
-        searchQuery = "";
-        if (etSearch != null && etSearch.getText() != null)
-            etSearch.setText("");
-    }
-
-    // ================= Network: URLs =================
+    // ================= URLs =================
 
     private String urlCategories() {
         return ApiRoutes.BASE_URL + "/list_categories.php";
@@ -672,16 +951,15 @@ public class MainActivity extends AppCompatActivity {
                 .append("&limit=").append(LIMIT)
                 .append("&sort=newest");
 
-        if (selectedCategoryId > 0)
-            sb.append("&category_id=").append(selectedCategoryId);
-        if (selectedSubFilterId > 0)
-            sb.append("&subcategory_id=").append(selectedSubFilterId);
-        if (!TextUtils.isEmpty(searchQuery))
+        if (selectedCategoryId > 0) sb.append("&category_id=").append(selectedCategoryId);
+        if (selectedSubFilterId > 0) sb.append("&subcategory_id=").append(selectedSubFilterId);
+        if (!TextUtils.isEmpty(searchQuery)) {
             sb.append("&q=").append(android.net.Uri.encode(searchQuery));
-        if (showNew != null)
+        }
+        if (showNew != null) {
             sb.append("&is_new=").append(showNew ? "1" : "0");
+        }
 
-        // KM distance filter
         if (selectedRadiusKm != null && userLat != null && userLng != null) {
             sb.append("&lat=").append(userLat)
                     .append("&lng=").append(userLng)
@@ -691,7 +969,6 @@ public class MainActivity extends AppCompatActivity {
         return sb.toString();
     }
 
-    /** Reset pagination state when filters/search change */
     private void resetPagination() {
         currentPage = 1;
         hasMoreProducts = true;
@@ -700,23 +977,20 @@ public class MainActivity extends AppCompatActivity {
         lastProductsUrl = null;
     }
 
-    /** Load next page of products (infinite scroll) */
     private void loadMoreProducts() {
-        if (isLoadingMore || !hasMoreProducts)
-            return;
+        if (isLoadingMore || !hasMoreProducts) return;
         isLoadingMore = true;
         currentPage++;
         fetchProducts();
     }
 
-    // ================= Network: Fetchers =================
+    // ================= Network =================
 
     private void fetchCategories() {
         final String url = urlCategories();
-        Log.e(TAG, "========== FETCH CATEGORIES START =========="); // Changed to Log.e for visibility
+        Log.e(TAG, "========== FETCH CATEGORIES START ==========");
         Log.e(TAG, "URL: " + url);
 
-        @SuppressLint("NotifyDataSetChanged")
         JsonObjectRequest req = new JsonObjectRequest(
                 Request.Method.GET,
                 url,
@@ -735,11 +1009,10 @@ public class MainActivity extends AppCompatActivity {
 
                         categories.clear();
 
-                        // ✅ ADDED: "All Listings" button at the start
                         Map<String, Object> allCat = new HashMap<>();
-                        allCat.put("id", 0); // Special ID for "All"
+                        allCat.put("id", 0);
                         allCat.put("name", "All Listings");
-                        allCat.put("iconRes", R.drawable.ic_all_listings); // Custom dashboard/grid icon
+                        allCat.put("iconRes", R.drawable.ic_all_listings);
                         categories.add(allCat);
 
                         List<String> catNameKeys = new ArrayList<>();
@@ -754,25 +1027,27 @@ public class MainActivity extends AppCompatActivity {
                                 String nameEn = o.optString("name", "");
                                 m.put("name", nameEn);
 
-                                // ✅ FIXED: Proper icon URL handling with makeAbsoluteImageUrl
                                 String iconUrl = o.optString("icon", "");
-                                if (TextUtils.isEmpty(iconUrl))
+                                if (TextUtils.isEmpty(iconUrl)) {
                                     iconUrl = o.optString("icon_url", "");
+                                }
 
-                                // ✅ Convert relative path to absolute URL
                                 iconUrl = makeAbsoluteImageUrl(iconUrl);
                                 m.put("iconUrl", iconUrl);
                                 m.put("hasNewOld", o.optInt("hasNewOld", 0) == 1);
 
                                 categories.add(m);
 
-                                if (!TextUtils.isEmpty(nameEn))
+                                if (!TextUtils.isEmpty(nameEn)) {
                                     catNameKeys.add(nameEn);
+                                }
                             }
                         } else {
                             Log.e(TAG, "fetchCategories(): data array is NULL!");
                         }
-                        catAdapter.notifyDataSetChanged();
+
+                        if (catAdapter != null) catAdapter.notifyDataSetChanged();
+
                         I18n.prefetch(this, catNameKeys, () -> {
                             for (Map<String, Object> m : categories) {
                                 Object nObj = m.get("name");
@@ -781,7 +1056,7 @@ public class MainActivity extends AppCompatActivity {
                                     m.put("name", I18n.t(this, en));
                                 }
                             }
-                            catAdapter.notifyDataSetChanged();
+                            if (catAdapter != null) catAdapter.notifyDataSetChanged();
                         });
 
                     } catch (Exception e) {
@@ -790,7 +1065,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 },
                 err -> {
-                    Log.e(TAG, "❌ Categories Fetch Error: " + err.toString());
+                    Log.e(TAG, "❌ Categories Fetch Error: " + err);
                     if (err.networkResponse != null) {
                         Log.e(TAG, "Status Code: " + err.networkResponse.statusCode);
                         Log.e(TAG, "Body: " + new String(err.networkResponse.data));
@@ -806,7 +1081,6 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        // Extended Timeout - 15 seconds
         req.setRetryPolicy(new DefaultRetryPolicy(
                 15000,
                 1,
@@ -818,39 +1092,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void fetchSubFilters(int categoryId) {
         final String url = urlSubcategories(categoryId);
-        // ✅ CHECK MEMORY CACHE
+
         if (mapSubFilters.containsKey(categoryId)) {
             List<Map<String, Object>> subs = mapSubFilters.get(categoryId);
-
-            rvSubFiltersGrid.setAdapter(new SubFilterGridAdapter(subs, sub -> {
-                selectedSubFilterId = toInt(sub.get("id"), 0);
-                clearSearch();
-                showProducts();
-
-                if (selectedSubFilterId > 0) {
-                    boolean hasNewOld = toBool(sub.get("hasNewOld"), false);
-                    if (hasNewOld && toggleNewOld != null)
-                        toggleNewOld.setVisibility(View.VISIBLE);
-                    else if (toggleNewOld != null) {
-                        toggleNewOld.setVisibility(View.GONE);
-                        showNew = null;
-                        toggleNewOld.clearChecked();
-                    }
-                } else {
-                    if (toggleNewOld != null) {
-                        toggleNewOld.setVisibility(View.GONE);
-                        showNew = null;
-                        toggleNewOld.clearChecked();
-                    }
-                }
-
-                productsInFlight = false;
-                lastProductsUrl = null;
-                fetchProducts();
-            }));
-
-            showSubFilters();
-            return; // SKIP API
+            bindSubFilters(subs);
+            return;
         }
 
         JsonObjectRequest req = new JsonObjectRequest(
@@ -870,7 +1116,7 @@ public class MainActivity extends AppCompatActivity {
 
                         Map<String, Object> all = new HashMap<>();
                         all.put("id", 0);
-                        all.put("name", getString(R.string.sub_all));
+                        all.put("name", I18n.t(this, "All"));
                         all.put("iconRes", R.drawable.ic_placeholder_circle);
                         all.put("hasNewOld", false);
                         subs.add(all);
@@ -885,12 +1131,11 @@ public class MainActivity extends AppCompatActivity {
                                 String subName = o.optString("name", "");
                                 m.put("name", subName);
 
-                                // ✅ FIXED: Proper icon URL handling with makeAbsoluteImageUrl
                                 String iconUrl = o.optString("icon", "");
-                                if (TextUtils.isEmpty(iconUrl))
+                                if (TextUtils.isEmpty(iconUrl)) {
                                     iconUrl = o.optString("icon_url", "");
+                                }
 
-                                // ✅ Convert relative path to absolute URL
                                 iconUrl = makeAbsoluteImageUrl(iconUrl);
                                 m.put("iconUrl", iconUrl);
                                 m.put("hasNewOld", o.optInt("hasNewOld", 0) == 1);
@@ -900,36 +1145,29 @@ public class MainActivity extends AppCompatActivity {
                         } else {
                             Log.e(TAG, "fetchSubFilters(): data array is NULL!");
                         }
-                        mapSubFilters.put(categoryId, subs);
 
-                        rvSubFiltersGrid.setAdapter(new SubFilterGridAdapter(subs, sub -> {
-                            selectedSubFilterId = toInt(sub.get("id"), 0);
-                            clearSearch();
-                            showProducts();
-                            if (selectedSubFilterId > 0) {
-                                boolean hasNewOld = toBool(sub.get("hasNewOld"), false);
-                                if (hasNewOld && toggleNewOld != null) {
-                                    toggleNewOld.setVisibility(View.VISIBLE);
-                                } else if (toggleNewOld != null) {
-                                    toggleNewOld.setVisibility(View.GONE);
-                                    showNew = null;
-                                    toggleNewOld.clearChecked();
-                                }
-                            } else {
-                                if (toggleNewOld != null) {
-                                    toggleNewOld.setVisibility(View.GONE);
-                                    showNew = null;
-                                    toggleNewOld.clearChecked();
+                        List<String> subNameKeys = new ArrayList<>();
+                        for (Map<String, Object> m : subs) {
+                            Object nObj = m.get("name");
+                            if (nObj != null) {
+                                subNameKeys.add(String.valueOf(nObj));
+                            }
+                        }
+
+                        I18n.prefetch(this, subNameKeys, () -> {
+                            for (Map<String, Object> m : subs) {
+                                Object nObj = m.get("name");
+                                if (nObj != null) {
+                                    String en = String.valueOf(nObj);
+                                    m.put("name", I18n.t(this, en));
                                 }
                             }
-
-                            productsInFlight = false;
-                            lastProductsUrl = null;
-                            fetchProducts();
-                        }));
-
-                        showSubFilters();
-                        catAdapter.setSelectedId(selectedCategoryId);
+                            mapSubFilters.put(categoryId, subs);
+                            bindSubFilters(subs);
+                        }, () -> {
+                            mapSubFilters.put(categoryId, subs);
+                            bindSubFilters(subs);
+                        });
 
                     } catch (Exception e) {
                         Log.e(TAG, "fetchSubFilters(): parse exception", e);
@@ -940,7 +1178,6 @@ public class MainActivity extends AppCompatActivity {
                     Log.e(TAG, "fetchSubFilters() error=" + buildVolleyError(err), err);
                     makeText(this, I18n.t(this, "Network error (subcategories)"), Toast.LENGTH_SHORT).show();
                 }) {
-
             @Override
             public Map<String, String> getHeaders() {
                 HashMap<String, String> headers = new HashMap<>();
@@ -948,8 +1185,8 @@ public class MainActivity extends AppCompatActivity {
                 headers.put("Accept-Language", I18n.lang(MainActivity.this));
                 return headers;
             }
-
         };
+
         req.setShouldCache(false);
         req.setRetryPolicy(new DefaultRetryPolicy(15000, 0, 1f));
         VolleySingleton.getInstance(this).add(req);
@@ -957,27 +1194,23 @@ public class MainActivity extends AppCompatActivity {
 
     private void fetchProducts() {
         final String url = urlProducts();
-        final boolean isAppend = currentPage > 1; // Loading more pages
+        final boolean isAppend = currentPage > 1;
 
-        // Cancel previous requests only if this is a fresh load (not append)
         if (!isAppend && productsInFlight) {
             VolleySingleton.getInstance(this).getQueue().cancelAll(TAG_FETCH_PRODUCTS);
         }
         productsInFlight = true;
 
-        // Check memory cache (only for page 1)
         if (!isAppend) {
             JSONObject cachedResp = productCache.get(url);
             if (cachedResp != null) {
                 try {
                     productsInFlight = false;
-                    if (swipeRefresh != null)
-                        swipeRefresh.setRefreshing(false);
+                    if (swipeRefresh != null) swipeRefresh.setRefreshing(false);
                     parseProductsResponse(cachedResp, false);
                     lastProductsUrl = url;
                     return;
-                } catch (Exception e) {
-                    // fallback to network
+                } catch (Exception ignored) {
                 }
             }
         }
@@ -992,22 +1225,19 @@ public class MainActivity extends AppCompatActivity {
                     productsInFlight = false;
                     isLoadingMore = false;
 
-                    if (swipeRefresh != null)
-                        swipeRefresh.setRefreshing(false);
+                    if (swipeRefresh != null) swipeRefresh.setRefreshing(false);
 
                     if (resp != null) {
-                        if (!isAppend)
-                            productCache.put(url, resp);
+                        if (!isAppend) productCache.put(url, resp);
                         parseProductsResponse(resp, isAppend);
                     }
                 },
                 err -> {
-                    Log.e(TAG, "fetchProducts() ERROR: " + err.toString());
+                    Log.e(TAG, "fetchProducts() ERROR: " + err);
                     productsInFlight = false;
                     isLoadingMore = false;
 
-                    if (swipeRefresh != null)
-                        swipeRefresh.setRefreshing(false);
+                    if (swipeRefresh != null) swipeRefresh.setRefreshing(false);
 
                     makeText(this, I18n.t(this, "Network error (products)"), Toast.LENGTH_SHORT).show();
 
@@ -1034,237 +1264,15 @@ public class MainActivity extends AppCompatActivity {
         VolleySingleton.getInstance(this).add(req);
     }
 
-    // ================= KM Filter Bottom Sheet =================
-
-    private void showKmFilterSheet() {
-        BottomSheetDialog dialog = new BottomSheetDialog(this);
-        View sheet = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_km_filter, null);
-        dialog.setContentView(sheet);
-
-        ChipGroup chipGroup = sheet.findViewById(R.id.chipGroupKm);
-
-        // Pre-select current value
-        if (selectedRadiusKm == null) {
-            ((Chip) sheet.findViewById(R.id.chipAll)).setChecked(true);
-        } else if (selectedRadiusKm == 5) {
-            ((Chip) sheet.findViewById(R.id.chip5km)).setChecked(true);
-        } else if (selectedRadiusKm == 10) {
-            ((Chip) sheet.findViewById(R.id.chip10km)).setChecked(true);
-        } else if (selectedRadiusKm == 25) {
-            ((Chip) sheet.findViewById(R.id.chip25km)).setChecked(true);
-        } else if (selectedRadiusKm == 50) {
-            ((Chip) sheet.findViewById(R.id.chip50km)).setChecked(true);
-        } else if (selectedRadiusKm == 100) {
-            ((Chip) sheet.findViewById(R.id.chip100km)).setChecked(true);
-        }
-
-        chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
-            if (checkedIds.isEmpty())
-                return;
-            int checkedId = checkedIds.get(0);
-
-            if (checkedId == R.id.chipAll) {
-                selectedRadiusKm = null;
-                updateKmChipText();
-                dialog.dismiss();
-                applyKmFilter();
-            } else {
-                int km = 10; // default
-                if (checkedId == R.id.chip5km)
-                    km = 5;
-                else if (checkedId == R.id.chip10km)
-                    km = 10;
-                else if (checkedId == R.id.chip25km)
-                    km = 25;
-                else if (checkedId == R.id.chip50km)
-                    km = 50;
-                else if (checkedId == R.id.chip100km)
-                    km = 100;
-
-                selectedRadiusKm = km;
-                updateKmChipText();
-                dialog.dismiss();
-
-                // Need user location to filter by radius
-                if (userLat == null || userLng == null) {
-                    fetchUserLocationThenFilter();
-                } else {
-                    applyKmFilter();
-                }
-            }
-        });
-
-        dialog.show();
-    }
-
-    private void updateKmChipText() {
-        if (chipKmFilter == null)
-            return;
-        if (selectedRadiusKm == null) {
-            chipKmFilter.setText("📍 Nearby");
-        } else {
-            chipKmFilter.setText("📍 " + selectedRadiusKm + " km");
-        }
-    }
-
-    private void applyKmFilter() {
-        ensureProductsView();
-        // Clear cache so new radius is applied
-        productCache.evictAll();
-        lastProductsUrl = null;
-        productsInFlight = false;
-        fetchProducts();
-    }
-
-    @SuppressLint("MissingPermission")
-    private void fetchUserLocationThenFilter() {
-        // 1. Check permission first
-        if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[] { Manifest.permission.ACCESS_FINE_LOCATION },
-                    LOCATION_PERMISSION_REQUEST);
-            return;
-        }
-
-        // 2. Check if GPS/Location services are enabled
-        com.google.android.gms.location.LocationRequest locationRequest = com.google.android.gms.location.LocationRequest
-                .create()
-                .setPriority(com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY);
-
-        com.google.android.gms.location.LocationSettingsRequest settingsRequest = new com.google.android.gms.location.LocationSettingsRequest.Builder()
-                .addLocationRequest(locationRequest)
-                .setAlwaysShow(true) // Show dialog even if GPS was previously declined
-                .build();
-
-        com.google.android.gms.location.LocationServices.getSettingsClient(this)
-                .checkLocationSettings(settingsRequest)
-                .addOnSuccessListener(this, response -> {
-                    // GPS is ON — go ahead and fetch location
-                    doFetchLocation();
-                })
-                .addOnFailureListener(this, e -> {
-                    if (e instanceof com.google.android.gms.common.api.ResolvableApiException) {
-                        // GPS is OFF — show Google's "Enable Location" dialog
-                        try {
-                            com.google.android.gms.common.api.ResolvableApiException resolvable = (com.google.android.gms.common.api.ResolvableApiException) e;
-                            locationSettingsLauncher.launch(
-                                    new androidx.activity.result.IntentSenderRequest.Builder(
-                                            resolvable.getResolution()).build());
-                        } catch (Exception ex) {
-                            Log.e(TAG, "Could not show location settings dialog", ex);
-                            showManualGpsPrompt();
-                        }
-                    } else {
-                        // Some other settings error
-                        showManualGpsPrompt();
-                    }
-                });
-    }
-
-    /** Fetch location after GPS check passes */
-    @SuppressLint("MissingPermission")
-    private void doFetchLocation() {
-        LoadingDialog.showLoading(this, "Getting your location...");
-        fusedLocationClient.getLastLocation()
-                .addOnSuccessListener(this, location -> {
-                    LoadingDialog.hideLoading();
-                    if (location != null) {
-                        userLat = location.getLatitude();
-                        userLng = location.getLongitude();
-                        Log.d(TAG, "User location: " + userLat + ", " + userLng);
-                        applyKmFilter();
-                    } else {
-                        // Last location is null — request a fresh one
-                        requestFreshLocation();
-                    }
-                })
-                .addOnFailureListener(this, e -> {
-                    LoadingDialog.hideLoading();
-                    Log.e(TAG, "Location fetch failed", e);
-                    makeText(this, "Location error. Please try again.", Toast.LENGTH_SHORT).show();
-                    selectedRadiusKm = null;
-                    updateKmChipText();
-                });
-    }
-
-    /** Request a fresh location when getLastLocation returns null */
-    @SuppressLint("MissingPermission")
-    private void requestFreshLocation() {
-        com.google.android.gms.location.LocationRequest req = com.google.android.gms.location.LocationRequest.create()
-                .setPriority(com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY)
-                .setNumUpdates(1)
-                .setInterval(5000)
-                .setMaxWaitTime(10000);
-
-        fusedLocationClient.requestLocationUpdates(req,
-                new com.google.android.gms.location.LocationCallback() {
-                    @Override
-                    public void onLocationResult(com.google.android.gms.location.LocationResult result) {
-                        fusedLocationClient.removeLocationUpdates(this);
-                        LoadingDialog.hideLoading();
-                        if (result != null && result.getLastLocation() != null) {
-                            userLat = result.getLastLocation().getLatitude();
-                            userLng = result.getLastLocation().getLongitude();
-                            Log.d(TAG, "Fresh location: " + userLat + ", " + userLng);
-                            applyKmFilter();
-                        } else {
-                            makeText(MainActivity.this, "Could not get location. Try again.", Toast.LENGTH_SHORT)
-                                    .show();
-                            selectedRadiusKm = null;
-                            updateKmChipText();
-                        }
-                    }
-                }, android.os.Looper.getMainLooper());
-    }
-
-    /** Fallback: prompt user to open GPS settings manually */
-    private void showManualGpsPrompt() {
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Enable Location")
-                .setMessage("GPS is turned off. Please enable location services to filter listings by distance.")
-                .setPositiveButton("Open Settings", (d, w) -> {
-                    Intent intent = new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                    startActivity(intent);
-                })
-                .setNegativeButton("Cancel", (d, w) -> {
-                    selectedRadiusKm = null;
-                    updateKmChipText();
-                })
-                .setCancelable(false)
-                .show();
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-            @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == LOCATION_PERMISSION_REQUEST) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted, retry location fetch
-                fetchUserLocationThenFilter();
-            } else {
-                makeText(this, "Location permission needed for distance filter", Toast.LENGTH_SHORT).show();
-                selectedRadiusKm = null;
-                updateKmChipText();
-            }
-        }
-    }
-
-    /**
-     * Helper to parse product response - logic extracted for reuse
-     */
     private void parseProductsResponse(JSONObject resp, boolean isAppend) {
         try {
             if (!"success".equalsIgnoreCase(resp.optString("status"))) {
                 Log.e(TAG, "parseProductsResponse(): status != success");
                 makeText(this, I18n.t(this, "Products error"), Toast.LENGTH_SHORT).show();
-                if (!isAppend)
-                    bindProducts(new ArrayList<>());
+                if (!isAppend) bindProducts(new ArrayList<>());
                 return;
             }
 
-            // Read pagination info from response
             hasMoreProducts = resp.optBoolean("has_more", false);
 
             JSONArray arr = resp.optJSONArray("data");
@@ -1274,21 +1282,21 @@ public class MainActivity extends AppCompatActivity {
                 for (int i = 0; i < arr.length(); i++) {
                     JSONObject o = arr.getJSONObject(i);
                     Map<String, Object> m = new HashMap<>();
-                    int prodId = o.optInt("id", 0);
-                    m.put("id", prodId);
-                    m.put("categoryId", o.optInt("category_id", 0));
+                    m.put("id", o.optInt("id", 0));
+                    m.put("category_id", o.optInt("category_id", 0));
                     m.put("subFilterId", o.optInt("subcategory_id", 0));
                     m.put("title", o.optString("title", ""));
                     m.put("price", String.valueOf(o.opt("price")));
                     m.put("city", o.optString("city", ""));
 
+                    if (!o.isNull("distance")) {
+                        m.put("distance", String.valueOf(o.opt("distance")));
+                    }
+
                     String imageUrl = "";
-                    if (!o.isNull("cover_image"))
-                        imageUrl = o.optString("cover_image", "");
-                    if (TextUtils.isEmpty(imageUrl) && !o.isNull("image_url"))
-                        imageUrl = o.optString("image_url", "");
-                    if (TextUtils.isEmpty(imageUrl) && !o.isNull("image"))
-                        imageUrl = o.optString("image", "");
+                    if (!o.isNull("cover_image")) imageUrl = o.optString("cover_image", "");
+                    if (TextUtils.isEmpty(imageUrl) && !o.isNull("image_url")) imageUrl = o.optString("image_url", "");
+                    if (TextUtils.isEmpty(imageUrl) && !o.isNull("image")) imageUrl = o.optString("image", "");
 
                     m.put("imageUrl", makeAbsoluteImageUrl(imageUrl));
                     m.put("isNew", o.optInt("is_new", 0) == 1);
@@ -1309,8 +1317,8 @@ public class MainActivity extends AppCompatActivity {
                             }
                         }
                     }
-                    if (images.isEmpty() && !TextUtils.isEmpty(m.get("imageUrl").toString())) {
-                        images.add(m.get("imageUrl").toString());
+                    if (images.isEmpty() && !TextUtils.isEmpty(String.valueOf(m.get("imageUrl")))) {
+                        images.add(String.valueOf(m.get("imageUrl")));
                     }
                     m.put("images", images);
 
@@ -1319,27 +1327,389 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (isAppend) {
-                // Infinite scroll: append to existing list
                 currentProducts.addAll(newItems);
                 if (productAdapterRef != null) {
                     productAdapterRef.addItems(newItems);
                 }
             } else {
-                // Fresh load: replace entire list
                 currentProducts.clear();
                 currentProducts.addAll(newItems);
                 bindProducts(new ArrayList<>(currentProducts));
             }
+
             LoadingDialog.hideLoading();
 
         } catch (Exception e) {
             Log.e(TAG, "parseProductsResponse(): exception", e);
-            if (!isAppend)
-                bindProducts(new ArrayList<>());
+            if (!isAppend) bindProducts(new ArrayList<>());
         }
     }
 
-    // ================= Back navigation =================
+    // ================= KM Filter =================
+
+    private void showKmFilterSheet() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View sheet = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_km_filter, null);
+        dialog.setContentView(sheet);
+
+        ChipGroup chipGroup = sheet.findViewById(R.id.chipGroupKm);
+
+        if (selectedRadiusKm == null) {
+            ((Chip) sheet.findViewById(R.id.chipAll)).setChecked(true);
+        } else if (selectedRadiusKm == 5) {
+            ((Chip) sheet.findViewById(R.id.chip5km)).setChecked(true);
+        } else if (selectedRadiusKm == 10) {
+            ((Chip) sheet.findViewById(R.id.chip10km)).setChecked(true);
+        } else if (selectedRadiusKm == 25) {
+            ((Chip) sheet.findViewById(R.id.chip25km)).setChecked(true);
+        } else if (selectedRadiusKm == 50) {
+            ((Chip) sheet.findViewById(R.id.chip50km)).setChecked(true);
+        } else if (selectedRadiusKm == 100) {
+            ((Chip) sheet.findViewById(R.id.chip100km)).setChecked(true);
+        }
+
+        chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            if (checkedIds.isEmpty()) return;
+            int checkedId = checkedIds.get(0);
+
+            if (checkedId == R.id.chipAll) {
+                selectedRadiusKm = null;
+                updateKmChipText();
+                dialog.dismiss();
+                applyKmFilter();
+            } else {
+                int km = 10;
+                if (checkedId == R.id.chip5km) km = 5;
+                else if (checkedId == R.id.chip10km) km = 10;
+                else if (checkedId == R.id.chip25km) km = 25;
+                else if (checkedId == R.id.chip50km) km = 50;
+                else if (checkedId == R.id.chip100km) km = 100;
+
+                selectedRadiusKm = km;
+                updateKmChipText();
+                dialog.dismiss();
+
+                if (userLat == null || userLng == null) {
+                    fetchUserLocationThenFilter();
+                } else {
+                    applyKmFilter();
+                }
+            }
+        });
+
+        dialog.show();
+    }
+
+    private void updateKmChipText() {
+        if (chipKmFilter == null) return;
+        if (selectedRadiusKm == null) {
+            chipKmFilter.setText(I18n.t(this, "Nearby"));
+        } else {
+            chipKmFilter.setText(selectedRadiusKm + " km");
+        }
+    }
+
+    private void applyKmFilter() {
+        ensureProductsView();
+        productCache.evictAll();
+        lastProductsUrl = null;
+        productsInFlight = false;
+        resetPagination();
+        fetchProducts();
+    }
+
+    @SuppressLint("MissingPermission")
+    private void fetchUserLocationThenFilter() {
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    LOCATION_PERMISSION_REQUEST);
+            return;
+        }
+
+        com.google.android.gms.location.LocationRequest locationRequest =
+                com.google.android.gms.location.LocationRequest.create()
+                        .setPriority(com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+        com.google.android.gms.location.LocationSettingsRequest settingsRequest =
+                new com.google.android.gms.location.LocationSettingsRequest.Builder()
+                        .addLocationRequest(locationRequest)
+                        .setAlwaysShow(true)
+                        .build();
+
+        LocationServices.getSettingsClient(this)
+                .checkLocationSettings(settingsRequest)
+                .addOnSuccessListener(this, response -> doFetchLocation())
+                .addOnFailureListener(this, e -> {
+                    if (e instanceof com.google.android.gms.common.api.ResolvableApiException) {
+                        try {
+                            com.google.android.gms.common.api.ResolvableApiException resolvable =
+                                    (com.google.android.gms.common.api.ResolvableApiException) e;
+                            locationSettingsLauncher.launch(
+                                    new androidx.activity.result.IntentSenderRequest.Builder(
+                                            resolvable.getResolution()).build());
+                        } catch (Exception ex) {
+                            Log.e(TAG, "Could not show location settings dialog", ex);
+                            showManualGpsPrompt();
+                        }
+                    } else {
+                        showManualGpsPrompt();
+                    }
+                });
+    }
+
+    @SuppressLint("MissingPermission")
+    private void doFetchLocation() {
+        LoadingDialog.showLoading(this, I18n.t(this, "Getting your location..."));
+        fusedLocationClient.getLastLocation()
+                .addOnSuccessListener(this, location -> {
+                    LoadingDialog.hideLoading();
+                    if (location != null) {
+                        userLat = location.getLatitude();
+                        userLng = location.getLongitude();
+                        Log.d(TAG, "User location: " + userLat + ", " + userLng);
+                        applyKmFilter();
+                    } else {
+                        requestFreshLocation();
+                    }
+                })
+                .addOnFailureListener(this, e -> {
+                    LoadingDialog.hideLoading();
+                    Log.e(TAG, "Location fetch failed", e);
+                    makeText(this, I18n.t(this, "Location error. Please try again."), Toast.LENGTH_SHORT).show();
+                    selectedRadiusKm = null;
+                    updateKmChipText();
+                });
+    }
+
+    @SuppressLint("MissingPermission")
+    private void requestFreshLocation() {
+        com.google.android.gms.location.LocationRequest req =
+                com.google.android.gms.location.LocationRequest.create()
+                        .setPriority(com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY)
+                        .setNumUpdates(1)
+                        .setInterval(5000)
+                        .setMaxWaitTime(10000);
+
+        fusedLocationClient.requestLocationUpdates(req,
+                new com.google.android.gms.location.LocationCallback() {
+                    @Override
+                    public void onLocationResult(com.google.android.gms.location.LocationResult result) {
+                        fusedLocationClient.removeLocationUpdates(this);
+                        LoadingDialog.hideLoading();
+                        if (result != null && result.getLastLocation() != null) {
+                            userLat = result.getLastLocation().getLatitude();
+                            userLng = result.getLastLocation().getLongitude();
+                            Log.d(TAG, "Fresh location: " + userLat + ", " + userLng);
+                            applyKmFilter();
+                        } else {
+                            makeText(MainActivity.this,
+                                    I18n.t(MainActivity.this, "Could not get location. Try again."),
+                                    Toast.LENGTH_SHORT).show();
+                            selectedRadiusKm = null;
+                            updateKmChipText();
+                        }
+                    }
+                }, android.os.Looper.getMainLooper());
+    }
+
+    private void showManualGpsPrompt() {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(I18n.t(this, "Enable Location"))
+                .setMessage(I18n.t(this, "GPS is turned off. Please enable location services to filter listings by distance."))
+                .setPositiveButton(I18n.t(this, "Open Settings"), (d, w) -> {
+                    Intent intent = new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                    startActivity(intent);
+                })
+                .setNegativeButton(I18n.t(this, "Cancel"), (d, w) -> {
+                    selectedRadiusKm = null;
+                    updateKmChipText();
+                })
+                .setCancelable(false)
+                .show();
+    }
+
+    // ================= Permission =================
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == HEADER_LOCATION_PERMISSION_REQUEST) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                fetchAndDisplayHeaderLocation();
+            }
+            return;
+        }
+
+        if (requestCode == LOCATION_PERMISSION_REQUEST) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                fetchUserLocationThenFilter();
+            } else {
+                makeText(this, I18n.t(this, "Location permission needed for distance filter"), Toast.LENGTH_SHORT).show();
+                selectedRadiusKm = null;
+                updateKmChipText();
+            }
+        }
+    }
+
+    // ================= User Profile =================
+
+    @SuppressLint("SetTextI18n")
+    private void fetchUserProfile(TextView tvUserName, TextView tvUserPhone) {
+        String accessToken = session.getAccessToken();
+        if (TextUtils.isEmpty(accessToken)) {
+            if (tvUserName != null) tvUserName.setText(I18n.t(this, "Guest User"));
+            if (tvUserPhone != null) tvUserPhone.setText("");
+            return;
+        }
+
+        String url = ApiRoutes.BASE_URL + "/get_user_profile.php";
+        JsonObjectRequest req = new JsonObjectRequest(
+                Request.Method.GET,
+                url,
+                null,
+                response -> {
+                    try {
+                        if (response.getBoolean("success")) {
+                            JSONObject user = response.getJSONObject("user");
+                            String name = user.optString("name", "User");
+                            String formattedPhone = user.optString("formatted_phone", "");
+                            if (tvUserName != null) {
+                                tvUserName.setText(I18n.t(this, name));
+                            }
+                            if (tvUserPhone != null) {
+                                tvUserPhone.setText(formattedPhone);
+                            }
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "❌ Error parsing user profile response", e);
+                    }
+                },
+                error -> {
+                    Log.e(TAG, "❌ USER PROFILE API ERROR", error);
+
+                    if (tvUserName != null) {
+                        tvUserName.setText(I18n.t(this, "User"));
+                    }
+                    if (tvUserPhone != null) {
+                        tvUserPhone.setText("");
+                    }
+                }) {
+            @Override
+            public Map<String, String> getHeaders() {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Authorization", "Bearer " + accessToken);
+                headers.put("Content-Type", "application/json");
+                return headers;
+            }
+        };
+
+        req.setShouldCache(false);
+        req.setRetryPolicy(new DefaultRetryPolicy(
+                5000,
+                0,
+                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+        VolleySingleton.getInstance(this).add(req);
+    }
+
+    private void fetchUserProfileOnStartup() {
+        String accessToken = session.getAccessToken();
+        if (TextUtils.isEmpty(accessToken)) {
+            cachedUserName = I18n.t(this, "Guest User");
+            cachedUserPhone = "";
+            return;
+        }
+
+        String url = ApiRoutes.BASE_URL + "/get_user_profile.php";
+        JsonObjectRequest req = new JsonObjectRequest(
+                Request.Method.GET,
+                url,
+                null,
+                response -> {
+                    try {
+                        if (response.getBoolean("success")) {
+                            JSONObject user = response.getJSONObject("user");
+                            cachedUserName = I18n.t(this, user.optString("name", "User"));
+                            cachedUserPhone = user.optString("formatted_phone", "");
+                            session.saveUserProfile(cachedUserName, cachedUserPhone);
+
+                            runOnUiThread(() -> {
+                                if (tvNavUserName != null) {
+                                    tvNavUserName.setText(I18n.t(this, cachedUserName));
+                                }
+                                if (tvNavUserPhone != null) {
+                                    tvNavUserPhone.setText(cachedUserPhone);
+                                }
+                            });
+                        } else {
+                            cachedUserName = I18n.t(this, "User");
+                            cachedUserPhone = "";
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "❌ Error parsing user profile response", e);
+                        cachedUserName = I18n.t(this, "User");
+                        cachedUserPhone = "";
+                    }
+                },
+                error -> {
+                    Log.e(TAG, "❌ USER PROFILE API ERROR ON STARTUP", error);
+                    cachedUserName = "User";
+                    cachedUserPhone = "";
+                }) {
+            @Override
+            public Map<String, String> getHeaders() {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Authorization", "Bearer " + accessToken);
+                headers.put("Content-Type", "application/json");
+                return headers;
+            }
+        };
+
+        req.setShouldCache(false);
+        req.setRetryPolicy(new DefaultRetryPolicy(
+                10000,
+                1,
+                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+        VolleySingleton.getInstance(this).add(req);
+    }
+
+    // ================= Condition popup =================
+
+    private void showConditionPopup() {
+        if (chipCondition == null) return;
+
+        androidx.appcompat.widget.PopupMenu popup =
+                new androidx.appcompat.widget.PopupMenu(this, chipCondition);
+        popup.getMenu().add(0, 0, 0, I18n.t(this, "Condition: All"));
+        popup.getMenu().add(0, 1, 1, I18n.t(this, "New Items Only"));
+        popup.getMenu().add(0, 2, 2, I18n.t(this, "Used Items Only"));
+
+        popup.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == 0) {
+                showNew = null;
+                chipCondition.setText(I18n.t(this, "Condition: All"));
+            } else if (id == 1) {
+                showNew = true;
+                chipCondition.setText(I18n.t(this, "Condition: New"));
+            } else if (id == 2) {
+                showNew = false;
+                chipCondition.setText(I18n.t(this, "Condition: Used"));
+            }
+
+            productCache.evictAll();
+            resetPagination();
+            fetchProducts();
+            return true;
+        });
+
+        popup.show();
+    }
+
+    // ================= Back =================
 
     @Override
     public void onBackPressed() {
@@ -1347,39 +1717,46 @@ public class MainActivity extends AppCompatActivity {
             drawerLayout.closeDrawer(GravityCompat.START);
             return;
         }
-        if (rvSubFiltersGrid.getVisibility() == View.VISIBLE) {
+
+        if (rvSubFiltersGrid != null && rvSubFiltersGrid.getVisibility() == View.VISIBLE) {
             showProducts();
             selectedSubFilterId = -1;
             productsInFlight = false;
             lastProductsUrl = null;
+            resetPagination();
             fetchProducts();
             return;
         }
+
         if (selectedCategoryId != -1) {
             selectedCategoryId = -1;
             selectedSubFilterId = -1;
             showNew = null;
-            if (toggleNewOld != null)
-                toggleNewOld.setVisibility(View.GONE);
-            if (catAdapter != null)
+
+            if (chipCondition != null) {
+                chipCondition.setVisibility(View.GONE);
+            }
+            if (catAdapter != null) {
                 catAdapter.setSelectedId(-1);
+            }
 
             showProducts();
-            clearSearch();
+            clearSearchSilently();
 
             productsInFlight = false;
             lastProductsUrl = null;
+            resetPagination();
             fetchProducts();
             return;
         }
+
         super.onBackPressed();
     }
 
-    // ================= Helpers =================
+    // ================= Misc =================
 
     private static int toInt(Object o, int def) {
-        if (o instanceof Integer)
-            return (Integer) o;
+        if (o instanceof Integer) return (Integer) o;
         try {
             return Integer.parseInt(String.valueOf(o));
         } catch (Exception e) {
@@ -1388,15 +1765,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private static boolean toBool(Object o, boolean def) {
-        if (o instanceof Boolean)
-            return (Boolean) o;
-        if (o == null)
-            return def;
+        if (o instanceof Boolean) return (Boolean) o;
+        if (o == null) return def;
+
         String s = String.valueOf(o);
-        if ("1".equals(s))
-            return true;
-        if ("0".equals(s))
-            return false;
+        if ("1".equals(s)) return true;
+        if ("0".equals(s)) return false;
+
         try {
             return Boolean.parseBoolean(s);
         } catch (Exception e) {
@@ -1407,8 +1782,7 @@ public class MainActivity extends AppCompatActivity {
     private String safeJsonSnippet(JSONObject obj) {
         try {
             String s = obj == null ? "null" : obj.toString();
-            if (s.length() > 500)
-                return s.substring(0, 500) + "...";
+            if (s.length() > 500) return s.substring(0, 500) + "...";
             return s;
         } catch (Exception e) {
             return "json_snippet_error";
@@ -1416,8 +1790,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String buildVolleyError(VolleyError err) {
-        if (err == null)
-            return "VolleyError=null";
+        if (err == null) return "VolleyError=null";
 
         StringBuilder sb = new StringBuilder();
         sb.append("type=").append(err.getClass().getSimpleName());
@@ -1431,10 +1804,8 @@ public class MainActivity extends AppCompatActivity {
             if (err.networkResponse != null) {
                 sb.append(" status=").append(err.networkResponse.statusCode);
                 if (err.networkResponse.data != null) {
-                    String body = new String(err.networkResponse.data);
-                    body = body.trim();
-                    if (body.length() > 300)
-                        body = body.substring(0, 300) + "...";
+                    String body = new String(err.networkResponse.data).trim();
+                    if (body.length() > 300) body = body.substring(0, 300) + "...";
                     sb.append(" body=").append(body);
                 }
             } else {
@@ -1462,170 +1833,11 @@ public class MainActivity extends AppCompatActivity {
     private void rateUs() {
         String pkg = getPackageName();
         try {
-            startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=" + pkg)));
+            startActivity(new Intent(Intent.ACTION_VIEW,
+                    android.net.Uri.parse("market://details?id=" + pkg)));
         } catch (Exception e) {
             startActivity(new Intent(Intent.ACTION_VIEW,
                     android.net.Uri.parse("https://play.google.com/store/apps/details?id=" + pkg)));
         }
-    }
-
-    /**
-     * ✅ KEPT: Original method - Fetch logged-in user profile from API and update UI
-     * Network optimized with caching and proper error handling
-     */
-    @SuppressLint("SetTextI18n")
-    private void fetchUserProfile(TextView tvUserName, TextView tvUserPhone) {
-        String accessToken = session.getAccessToken();
-        if (TextUtils.isEmpty(accessToken)) {
-            if (tvUserName != null)
-                tvUserName.setText("Guest User");
-            if (tvUserPhone != null)
-                tvUserPhone.setText("");
-            return;
-        }
-
-        String url = ApiRoutes.BASE_URL + "/get_user_profile.php";
-        JsonObjectRequest req = new JsonObjectRequest(
-                Request.Method.GET,
-                url,
-                null,
-                response -> {
-                    try {
-                        if (response.getBoolean("success")) {
-                            JSONObject user = response.getJSONObject("user");
-                            String name = user.optString("name", "User");
-                            String formattedPhone = user.optString("formatted_phone", "");
-                            if (tvUserName != null) {
-                                tvUserName.setText(name);
-                            }
-                            if (tvUserPhone != null) {
-                                tvUserPhone.setText(formattedPhone);
-                            }
-                        } else {
-                            String error = response.optString("error", "Unknown error");
-                        }
-                    } catch (Exception e) {
-                        Log.e(TAG, "❌ Error parsing user profile response");
-                        Log.e(TAG, "Exception: " + e.getMessage());
-                        e.printStackTrace();
-                    }
-                },
-                error -> {
-                    Log.e(TAG, "❌ ========== USER PROFILE API ERROR ==========");
-                    Log.e(TAG, "Error: " + error.toString());
-                    if (error.networkResponse != null) {
-                        Log.e(TAG, "Status Code: " + error.networkResponse.statusCode);
-                        Log.e(TAG, "Response Data: " + new String(error.networkResponse.data));
-                    } else {
-                        Log.e(TAG, "Network Response: NULL (likely network/SSL error)");
-                    }
-                    Log.e(TAG, "Cause: " + (error.getCause() != null ? error.getCause().getMessage() : "Unknown"));
-
-                    if (tvUserName != null) {
-                        tvUserName.setText("User");
-                    }
-                    if (tvUserPhone != null) {
-                        tvUserPhone.setText("");
-                    }
-                    Log.e(TAG, "========== USER PROFILE ERROR END ==========");
-                }) {
-
-            @Override
-            public Map<String, String> getHeaders() {
-                Map<String, String> headers = new HashMap<>();
-                headers.put("Authorization", "Bearer " + accessToken);
-                headers.put("Content-Type", "application/json");
-                return headers;
-            }
-
-        };
-
-        // Disable caching - user profile should always be fresh
-        req.setShouldCache(false);
-
-        // Network optimization: shorter timeout, no retries for profile fetch
-        req.setRetryPolicy(new DefaultRetryPolicy(5000, // 5 second timeout
-                0, // No retries - fail fast
-                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
-        VolleySingleton.getInstance(this).add(req);
-    }
-
-    private void fetchUserProfileOnStartup() {
-        String accessToken = session.getAccessToken();
-        if (TextUtils.isEmpty(accessToken)) {
-            cachedUserName = "Guest User";
-            cachedUserPhone = "";
-            return;
-        }
-
-        String url = ApiRoutes.BASE_URL + "/get_user_profile.php";
-        JsonObjectRequest req = new JsonObjectRequest(
-                Request.Method.GET,
-                url,
-                null,
-                response -> {
-                    try {
-                        if (response.getBoolean("success")) {
-                            JSONObject user = response.getJSONObject("user");
-                            cachedUserName = user.optString("name", "User");
-                            cachedUserPhone = user.optString("formatted_phone", "");
-                            // Save to session for next startup
-                            session.saveUserProfile(cachedUserName, cachedUserPhone);
-                            // Update TextViews immediately on UI thread
-                            runOnUiThread(() -> {
-                                if (tvNavUserName != null) {
-                                    tvNavUserName.setText(cachedUserName);
-                                }
-                                if (tvNavUserPhone != null) {
-                                    tvNavUserPhone.setText(cachedUserPhone);
-                                }
-                            });
-                        } else {
-                            String error = response.optString("error", "Unknown error");
-                            cachedUserName = "User";
-                            cachedUserPhone = "";
-                        }
-                    } catch (Exception e) {
-                        Log.e(TAG, "❌ Error parsing user profile response");
-                        Log.e(TAG, "Exception: " + e.getMessage());
-                        e.printStackTrace();
-                        cachedUserName = "User";
-                        cachedUserPhone = "";
-                    }
-                },
-                error -> {
-                    Log.e(TAG, "❌ ========== USER PROFILE API ERROR ON STARTUP ==========");
-                    Log.e(TAG, "Error: " + error.toString());
-                    if (error.networkResponse != null) {
-                        Log.e(TAG, "Status Code: " + error.networkResponse.statusCode);
-                        Log.e(TAG, "Response Data: " + new String(error.networkResponse.data));
-                    } else {
-                        Log.e(TAG, "Network Response: NULL (likely network/SSL error)");
-                    }
-                    Log.e(TAG, "Cause: " + (error.getCause() != null ? error.getCause().getMessage() : "Unknown"));
-
-                    // Set fallback values
-                    cachedUserName = "User";
-                    cachedUserPhone = "";
-                    Log.e(TAG, "========== USER PROFILE ERROR ON STARTUP END ==========");
-                }) {
-
-            @Override
-            public Map<String, String> getHeaders() {
-                Map<String, String> headers = new HashMap<>();
-                headers.put("Authorization", "Bearer " + accessToken);
-                headers.put("Content-Type", "application/json");
-                return headers;
-            }
-        };
-
-        // Disable caching - user profile should always be fresh
-        req.setShouldCache(false);
-
-        // Network optimization: 10 second timeout with 1 retry
-        req.setRetryPolicy(new DefaultRetryPolicy(10000, // 10 second timeout
-                1, // 1 retry
-                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
-        VolleySingleton.getInstance(this).add(req);
     }
 }

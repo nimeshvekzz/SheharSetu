@@ -9,7 +9,9 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -30,12 +32,13 @@ import androidx.viewpager2.widget.ViewPager2;
 
 import com.android.volley.Request;
 import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.Volley;
+import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
-import com.google.android.material.chip.ChipGroup;
+import com.infowave.sheharsetu.Adapter.I18n;
 import com.infowave.sheharsetu.Adapter.ImagePagerAdapter;
+import com.infowave.sheharsetu.Adapter.LanguageManager;
 import com.infowave.sheharsetu.Adapter.SimilarAdapter;
 import com.infowave.sheharsetu.Adapter.ThumbAdapter;
 import com.infowave.sheharsetu.net.ApiRoutes;
@@ -45,47 +48,39 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-/**
- * Product detail page – अब API से डायनेमिक डेटा लोड करता है।
- */
 public class ProductDetail extends AppCompatActivity {
 
     private static final String TAG = "ProductDetail";
 
-    // Top (header)
     private ImageView pdpBack, pdpShare, pdpSave;
     private AppBarLayout appBar;
 
-    // Gallery
     private ViewPager2 pdpImagePager;
     private LinearLayout pdpDots;
     private RecyclerView pdpThumbRv;
     private ThumbAdapter thumbAdapter;
     private ImagePagerAdapter pagerAdapter;
 
-    // Content
     private TextView pdpTitle, pdpPrice, pdpMeta, pdpDesc;
-    private ChipGroup pdpChips;
+    private GridLayout pdpChips;
     private Chip pdpSoldChip;
     private ImageView pdpSellerAvatar;
-    private TextView pdpSellerName, pdpSellerMeta;
+    private TextView pdpSellerName, pdpSellerMeta, tvSellerAvatarLetter;
     private MaterialButton pdpViewProfile;
 
-    // Bottom CTAs
     private MaterialButton pdpCall, pdpCallWhatsapp, pdpViewLocation;
 
-    // Similar listings
     private RecyclerView pdpSimilarRv;
     private SimilarAdapter similarAdapter;
-    private View similarSection;
+    private TextView labelSimilar;
 
     private final List<Object> imageSources = new ArrayList<>();
 
-    // Palette
-    private final int royalBlue = Color.parseColor("#96A78D"); // Greenish primary theme
-    private final int lavender = Color.parseColor("#D8C8FF");
+    private final int royalBlue = Color.parseColor("#96A78D");
     private final int deepText = Color.parseColor("#111111");
 
     private String productTitle = "";
@@ -101,25 +96,36 @@ public class ProductDetail extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
+        LanguageManager.apply(this,
+                getSharedPreferences(com.infowave.sheharsetu.core.SessionManager.PREFS, MODE_PRIVATE)
+                        .getString("app_lang_code", "en"));
         getWindow().setStatusBarColor(ContextCompat.getColor(this, android.R.color.black));
         getWindow().setNavigationBarColor(ContextCompat.getColor(this, android.R.color.black));
         setContentView(R.layout.activity_product_detail);
+
+        View viewStatusBarBg = findViewById(R.id.viewStatusBarBackground);
+        View viewNavBarBg = findViewById(R.id.viewNavBarBackground);
+        View rootView = findViewById(R.id.root);
+        if (rootView != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, insets) -> {
+                androidx.core.graphics.Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+                if (viewStatusBarBg != null) {
+                    viewStatusBarBg.getLayoutParams().height = systemBars.top;
+                    viewStatusBarBg.requestLayout();
+                }
+                if (viewNavBarBg != null) {
+                    viewNavBarBg.getLayoutParams().height = systemBars.bottom;
+                    viewNavBarBg.requestLayout();
+                }
+                return insets;
+            });
+        }
 
         bindViews();
         setupGalleryShell();
         setupStaticUi();
         setupClicks();
         setupSimilarListings();
-
-        View bottomBar = findViewById(R.id.bottomBar);
-        if (bottomBar != null) {
-            ViewCompat.setOnApplyWindowInsetsListener(bottomBar, (v, insets) -> {
-                int b = insets.getInsets(
-                        WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()).bottom;
-                v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), v.getPaddingBottom() + b);
-                return insets;
-            });
-        }
 
         int listingId = getIntent().getIntExtra("listing_id", 0);
         if (listingId > 0) {
@@ -133,8 +139,7 @@ public class ProductDetail extends AppCompatActivity {
             bindTextFallback(t, p, c, d);
             if (imgs != null && imgs.length > 0) {
                 List<Object> drawables = new ArrayList<>();
-                for (int idRes : imgs)
-                    drawables.add(idRes);
+                for (int idRes : imgs) drawables.add(idRes);
                 setGallery(drawables);
             } else {
                 List<Object> ph = new ArrayList<>();
@@ -162,6 +167,7 @@ public class ProductDetail extends AppCompatActivity {
         pdpSoldChip = findViewById(R.id.pdpSoldChip);
 
         pdpSellerAvatar = findViewById(R.id.pdpSellerAvatar);
+        tvSellerAvatarLetter = findViewById(R.id.tvSellerAvatarLetter);
         pdpSellerName = findViewById(R.id.pdpSellerName);
         pdpSellerMeta = findViewById(R.id.pdpSellerMeta);
         pdpViewProfile = findViewById(R.id.pdpViewProfile);
@@ -171,10 +177,7 @@ public class ProductDetail extends AppCompatActivity {
         pdpViewLocation = findViewById(R.id.pdpViewLocation);
 
         pdpSimilarRv = findViewById(R.id.pdpSimilarRv);
-        similarSection = findViewById(R.id.labelSimilar);
-        if (similarSection != null) {
-            similarSection = (View) similarSection.getParent().getParent(); // Get the card
-        }
+        labelSimilar = findViewById(R.id.labelSimilar);
     }
 
     @SuppressLint("SetTextI18n")
@@ -187,10 +190,12 @@ public class ProductDetail extends AppCompatActivity {
             });
         }
 
-        pdpSellerAvatar.setImageResource(R.drawable.ic_placeholder_circle);
+        pdpSellerAvatar.setVisibility(View.INVISIBLE);
+        if (tvSellerAvatarLetter != null) tvSellerAvatarLetter.setText("S");
         pdpSellerName.setText("Seller");
         pdpSellerMeta.setText("");
     }
+
     private void setupGalleryShell() {
         pagerAdapter = new ImagePagerAdapter(this, imageSources, pos -> {
             ArrayList<String> urls = new ArrayList<>();
@@ -198,7 +203,6 @@ public class ProductDetail extends AppCompatActivity {
                 if (obj instanceof String) {
                     urls.add((String) obj);
                 } else {
-
                     urls.add("android.resource://" + getPackageName() + "/" + obj);
                 }
             }
@@ -235,11 +239,11 @@ public class ProductDetail extends AppCompatActivity {
 
         pdpShare.setOnClickListener(v -> {
             String text = productTitle + " — " + productPrice + "\n" + productCity
-                    + (postedWhen.isEmpty() ? "" : " • Posted " + postedWhen);
+                    + (postedWhen.isEmpty() ? "" : " • " + I18n.t(this, "Posted") + " " + postedWhen);
             Intent s = new Intent(Intent.ACTION_SEND);
             s.setType("text/plain");
             s.putExtra(Intent.EXTRA_TEXT, text);
-            startActivity(Intent.createChooser(s, "Share via"));
+            startActivity(Intent.createChooser(s, I18n.t(this, "Share via")));
         });
 
         pdpSave.setOnClickListener(v -> Toast.makeText(this, "Saved/Unsaved (demo)", Toast.LENGTH_SHORT).show());
@@ -257,8 +261,10 @@ public class ProductDetail extends AppCompatActivity {
             startActivity(new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + phone)));
         });
 
-        pdpCallWhatsapp.setOnClickListener(v -> openWhatsApp(sellerPhone.isEmpty() ? "0000000000" : sellerPhone,
-                "Hi, I'm interested in " + productTitle + " (" + productPrice + ")"));
+        pdpCallWhatsapp.setOnClickListener(v -> openWhatsApp(
+                sellerPhone.isEmpty() ? "0000000000" : sellerPhone,
+                I18n.t(this, "Hi, I'm interested in") + " " + productTitle + " (" + productPrice + ")"
+        ));
 
         pdpViewLocation.setOnClickListener(v -> {
             String city = productCity == null ? "" : productCity;
@@ -268,11 +274,9 @@ public class ProductDetail extends AppCompatActivity {
 
     private void fetchListing(int listingId) {
         String url = ApiRoutes.GET_LISTING_DETAILS + "?listing_id=" + listingId;
-
-        // 🔍 DEBUG LOGS
         Log.e(TAG, "========== FETCH LISTING START ==========");
 
-        LoadingDialog.showLoading(this, "Loading listing...");
+        LoadingDialog.showLoading(this, I18n.t(this, "Loading listing..."));
 
         StringRequest req = new StringRequest(
                 Request.Method.GET,
@@ -286,13 +290,11 @@ public class ProductDetail extends AppCompatActivity {
                         JSONObject root = new JSONObject(resp);
 
                         if (!"success".equalsIgnoreCase(root.optString("status"))) {
-                            // Logic error from server
                             String msg = root.optString("message", "Failed");
                             Log.e(TAG, "❌ Server returned error status: " + msg);
                             Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
                             return;
                         }
-
 
                         JSONObject d = root.getJSONObject("data");
                         Log.e(TAG, "Data object found. Parsing title/price...");
@@ -306,13 +308,11 @@ public class ProductDetail extends AppCompatActivity {
                         String listingStatus = d.optString("status", "active");
                         boolean isSold = "sold".equalsIgnoreCase(listingStatus);
 
-                        // Bind text
                         pdpTitle.setText(productTitle);
                         pdpPrice.setText(productPrice);
                         pdpPrice.setTextColor(royalBlue);
                         String meta = productCity;
-                        if (!postedWhen.isEmpty())
-                            meta += " • Posted " + postedWhen;
+                        if (!postedWhen.isEmpty()) meta += " • " + I18n.t(this, "Posted") + " " + postedWhen;
                         pdpMeta.setText(meta);
                         pdpDesc.setText(productDesc);
 
@@ -323,16 +323,39 @@ public class ProductDetail extends AppCompatActivity {
                         JSONObject seller = d.optJSONObject("seller");
                         if (seller != null) {
                             sellerId = seller.optInt("id", 0);
-                            pdpSellerName.setText(seller.optString("name", "Seller"));
+                            String sName = seller.optString("name", "Seller");
+                            pdpSellerName.setText(sName);
+                            if (!sName.isEmpty() && tvSellerAvatarLetter != null) {
+                                tvSellerAvatarLetter.setText(String.valueOf(sName.charAt(0)).toUpperCase());
+                            } else if (tvSellerAvatarLetter != null) {
+                                tvSellerAvatarLetter.setText("S");
+                            }
+
                             String mem = "";
                             if (!seller.optString("member_since", "").isEmpty()) {
-                                mem = "Member since " + seller.optString("member_since");
+                                mem = I18n.t(this, "Member since") + " " + seller.optString("member_since");
                             }
                             int cnt = seller.optInt("listings_count", 0);
-                            if (cnt > 0)
-                                mem = mem.isEmpty() ? (cnt + " listings") : (mem + " • " + cnt + " listings");
+                            if (cnt > 0) {
+                                mem = mem.isEmpty()
+                                        ? (cnt + " " + I18n.t(this, "listings"))
+                                        : (mem + " • " + cnt + " " + I18n.t(this, "listings"));
+                            }
                             pdpSellerMeta.setText(mem);
                             sellerPhone = seller.optString("phone", "");
+
+                            String avatarUrl = seller.optString("avatar_url", "");
+                            if (pdpSellerAvatar != null) {
+                                if (!avatarUrl.isEmpty()) {
+                                    pdpSellerAvatar.setVisibility(View.VISIBLE);
+                                    Glide.with(ProductDetail.this)
+                                            .load(avatarUrl)
+                                            .placeholder(R.drawable.ic_placeholder_circle)
+                                            .into(pdpSellerAvatar);
+                                } else {
+                                    pdpSellerAvatar.setVisibility(View.INVISIBLE);
+                                }
+                            }
                         }
 
                         JSONArray imgs = d.optJSONArray("images");
@@ -340,16 +363,13 @@ public class ProductDetail extends AppCompatActivity {
                         if (imgs != null && imgs.length() > 0) {
                             for (int i = 0; i < imgs.length(); i++) {
                                 String u = imgs.optString(i);
-                                if (u != null && !u.trim().isEmpty())
-                                    srcs.add(u.trim());
+                                if (u != null && !u.trim().isEmpty()) srcs.add(u.trim());
                             }
                         }
                         if (srcs.isEmpty()) {
                             String single = d.optString("image_url", "");
-                            if (!single.isEmpty())
-                                srcs.add(single);
-                            else
-                                srcs.add(R.drawable.image1);
+                            if (!single.isEmpty()) srcs.add(single);
+                            else srcs.add(R.drawable.image1);
                         }
                         setGallery(srcs);
 
@@ -363,26 +383,24 @@ public class ProductDetail extends AppCompatActivity {
                                 String unit = a.optString("unit", "");
 
                                 if (!label.isEmpty() && !val.isEmpty()) {
-                                    String displayText = label + ": " + val + (unit.isEmpty() ? "" : " " + unit);
-                                    addChip(displayText);
+                                    String displayText = val + (unit.isEmpty() ? "" : " " + unit);
+                                    addDetailCard(label, displayText);
                                 }
                             }
                         } else {
-
-                            addChip("Verified Listing");
+                            addDetailCard("Status", I18n.t(this, "Verified Listing"));
                         }
 
                         fetchSimilarListings(listingId, categoryId);
 
                     } catch (Exception e) {
-                        Log.e(TAG, "❌ PARSE ERROR: " + e.getMessage());
-                        e.printStackTrace();
-                        Toast.makeText(this, "Parse error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        Log.e(TAG, "❌ PARSE ERROR: " + e.getMessage(), e);
+                        Toast.makeText(this, I18n.t(this, "Parse error") + ": " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 },
                 err -> {
                     LoadingDialog.hideLoading();
-                    Log.e(TAG, "❌ NETWORK ERROR: " + err.toString());
+                    Log.e(TAG, "❌ NETWORK ERROR: " + err);
                     if (err.networkResponse != null) {
                         Log.e(TAG, "Status: " + err.networkResponse.statusCode);
                         try {
@@ -390,21 +408,25 @@ public class ProductDetail extends AppCompatActivity {
                         } catch (Exception ignored) {
                         }
                     }
-                    Toast.makeText(this, "Network error", Toast.LENGTH_SHORT).show();
-                });
+                    Toast.makeText(this, I18n.t(this, "Network error"), Toast.LENGTH_SHORT).show();
+                }
+        );
 
         com.infowave.sheharsetu.net.VolleySingleton.queue(this).add(req);
     }
 
-    private void addChip(String text) {
-        Chip chip = new Chip(this, null, com.google.android.material.R.style.Widget_MaterialComponents_Chip_Filter);
-        chip.setText(text);
-        chip.setCheckable(false);
-        // Soft blue-grey background
-        chip.setChipBackgroundColor(ColorStateList.valueOf(Color.parseColor("#F0F4F8")));
-        chip.setTextColor(Color.BLACK);
-        chip.setChipStrokeWidth(0);
-        pdpChips.addView(chip);
+    private void addDetailCard(String label, String value) {
+        View card = LayoutInflater.from(this).inflate(R.layout.item_listing_detail, pdpChips, false);
+        TextView tvLabel = card.findViewById(R.id.tvDetailLabel);
+        TextView tvVal = card.findViewById(R.id.tvDetailValue);
+        tvLabel.setText(label.toUpperCase());
+        tvVal.setText(value);
+
+        if ("availability".equalsIgnoreCase(label) || "Available".equalsIgnoreCase(value)) {
+            tvVal.setTextColor(Color.parseColor("#16B381"));
+        }
+
+        pdpChips.addView(card);
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -428,34 +450,25 @@ public class ProductDetail extends AppCompatActivity {
         pdpPrice.setText(productPrice);
         pdpPrice.setTextColor(royalBlue);
         String meta = productCity;
-        if (postedWhen != null && !postedWhen.isEmpty())
-            meta += " • Posted " + postedWhen;
+        if (postedWhen != null && !postedWhen.isEmpty()) meta += " • Posted " + postedWhen;
         pdpMeta.setText(meta);
         pdpDesc.setText(productDesc);
 
-        // Default chips (fallback)
-        bindFeatureChips(new String[] { "Demo", "Fallback" });
+        bindFeatureChips(new String[]{"Demo", "Fallback"});
     }
 
     private void bindFeatureChips(String[] chips) {
         pdpChips.removeAllViews();
         for (String s : chips) {
-            Chip chip = new Chip(this, null, com.google.android.material.R.style.Widget_MaterialComponents_Chip_Filter);
-            chip.setText(s);
-            chip.setCheckable(false);
-            chip.setChipBackgroundColor(ColorStateList.valueOf(Color.parseColor("#F2F4F7")));
-            chip.setTextColor(deepText);
-            chip.setChipStrokeWidth(0);
-            pdpChips.addView(chip);
+            addDetailCard("Feature", s);
         }
     }
 
     private void applyHeaderStyle(boolean collapsed) {
         int iconTint = collapsed ? deepText : Color.WHITE;
         int bgRes = collapsed ? R.drawable.bg_header_icon_light : R.drawable.bg_header_icon_dark;
-        for (ImageView v : new ImageView[] { pdpBack, pdpShare, pdpSave }) {
-            if (v == null)
-                continue;
+        for (ImageView v : new ImageView[]{pdpBack, pdpShare, pdpSave}) {
+            if (v == null) continue;
             v.setBackground(ResourcesCompat.getDrawable(getResources(), bgRes, getTheme()));
             v.setImageTintList(ColorStateList.valueOf(iconTint));
         }
@@ -475,8 +488,7 @@ public class ProductDetail extends AppCompatActivity {
 
     private void highlightDot(int active) {
         int n = pdpDots.getChildCount();
-        for (int i = 0; i < n; i++)
-            updateDot(pdpDots.getChildAt(i), i == active);
+        for (int i = 0; i < n; i++) updateDot(pdpDots.getChildAt(i), i == active);
     }
 
     private void updateDot(View dot, boolean active) {
@@ -497,7 +509,7 @@ public class ProductDetail extends AppCompatActivity {
         try {
             startActivity(i);
         } catch (ActivityNotFoundException e) {
-            Toast.makeText(this, "WhatsApp not installed", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, I18n.t(this, "WhatsApp not installed"), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -513,21 +525,20 @@ public class ProductDetail extends AppCompatActivity {
     }
 
     private void setupSimilarListings() {
-        if (pdpSimilarRv == null)
-            return;
+        if (pdpSimilarRv == null) return;
 
         pdpSimilarRv.setLayoutManager(new LinearLayoutManager(this, RecyclerView.HORIZONTAL, false));
         similarAdapter = new SimilarAdapter(this);
         pdpSimilarRv.setAdapter(similarAdapter);
 
-        if (similarSection != null) {
-            similarSection.setVisibility(View.GONE);
+        if (labelSimilar != null) {
+            labelSimilar.setVisibility(View.GONE);
         }
+        pdpSimilarRv.setVisibility(View.GONE);
     }
 
     private void fetchSimilarListings(int listingId, int catId) {
-        if (listingId <= 0)
-            return;
+        if (listingId <= 0) return;
 
         String url = ApiRoutes.BASE_URL + "/get_similar_listings.php?listing_id=" + listingId
                 + "&category_id=" + catId + "&limit=10";
@@ -542,22 +553,20 @@ public class ProductDetail extends AppCompatActivity {
                         JSONObject root = new JSONObject(resp);
                         if (!"success".equalsIgnoreCase(root.optString("status"))) {
                             Log.e(TAG, "Similar listings error: " + root.optString("message"));
+                            hideSimilarSection();
                             return;
                         }
 
                         JSONArray arr = root.optJSONArray("data");
                         if (arr == null || arr.length() == 0) {
-                            // No similar listings - hide section
-                            if (similarSection != null) {
-                                similarSection.setVisibility(View.GONE);
-                            }
+                            hideSimilarSection();
                             return;
                         }
 
-                        List<java.util.Map<String, Object>> items = new ArrayList<>();
+                        List<Map<String, Object>> items = new ArrayList<>();
                         for (int i = 0; i < arr.length(); i++) {
                             JSONObject o = arr.getJSONObject(i);
-                            java.util.Map<String, Object> m = new java.util.HashMap<>();
+                            Map<String, Object> m = new HashMap<>();
                             m.put("id", o.optInt("id", 0));
                             m.put("title", o.optString("title", ""));
                             m.put("price", o.optString("price", ""));
@@ -566,21 +575,38 @@ public class ProductDetail extends AppCompatActivity {
                             items.add(m);
                         }
 
-
                         if (similarAdapter != null) {
                             similarAdapter.setItems(items);
                         }
-                        if (similarSection != null && !items.isEmpty()) {
-                            similarSection.setVisibility(View.VISIBLE);
+
+                        if (!items.isEmpty()) {
+                            if (labelSimilar != null) labelSimilar.setVisibility(View.VISIBLE);
+                            pdpSimilarRv.setVisibility(View.VISIBLE);
+                        } else {
+                            hideSimilarSection();
                         }
 
                     } catch (Exception e) {
-                        Log.e(TAG, "Similar listings parse error: " + e.getMessage());
+                        Log.e(TAG, "Similar listings parse error: " + e.getMessage(), e);
+                        hideSimilarSection();
                     }
                 },
-                err -> Log.e(TAG, "Similar listings network error: " + err.toString()));
+                err -> {
+                    Log.e(TAG, "Similar listings network error: " + err);
+                    hideSimilarSection();
+                }
+        );
 
         req.setShouldCache(false);
         com.infowave.sheharsetu.net.VolleySingleton.queue(this).add(req);
+    }
+
+    private void hideSimilarSection() {
+        if (labelSimilar != null) {
+            labelSimilar.setVisibility(View.GONE);
+        }
+        if (pdpSimilarRv != null) {
+            pdpSimilarRv.setVisibility(View.GONE);
+        }
     }
 }

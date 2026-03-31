@@ -73,15 +73,44 @@
 
 
 
-    <color name="colorPrimary">#96A78D</color>      <!-- base green -->
-    <color name="colorPrimaryMedium">#B6CEB4</color>
-    <color name="colorPrimaryLight">#D9E9CF</color>
+    <!-- Premium Colors (Professional Coral & Teal) -->
+    <color name="coral_primary">#E67E22</color> <!-- Professional warm orange-coral -->
+    <color name="coral_dark">#D35400</color>
+    <color name="coral_light">#F39C12</color>
+    <color name="teal_premium">#16A085</color> <!-- Sophisticated teal -->
+    
+    <!-- Sophisticated Neutrals (Updated to new color system) -->
+    <color name="premium_bg">#F7F9F9</color>
+    <color name="premium_surface">#FFFFFF</color>
+    <color name="premium_text_main">#1B1F24</color> <!-- Deep navy-grey text -->
+    <color name="premium_text_sub">#6B7280</color> <!-- Refined subtext -->
+    <color name="premium_divider">#E5E7EB</color>
+    
+    <!-- Glassmorphism/Overlay -->
+    <color name="glass_white">#BCFFFFFF</color>
+    <color name="hero_overlay">#8E1C0D02</color> <!-- Sophisticated deep brown-red overlay -->
 
-    <!-- Neutral text / surface (simple, not colorful) -->
-    <color name="colorTextPrimary">#1F2933</color>      <!-- dark grey text -->
-    <color name="colorTextSecondary">#4B5563</color>
-    <color name="colorSurface">#FFFFFFFF</color>        <!-- white card -->
+    <!-- New Professional Color System -->
+    <color name="colorPrimary">#195E63</color>
+    <color name="colorPrimaryDark">#063940</color>
+    <color name="colorSecondary">#3E838C</color>
+    <color name="colorAccent">#2EC4B6</color>
+    <color name="accentGreen">#16B381</color>
+    
+    <color name="colorPrimaryMedium">#EB984E</color>
+    <color name="colorPrimaryLight">#FAD7A0</color>
+
+    <color name="colorBackground">#F7F9F9</color>
+    <color name="colorSurface">#FFFFFF</color>
+    
+    <color name="colorTextPrimary">#1B1F24</color>
+    <color name="colorTextSecondary">#6B7280</color>
+    
+    <color name="colorBorder">#E5E7EB</color>
     <color name="colorDivider">#E5E7EB</color>
+    
+    <color name="colorError">#EF4444</color>
+    <color name="colorSuccess">#22C55E</color>
     
     <!-- Glass Background for Forms -->
     <color name="colorGlass">#CCFFFFFF</color>          <!-- Semi-transparent White -->

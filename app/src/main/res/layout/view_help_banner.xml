@@ -37,7 +37,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/help_banner_text"
+            android:text="Need help? Contact support"
             android:textStyle="bold"
             android:textSize="18sp"
             android:textColor="#D32F2F"

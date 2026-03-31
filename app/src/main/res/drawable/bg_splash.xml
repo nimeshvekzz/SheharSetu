@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Base vertical gradient using your palette -->
+    <!-- Base vertical gradient using your Teal palette -->
     <item>
         <shape android:shape="rectangle">
             <gradient
                 android:type="linear"
                 android:angle="270"
-                android:startColor="@color/colorPrimaryLight"
-            android:endColor="@color/colorPrimaryMedium" /> <!-- #B6CEB4 -->
+                android:startColor="@color/colorSecondary"
+                android:endColor="@color/colorPrimary" /> <!-- Sophisticated Teal Gradient -->
         </shape>
     </item>
 
-    <!-- Soft big circle top-right (same color, low opacity) -->
+    <!-- Soft big circle top-right (white, low opacity) -->
     <item
         android:gravity="top|end"
         android:right="-90dp"
@@ -21,12 +21,11 @@
             <size
                 android:width="260dp"
                 android:height="260dp" />
-            <!-- #96A78D with ~35% opacity -->
-            <solid android:color="#5996A78D" />
+            <solid android:color="#20FFFFFF" />
         </shape>
     </item>
 
-    <!-- Soft big circle bottom-left (medium shade, low opacity) -->
+    <!-- Soft big circle bottom-left (white, low opacity) -->
     <item
         android:gravity="bottom|start"
         android:left="-110dp"
@@ -35,8 +34,7 @@
             <size
                 android:width="320dp"
                 android:height="320dp" />
-            <!-- #B6CEB4 with ~30% opacity -->
-            <solid android:color="#4DB6CEB4" />
+            <solid android:color="#10FFFFFF" />
         </shape>
     </item>
 
@@ -50,9 +48,9 @@
             <gradient
                 android:type="linear"
                 android:angle="0"
-                android:startColor="#00D9E9CF"
-            android:centerColor="#40D9E9CF"
-            android:endColor="#00D9E9CF" />
+                android:startColor="#00FFFFFF"
+                android:centerColor="#10FFFFFF"
+                android:endColor="#00FFFFFF" />
         </shape>
     </item>
 

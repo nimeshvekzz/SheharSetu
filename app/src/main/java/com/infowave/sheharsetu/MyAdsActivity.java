@@ -6,11 +6,13 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -22,6 +24,8 @@ import com.android.volley.Request;
 import com.android.volley.toolbox.StringRequest;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.card.MaterialCardView;
+import com.infowave.sheharsetu.Adapter.I18n;
+import com.infowave.sheharsetu.Adapter.LanguageManager;
 import com.infowave.sheharsetu.Adapter.MyAdsAdapter;
 import com.infowave.sheharsetu.Adapter.MyListingsAdapter;
 import com.infowave.sheharsetu.core.SessionManager;
@@ -51,6 +55,14 @@ public class MyAdsActivity extends AppCompatActivity implements MyAdsAdapter.OnA
     private MyAdsAdapter adapter;
     private SessionManager session;
 
+    // New Views for Dashboard
+    private TextView tvTotalAdsCount, tvActiveAdsCount, tvSoldAdsCount, tvListingsTitle;
+    private MaterialCardView chipAllAds, chipActiveAds, chipSoldAds, chipPausedAds;
+
+    // State for filtering
+    private final List<MyListingsAdapter.ListingItem> allListings = new ArrayList<>();
+    private String currentFilter = "ALL"; // ALL, ACTIVE, SOLD, PAUSED
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -64,6 +76,10 @@ public class MyAdsActivity extends AppCompatActivity implements MyAdsAdapter.OnA
         ctrl.setAppearanceLightStatusBars(false);
         ctrl.setAppearanceLightNavigationBars(false);
 
+        String langCode = getSharedPreferences(SessionManager.PREFS, MODE_PRIVATE)
+                .getString("app_lang_code", "en");
+        LanguageManager.apply(this, langCode);
+
         setContentView(R.layout.activity_my_ads);
 
         session = new SessionManager(this);
@@ -76,6 +92,19 @@ public class MyAdsActivity extends AppCompatActivity implements MyAdsAdapter.OnA
         rvMyAds = findViewById(R.id.rvMyAds);
         swipeRefresh = findViewById(R.id.swipeRefresh);
         cardEmptyState = findViewById(R.id.cardEmptyState);
+
+        // Dashboard views
+        tvTotalAdsCount = findViewById(R.id.tvTotalAdsCount);
+        tvActiveAdsCount = findViewById(R.id.tvActiveAdsCount);
+        tvSoldAdsCount = findViewById(R.id.tvSoldAdsCount);
+        tvListingsTitle = findViewById(R.id.tvListingsTitle);
+
+        chipAllAds = findViewById(R.id.chipAllAds);
+        chipActiveAds = findViewById(R.id.chipActiveAds);
+        chipSoldAds = findViewById(R.id.chipSoldAds);
+        chipPausedAds = findViewById(R.id.chipPausedAds);
+
+        setupFilterChips();
 
         // RecyclerView
         rvMyAds.setLayoutManager(new LinearLayoutManager(this));
@@ -94,6 +123,92 @@ public class MyAdsActivity extends AppCompatActivity implements MyAdsAdapter.OnA
         fetchMyAds();
     }
 
+    // ==================== DASHBOARD & FILTERING ====================
+
+    private void setupFilterChips() {
+        if (chipAllAds == null) return;
+        chipAllAds.setOnClickListener(v -> {
+            currentFilter = "ALL";
+            applyFilter();
+        });
+        chipActiveAds.setOnClickListener(v -> {
+            currentFilter = "ACTIVE";
+            applyFilter();
+        });
+        chipSoldAds.setOnClickListener(v -> {
+            currentFilter = "SOLD";
+            applyFilter();
+        });
+        chipPausedAds.setOnClickListener(v -> {
+            currentFilter = "PAUSED";
+            applyFilter();
+        });
+    }
+
+    private void updateStats() {
+        int total = allListings.size();
+        int active = 0;
+        int sold = 0;
+
+        for (MyListingsAdapter.ListingItem item : allListings) {
+            if (item.isSold) sold++;
+            else active++;
+        }
+
+        if (tvTotalAdsCount != null) {
+            tvTotalAdsCount.setText(String.valueOf(total));
+            tvActiveAdsCount.setText(String.valueOf(active));
+            tvSoldAdsCount.setText(String.valueOf(sold));
+        }
+    }
+
+    private void applyFilter() {
+        List<MyListingsAdapter.ListingItem> filtered = new ArrayList<>();
+        for (MyListingsAdapter.ListingItem item : allListings) {
+            if ("ALL".equals(currentFilter)) {
+                filtered.add(item);
+            } else if ("ACTIVE".equals(currentFilter) && !item.isSold) {
+                filtered.add(item);
+            } else if ("SOLD".equals(currentFilter) && item.isSold) {
+                filtered.add(item);
+            } else if ("PAUSED".equals(currentFilter)) {
+                // Ignore for now
+            }
+        }
+
+        adapter.setItems(filtered);
+
+        if (filtered.isEmpty()) {
+            showEmptyState();
+        } else {
+            rvMyAds.setVisibility(View.VISIBLE);
+            cardEmptyState.setVisibility(View.GONE);
+        }
+
+        if (tvListingsTitle != null) {
+            tvListingsTitle.setText(filtered.size() + " " + I18n.t(this, "listings"));
+        }
+
+        updateChipUI(chipAllAds, "ALL".equals(currentFilter));
+        updateChipUI(chipActiveAds, "ACTIVE".equals(currentFilter));
+        updateChipUI(chipSoldAds, "SOLD".equals(currentFilter));
+        updateChipUI(chipPausedAds, "PAUSED".equals(currentFilter));
+    }
+
+    private void updateChipUI(MaterialCardView chip, boolean isSelected) {
+        if (chip == null) return;
+        TextView tv = (TextView) chip.getChildAt(0);
+        if (isSelected) {
+            chip.setCardBackgroundColor(ContextCompat.getColor(this, R.color.colorPrimary));
+            chip.setStrokeColor(ContextCompat.getColor(this, R.color.colorPrimary));
+            if (tv != null) tv.setTextColor(Color.WHITE);
+        } else {
+            chip.setCardBackgroundColor(Color.WHITE);
+            chip.setStrokeColor(Color.parseColor("#E5E7EB"));
+            if (tv != null) tv.setTextColor(Color.parseColor("#4B5563"));
+        }
+    }
+
     // ==================== DATA LOADING ====================
 
     private void fetchMyAds() {
@@ -104,7 +219,7 @@ public class MyAdsActivity extends AppCompatActivity implements MyAdsAdapter.OnA
         }
 
         if (!swipeRefresh.isRefreshing()) {
-            LoadingDialog.showLoading(this, "Loading your ads...");
+            LoadingDialog.showLoading(this, I18n.t(this, "Loading your ads..."));
         }
 
         StringRequest req = new StringRequest(
@@ -118,30 +233,31 @@ public class MyAdsActivity extends AppCompatActivity implements MyAdsAdapter.OnA
                         JSONObject json = new JSONObject(response);
                         if (json.optBoolean("success", false)) {
                             JSONArray arr = json.optJSONArray("listings");
+                            allListings.clear();
                             if (arr != null && arr.length() > 0) {
-                                List<MyListingsAdapter.ListingItem> items = new ArrayList<>();
                                 for (int i = 0; i < arr.length(); i++) {
-                                    items.add(MyListingsAdapter.ListingItem.fromJson(arr.getJSONObject(i)));
+                                    allListings.add(MyListingsAdapter.ListingItem.fromJson(arr.getJSONObject(i)));
                                 }
-                                adapter.setItems(items);
-                                rvMyAds.setVisibility(View.VISIBLE);
-                                cardEmptyState.setVisibility(View.GONE);
-                            } else {
-                                showEmptyState();
                             }
+                            updateStats();
+                            applyFilter();
                         } else {
-                            showEmptyState();
+                            allListings.clear();
+                            updateStats();
+                            applyFilter();
                         }
                     } catch (Exception e) {
                         Log.e(TAG, "Parse error: " + e.getMessage());
-                        showEmptyState();
+                        allListings.clear();
+                        updateStats();
+                        applyFilter();
                     }
                 },
                 error -> {
                     Log.e(TAG, "Fetch error: " + error.toString());
                     LoadingDialog.hideLoading();
                     swipeRefresh.setRefreshing(false);
-                    Toast.makeText(this, "Failed to load ads", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, I18n.t(this, "Failed to load ads"), Toast.LENGTH_SHORT).show();
                     showEmptyState();
                 }) {
             @Override
@@ -173,26 +289,26 @@ public class MyAdsActivity extends AppCompatActivity implements MyAdsAdapter.OnA
 
     @Override
     public void onMarkSoldClick(int listingId, boolean currentlySold) {
-        String title = currentlySold ? "Mark as Available" : "Mark as Sold";
+        String title = currentlySold ? I18n.t(this, "Mark as Available") : I18n.t(this, "Mark as Sold");
         String message = currentlySold
-                ? "This will make your listing visible to buyers again."
-                : "This will mark your listing as sold.";
+                ? I18n.t(this, "This will make your listing visible to buyers again.")
+                : I18n.t(this, "This will mark your listing as sold.");
 
         new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(message)
-                .setPositiveButton("Confirm", (d, w) -> doMarkSold(listingId, !currentlySold))
-                .setNegativeButton("Cancel", null)
+                .setPositiveButton(I18n.t(this, "Confirm"), (d, w) -> doMarkSold(listingId, !currentlySold))
+                .setNegativeButton(I18n.t(this, "Cancel"), null)
                 .show();
     }
 
     @Override
     public void onRepostClick(int listingId) {
         new AlertDialog.Builder(this)
-                .setTitle("Repost Listing")
-                .setMessage("This will bump your ad to the top of the feed so more people can see it.")
-                .setPositiveButton("Repost", (d, w) -> doRepost(listingId))
-                .setNegativeButton("Cancel", null)
+                .setTitle(I18n.t(this, "Repost Listing"))
+                .setMessage(I18n.t(this, "This will bump your ad to the top of the feed so more people can see it."))
+                .setPositiveButton(I18n.t(this, "Repost"), (d, w) -> doRepost(listingId))
+                .setNegativeButton(I18n.t(this, "Cancel"), null)
                 .show();
     }
 
@@ -209,10 +325,10 @@ public class MyAdsActivity extends AppCompatActivity implements MyAdsAdapter.OnA
     @Override
     public void onDeleteClick(int listingId) {
         new AlertDialog.Builder(this)
-                .setTitle("Delete Listing")
-                .setMessage("Are you sure? This will permanently delete your ad and cannot be undone.")
-                .setPositiveButton("Delete", (d, w) -> doDelete(listingId))
-                .setNegativeButton("Cancel", null)
+                .setTitle(I18n.t(this, "Delete Listing"))
+                .setMessage(I18n.t(this, "Are you sure? This will permanently delete your ad and cannot be undone."))
+                .setPositiveButton(I18n.t(this, "Delete"), (d, w) -> doDelete(listingId))
+                .setNegativeButton(I18n.t(this, "Cancel"), null)
                 .show();
     }
 
@@ -223,7 +339,7 @@ public class MyAdsActivity extends AppCompatActivity implements MyAdsAdapter.OnA
         if (TextUtils.isEmpty(accessToken))
             return;
 
-        LoadingDialog.showLoading(this, markAsSold ? "Marking as sold..." : "Marking as available...");
+        LoadingDialog.showLoading(this, markAsSold ? I18n.t(this, "Marking as sold...") : I18n.t(this, "Marking as available..."));
 
         StringRequest req = new StringRequest(
                 Request.Method.POST,
@@ -233,19 +349,26 @@ public class MyAdsActivity extends AppCompatActivity implements MyAdsAdapter.OnA
                     try {
                         JSONObject json = new JSONObject(response);
                         if (json.optBoolean("success", false)) {
-                            adapter.updateItemSoldStatus(listingId, markAsSold);
-                            String msg = markAsSold ? "Marked as sold!" : "Marked as available!";
+                            for (MyListingsAdapter.ListingItem item : allListings) {
+                                if (item.listingId == listingId) {
+                                    item.isSold = markAsSold;
+                                    break;
+                                }
+                            }
+                            updateStats();
+                            applyFilter();
+                            String msg = markAsSold ? I18n.t(this, "Marked as sold!") : I18n.t(this, "Marked as available!");
                             Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
                         } else {
-                            Toast.makeText(this, json.optString("error", "Failed"), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, json.optString("error", I18n.t(this, "Failed")), Toast.LENGTH_SHORT).show();
                         }
                     } catch (Exception e) {
-                        Toast.makeText(this, "Error processing response", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, I18n.t(this, "Error processing response"), Toast.LENGTH_SHORT).show();
                     }
                 },
                 error -> {
                     LoadingDialog.hideLoading();
-                    Toast.makeText(this, "Network error", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, I18n.t(this, "Network error"), Toast.LENGTH_SHORT).show();
                 }) {
             @Override
             public Map<String, String> getHeaders() {
@@ -272,7 +395,7 @@ public class MyAdsActivity extends AppCompatActivity implements MyAdsAdapter.OnA
         if (TextUtils.isEmpty(accessToken))
             return;
 
-        LoadingDialog.showLoading(this, "Reposting...");
+        LoadingDialog.showLoading(this, I18n.t(this, "Reposting..."));
 
         StringRequest req = new StringRequest(
                 Request.Method.POST,
@@ -284,21 +407,32 @@ public class MyAdsActivity extends AppCompatActivity implements MyAdsAdapter.OnA
                         if (json.optBoolean("success", false)) {
                             // Move item to top of list with updated repost count
                             int repostCount = json.optInt("repost_count", 0);
-                            adapter.moveItemToTop(listingId, "Just now", repostCount);
+                            for (int i = 0; i < allListings.size(); i++) {
+                                if (allListings.get(i).listingId == listingId) {
+                                    MyListingsAdapter.ListingItem item = allListings.remove(i);
+                                    item.isSold = false;
+                                    item.postedWhen = "Just now";
+                                    item.repostCount = repostCount;
+                                    allListings.add(0, item);
+                                    break;
+                                }
+                            }
+                            updateStats();
+                            applyFilter();
                             rvMyAds.scrollToPosition(0);
-                            Toast.makeText(this, "Ad reposted! It will appear at the top of the feed.",
+                            Toast.makeText(this, I18n.t(this, "Ad reposted! It will appear at the top of the feed."),
                                     Toast.LENGTH_LONG).show();
                         } else {
-                            Toast.makeText(this, json.optString("error", "Repost failed"),
+                            Toast.makeText(this, json.optString("error", I18n.t(this, "Repost failed")),
                                     Toast.LENGTH_SHORT).show();
                         }
                     } catch (Exception e) {
-                        Toast.makeText(this, "Error processing response", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, I18n.t(this, "Error processing response"), Toast.LENGTH_SHORT).show();
                     }
                 },
                 error -> {
                     LoadingDialog.hideLoading();
-                    Toast.makeText(this, "Network error", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, I18n.t(this, "Network error"), Toast.LENGTH_SHORT).show();
                 }) {
             @Override
             public Map<String, String> getHeaders() {
@@ -324,7 +458,7 @@ public class MyAdsActivity extends AppCompatActivity implements MyAdsAdapter.OnA
         if (TextUtils.isEmpty(accessToken))
             return;
 
-        LoadingDialog.showLoading(this, "Deleting...");
+        LoadingDialog.showLoading(this, I18n.t(this, "Deleting..."));
 
         StringRequest req = new StringRequest(
                 Request.Method.POST,
@@ -334,24 +468,26 @@ public class MyAdsActivity extends AppCompatActivity implements MyAdsAdapter.OnA
                     try {
                         JSONObject json = new JSONObject(response);
                         if (json.optBoolean("success", false)) {
-                            adapter.removeItem(listingId);
-                            Toast.makeText(this, "Ad deleted", Toast.LENGTH_SHORT).show();
-
-                            // Show empty state if no more items
-                            if (adapter.getListCount() == 0) {
-                                showEmptyState();
+                            for (int i = 0; i < allListings.size(); i++) {
+                                if (allListings.get(i).listingId == listingId) {
+                                    allListings.remove(i);
+                                    break;
+                                }
                             }
+                            updateStats();
+                            applyFilter();
+                            Toast.makeText(this, I18n.t(this, "Ad deleted"), Toast.LENGTH_SHORT).show();
                         } else {
-                            Toast.makeText(this, json.optString("error", "Delete failed"),
+                            Toast.makeText(this, json.optString("error", I18n.t(this, "Delete failed")),
                                     Toast.LENGTH_SHORT).show();
                         }
                     } catch (Exception e) {
-                        Toast.makeText(this, "Error processing response", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, I18n.t(this, "Error processing response"), Toast.LENGTH_SHORT).show();
                     }
                 },
                 error -> {
                     LoadingDialog.hideLoading();
-                    Toast.makeText(this, "Network error", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, I18n.t(this, "Network error"), Toast.LENGTH_SHORT).show();
                 }) {
             @Override
             public Map<String, String> getHeaders() {

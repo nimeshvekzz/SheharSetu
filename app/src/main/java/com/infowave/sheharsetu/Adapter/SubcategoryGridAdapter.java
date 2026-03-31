@@ -48,29 +48,20 @@ public class SubcategoryGridAdapter extends RecyclerView.Adapter<SubcategoryGrid
         notifyDataSetChanged();
     }
 
-    /** Programmatically select by id. */
-    public void setSelectedId(String id) {
-        selectedId = id;
-        int old = selected;
-        selected = RecyclerView.NO_POSITION;
-        if (id != null) {
-            for (int i = 0; i < data.size(); i++) {
-                if (id.equals(data.get(i).id)) { selected = i; break; }
-            }
-        }
-        if (old != RecyclerView.NO_POSITION) notifyItemChanged(old);
-        if (selected != RecyclerView.NO_POSITION) notifyItemChanged(selected);
-    }
+//    /** Programmatically select by id. */
+//    public void setSelectedId(String id) {
+//        selectedId = id;
+//        int old = selected;
+//        selected = RecyclerView.NO_POSITION;
+//        if (id != null) {
+//            for (int i = 0; i < data.size(); i++) {
+//                if (id.equals(data.get(i).id)) { selected = i; break; }
+//            }
+//        }
+//        if (old != RecyclerView.NO_POSITION) notifyItemChanged(old);
+//        if (selected != RecyclerView.NO_POSITION) notifyItemChanged(selected);
+//    }
 
-    /** Programmatically select by position. */
-    public void setSelectedPosition(int pos) {
-        if (pos < 0 || pos >= data.size()) return;
-        int old = selected;
-        selected = pos;
-        selectedId = data.get(pos).id;
-        if (old != RecyclerView.NO_POSITION) notifyItemChanged(old);
-        notifyItemChanged(selected);
-    }
 
     @NonNull @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {

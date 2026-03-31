@@ -8,6 +8,12 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.infowave.sheharsetu.Adapter.I18n;
+import com.infowave.sheharsetu.Adapter.LanguageManager;
+import com.infowave.sheharsetu.core.SessionManager;
+
+import java.util.Arrays;
+import java.util.List;
 
 public class AboutUsActivity extends AppCompatActivity {
 
@@ -27,12 +33,16 @@ public class AboutUsActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        String langCode = getSharedPreferences(SessionManager.PREFS, MODE_PRIVATE)
+                .getString("app_lang_code", "en");
+        LanguageManager.apply(this, langCode);
+
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_about_us);
 
         bindViews();
         setupToolbar();
-        setupTexts();
+        prefetchAndSetupTexts();
     }
 
     private void bindViews() {
@@ -66,66 +76,99 @@ public class AboutUsActivity extends AppCompatActivity {
     private void setupToolbar() {
         if (topBar != null) {
             topBar.setNavigationOnClickListener(v -> onBackPressed());
-            // Title can also be controlled from here if needed:
-            topBar.setTitle("About Shehar Setu");
+            topBar.setTitle(I18n.t(this, "About Shehar Setu"));
         }
+    }
+
+    private void prefetchAndSetupTexts() {
+        List<String> keys = Arrays.asList(
+                "About Shehar Setu",
+                "Connecting City, Markets and People",
+                "Shehar Setu is your bridge between local buyers, sellers and service providers.",
+                "What is Shehar Setu?",
+                "Shehar Setu is a local marketplace platform designed to simplify buying, " +
+                        "selling and service discovery in your city. From agriculture to services, " +
+                        "real estate to daily needs, citizens can post and explore listings in a " +
+                        "structured, easy-to-use format.",
+                "Local Marketplace", "Multi-category", "Dynamic Forms",
+                "For Buyers",
+                "- Discover nearby products and services.\n" +
+                        "- Filter by category, subcategory and condition.\n" +
+                        "- View clear, structured information with localized language support.",
+                "For Sellers and Service Providers",
+                "- Post detailed listings with category-specific dynamic forms.\n" +
+                        "- Highlight condition, price, quantity, location and images.\n" +
+                        "- Reach relevant local users without complexity.",
+                "Our Vision",
+                "To become the trusted digital bridge of every city – connecting citizens, " +
+                        "markets and services with clarity, transparency and simplicity.",
+                "Structured", "Local-first", "Supportive",
+                "Support and Feedback",
+                "For any issues, suggestions or feedback related to Shehar Setu, you can " +
+                        "reach out to the development team.",
+                "Email: support@sheharsetu.com"
+        );
+        I18n.prefetch(this, keys, () -> {
+            setupToolbar();
+            setupTexts();
+        }, () -> setupTexts());
     }
 
     /**
      * All visible text for the About screen is defined here,
-     * so you can later plug in I18n / dynamic content easily.
+     * wrapped in I18n.t() for runtime translation.
      */
     private void setupTexts() {
 
         // Hero section
-        tvHeadingApp.setText("Connecting City, Markets and People");
-        tvSubHeadingApp.setText(
+        tvHeadingApp.setText(I18n.t(this, "Connecting City, Markets and People"));
+        tvSubHeadingApp.setText(I18n.t(this,
                 "Shehar Setu is your bridge between local buyers, sellers and service providers."
-        );
+        ));
 
         // About section
-        tvAboutTitle.setText("What is Shehar Setu?");
-        tvAboutDesc.setText(
+        tvAboutTitle.setText(I18n.t(this, "What is Shehar Setu?"));
+        tvAboutDesc.setText(I18n.t(this,
                 "Shehar Setu is a local marketplace platform designed to simplify buying, " +
                         "selling and service discovery in your city. From agriculture to services, " +
                         "real estate to daily needs, citizens can post and explore listings in a " +
                         "structured, easy-to-use format."
-        );
-        tvChipMarketplace.setText("Local Marketplace");
-        tvChipMultiCategory.setText("Multi-category");
-        tvChipDynamicForms.setText("Dynamic Forms");
+        ));
+        tvChipMarketplace.setText(I18n.t(this, "Local Marketplace"));
+        tvChipMultiCategory.setText(I18n.t(this, "Multi-category"));
+        tvChipDynamicForms.setText(I18n.t(this, "Dynamic Forms"));
 
         // Buyers / Sellers
-        tvBuyersTitle.setText("For Buyers");
-        tvBuyersPoints.setText(
+        tvBuyersTitle.setText(I18n.t(this, "For Buyers"));
+        tvBuyersPoints.setText(I18n.t(this,
                 "- Discover nearby products and services.\n" +
                         "- Filter by category, subcategory and condition.\n" +
                         "- View clear, structured information with localized language support."
-        );
+        ));
 
-        tvSellersTitle.setText("For Sellers and Service Providers");
-        tvSellersPoints.setText(
+        tvSellersTitle.setText(I18n.t(this, "For Sellers and Service Providers"));
+        tvSellersPoints.setText(I18n.t(this,
                 "- Post detailed listings with category-specific dynamic forms.\n" +
                         "- Highlight condition, price, quantity, location and images.\n" +
                         "- Reach relevant local users without complexity."
-        );
+        ));
 
         // Vision & values
-        tvVisionTitle.setText("Our Vision");
-        tvVisionDesc.setText(
+        tvVisionTitle.setText(I18n.t(this, "Our Vision"));
+        tvVisionDesc.setText(I18n.t(this,
                 "To become the trusted digital bridge of every city – connecting citizens, " +
                         "markets and services with clarity, transparency and simplicity."
-        );
-        tvValueStructured.setText("Structured");
-        tvValueLocalFirst.setText("Local-first");
-        tvValueSupportive.setText("Supportive");
+        ));
+        tvValueStructured.setText(I18n.t(this, "Structured"));
+        tvValueLocalFirst.setText(I18n.t(this, "Local-first"));
+        tvValueSupportive.setText(I18n.t(this, "Supportive"));
 
         // Support
-        tvSupportTitle.setText("Support and Feedback");
-        tvSupportDesc.setText(
+        tvSupportTitle.setText(I18n.t(this, "Support and Feedback"));
+        tvSupportDesc.setText(I18n.t(this,
                 "For any issues, suggestions or feedback related to Shehar Setu, you can " +
                         "reach out to the development team."
-        );
-        tvSupportEmail.setText("Email: support@sheharsetu.com");
+        ));
+        tvSupportEmail.setText("Email: support@sheharsetu.com"); // keep email raw
     }
 }

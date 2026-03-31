@@ -1,408 +1,633 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout
+<androidx.drawerlayout.widget.DrawerLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/root"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/colorBackground">
+    android:fitsSystemWindows="false">
 
-    <!-- Collapsing header -->
-    <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/appBar"
-        android:layout_width="match_parent"
-        android:layout_height="300dp"
-        android:fitsSystemWindows="true"
-        android:background="@color/colorPrimaryLight">
-
-        <com.google.android.material.appbar.CollapsingToolbarLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:contentScrim="@color/colorPrimary"
-            app:layout_scrollFlags="scroll|exitUntilCollapsed">
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                app:layout_collapseMode="parallax">
-
-                <androidx.viewpager2.widget.ViewPager2
-                    android:id="@+id/pdpImagePager"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:paddingStart="24dp"
-                    android:paddingEnd="24dp"
-                    android:clipToPadding="false"
-                    android:clipChildren="false"/>
-
-                <!-- Soft overlay on top of image -->
-                <View
-                    android:id="@+id/headerGradient"
-                    android:layout_width="match_parent"
-                    android:layout_height="96dp"
-                    android:layout_gravity="top"
-                    android:background="@drawable/bg_toolbar_gradient"/>
-
-                <!-- Page dots -->
-                <LinearLayout
-                    android:id="@+id/pdpDots"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="bottom|center_horizontal"
-                    android:layout_marginBottom="16dp"
-                    android:orientation="horizontal"/>
-            </FrameLayout>
-
-            <!-- Top actions -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:gravity="center_vertical"
-                app:layout_collapseMode="pin">
-
-                <ImageView
-                    android:id="@+id/pdpBack"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:padding="8dp"
-                    android:src="@drawable/ic_arrows_24"
-                    android:tint="@android:color/white"
-                    android:background="?attr/selectableItemBackgroundBorderless"/>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="end">
-
-                    <ImageView
-                        android:id="@+id/pdpShare"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:padding="8dp"
-                        android:src="@drawable/ic_share_24"
-                        android:tint="@android:color/white"
-                        android:background="?attr/selectableItemBackgroundBorderless"/>
-
-                    <ImageView
-                        android:id="@+id/pdpSave"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:padding="8dp"
-                        android:src="@drawable/ic_favorite_border_24"
-                        android:tint="@android:color/white"
-                        android:background="?attr/selectableItemBackgroundBorderless"/>
-                </LinearLayout>
-            </LinearLayout>
-
-        </com.google.android.material.appbar.CollapsingToolbarLayout>
-    </com.google.android.material.appbar.AppBarLayout>
-
-    <!-- Body -->
-    <androidx.core.widget.NestedScrollView
-        android:id="@+id/scroll"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/root"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="?android:attr/colorBackground"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+        android:background="#F8FDFB">
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+        <!-- Status bar tint -->
+        <View
+            android:id="@+id/viewStatusBarBackground"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@color/black"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
-            <!-- Thumbnails -->
-            <com.google.android.material.card.MaterialCardView
+        <androidx.coordinatorlayout.widget.CoordinatorLayout
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            app:layout_constraintTop_toBottomOf="@id/viewStatusBarBackground"
+            app:layout_constraintBottom_toTopOf="@+id/viewNavBarBackground"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <!-- Hero AppBar -->
+            <com.google.android.material.appbar.AppBarLayout
+                android:id="@+id/appBar"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/colorPrimaryLight">
+                android:layout_height="320dp"
+                android:fitsSystemWindows="false"
+                android:background="@color/colorPrimary"
+                app:elevation="0dp">
 
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/pdpThumbRv"
+                <com.google.android.material.appbar.CollapsingToolbarLayout
                     android:layout_width="match_parent"
-                    android:layout_height="72dp"
-                    android:paddingStart="4dp"
-                    android:paddingEnd="4dp"
-                    android:overScrollMode="never"
-                    android:clipToPadding="false"
-                    android:scrollbars="none"
-                    android:background="?attr/colorSurface"/>
-            </com.google.android.material.card.MaterialCardView>
+                    android:layout_height="match_parent"
+                    app:contentScrim="@color/colorPrimaryDark"
+                    app:statusBarScrim="@color/colorPrimaryDark"
+                    app:layout_scrollFlags="scroll|exitUntilCollapsed">
 
-            <!-- Product info card -->
-            <com.google.android.material.card.MaterialCardView
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@color/colorPrimaryDark"
+                        app:layout_collapseMode="parallax">
+
+                        <!-- Main Image Pager (simulating the inner card logic or full bleed) -->
+                        <androidx.viewpager2.widget.ViewPager2
+                            android:id="@+id/pdpImagePager"
+                            android:layout_width="0dp"
+                            android:layout_height="180dp"
+                            android:layout_marginTop="56dp"
+                            android:layout_marginStart="32dp"
+                            android:layout_marginEnd="32dp"
+                            app:layout_constraintTop_toTopOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintEnd_toEndOf="parent" />
+
+                        <!-- Dark overlay on bottom half to blend pager -->
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="100dp"
+                            android:background="@drawable/bg_toolbar_gradient"
+                            app:layout_constraintBottom_toBottomOf="parent" />
+
+                        <!-- Dots -->
+                        <LinearLayout
+                            android:id="@+id/pdpDots"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="16dp"
+                            app:layout_constraintBottom_toTopOf="@id/priceRow"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintEnd_toEndOf="parent"/>
+
+                        <!-- Custom Price Row at bottom of AppBar -->
+                        <LinearLayout
+                            android:id="@+id/priceRow"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginStart="16dp"
+                            android:layout_marginEnd="16dp"
+                            android:layout_marginBottom="16dp"
+                            android:padding="16dp"
+                            android:background="@drawable/bg_dark_teal_rounded"
+                            app:layout_constraintBottom_toBottomOf="parent">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="ASKING PRICE"
+                                    android:textColor="@color/accentGreen"
+                                    android:textSize="10sp"
+                                    android:textStyle="bold"
+                                    android:letterSpacing="0.05" />
+
+                                <LinearLayout
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical">
+
+                                    <TextView
+                                        android:id="@+id/pdpPrice"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="₹ 0"
+                                        android:textColor="@color/white"
+                                        android:textSize="24sp"
+                                        android:textStyle="bold" />
+
+                                    <com.google.android.material.chip.Chip
+                                        android:id="@+id/pdpSoldChip"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="24dp"
+                                        android:layout_marginStart="8dp"
+                                        android:text="FREE"
+                                        android:textColor="@color/white"
+                                        android:textSize="10sp"
+                                        android:textStyle="bold"
+                                        app:chipBackgroundColor="@color/accentGreen"
+                                        app:chipMinHeight="20dp"
+                                        app:chipCornerRadius="4dp"
+                                        app:chipStrokeWidth="0dp" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- Location + Copy Icons -->
+                            <ImageView
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:layout_marginEnd="8dp"
+                                android:background="@drawable/bg_icon_outline_teal"
+                                android:padding="8dp"
+                                android:src="@drawable/ic_location_24px"
+                                app:tint="#80FFFFFF" />
+
+                            <ImageView
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:background="@drawable/bg_icon_outline_teal"
+                                android:padding="8dp"
+                                android:src="@drawable/ic_copy_24"
+                                app:tint="#80FFFFFF" />
+
+                        </LinearLayout>
+
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+
+                    <!-- Pinned Toolbar Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        android:gravity="center_vertical"
+                        app:layout_collapseMode="pin">
+
+                        <ImageView
+                            android:id="@+id/pdpBack"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/bg_nav_button_teal"
+                            android:padding="10dp"
+                            android:src="@drawable/ic_arrows_24"
+                            app:tint="@color/white" />
+
+                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+
+                        <ImageView
+                            android:id="@+id/pdpShare"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:layout_marginEnd="12dp"
+                            android:background="@drawable/bg_nav_button_teal"
+                            android:padding="10dp"
+                            android:src="@drawable/ic_share_24"
+                            app:tint="@color/white" />
+
+                        <ImageView
+                            android:id="@+id/pdpSave"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/bg_nav_button_teal"
+                            android:padding="10dp"
+                            android:src="@drawable/ic_favorite_border_24"
+                            app:tint="@color/white" />
+
+                    </LinearLayout>
+                </com.google.android.material.appbar.CollapsingToolbarLayout>
+            </com.google.android.material.appbar.AppBarLayout>
+
+            <!-- Scrollable Body -->
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/scroll"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                app:cardBackgroundColor="?attr/colorSurface">
+                android:layout_height="match_parent"
+                app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:paddingBottom="100dp">
 
-                    <!-- Title & price -->
+                    <!-- Meta Tags Row (Category, Time, ID) -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingStart="20dp"
+                        android:paddingEnd="20dp"
+                        android:paddingTop="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_light_teal_pill"
+                            android:text="TRANSPORT"
+                            android:textColor="@color/colorPrimary"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="4dp" />
+
+                        <TextView
+                            android:id="@+id/pdpMeta"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_light_gray_pill"
+                            android:text="• 17 hours ago"
+                            android:textColor="@color/colorTextSecondary"
+                            android:textSize="11sp"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="4dp" />
+
+                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="#LST-00291"
+                            android:textColor="#A0A0A0"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <!-- Title & Location -->
                     <TextView
                         android:id="@+id/pdpTitle"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="20dp"
+                        android:layout_marginEnd="20dp"
+                        android:layout_marginTop="16dp"
+                        android:text="Tempo Transport\nService Available"
+                        android:textColor="@color/colorTextPrimary"
+                        android:textSize="24sp"
                         android:textStyle="bold"
-                        android:textSize="20sp"
-                        android:textColor="@color/colorTextPrimary"/>
+                        android:lineSpacingExtra="4dp" />
 
-                    <!-- SOLD chip -->
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/pdpSoldChip"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="SOLD"
-                        android:textColor="@android:color/white"
-                        app:chipBackgroundColor="#E53935"
-                        app:chipStrokeWidth="0dp"
-                        app:chipMinHeight="28dp"
-                        android:visibility="gone"/>
-
-                    <TextView
-                        android:id="@+id/pdpPrice"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:textStyle="bold"
-                        android:textSize="18sp"
-                        android:textColor="@color/colorPrimary"/>
-
-                    <TextView
-                        android:id="@+id/pdpMeta"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textSize="13sp"
-                        android:textColor="@color/colorTextSecondary"/>
-
-                    <!-- Feature chips -->
-                    <com.google.android.material.chip.ChipGroup
-                        android:id="@+id/pdpChips"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        app:singleLine="false"
-                        app:chipSpacingHorizontal="6dp"
-                        app:chipSpacingVertical="6dp"/>
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginStart="20dp"
+                        android:layout_marginEnd="20dp"
+                        android:layout_marginTop="8dp">
 
-                    <!-- Divider -->
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:src="@drawable/ic_location_24px"
+                            app:tint="@color/colorPrimary" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:text="Usmanpura, Ahmedabad, Gujarat"
+                            android:textColor="@color/colorTextSecondary"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
+                        android:background="#E8EAEB"
+                        android:layout_marginStart="20dp"
+                        android:layout_marginEnd="20dp"
+                        android:layout_marginTop="20dp" />
+
+                    <!-- Listing Details (Grid of Attributes) -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="20dp"
+                        android:layout_marginTop="20dp"
+                        android:text="LISTING DETAILS"
+                        android:textColor="#7A9C95"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.05" />
+
+                    <GridLayout
+                        android:id="@+id/pdpChips"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_marginEnd="14dp"
                         android:layout_marginTop="12dp"
-                        android:background="@color/colorPrimaryLight"/>
+                        android:columnCount="2"
+                        android:alignmentMode="alignBounds" />
 
                     <!-- Description -->
                     <TextView
                         android:id="@+id/pdpDesc"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginStart="20dp"
+                        android:layout_marginEnd="20dp"
+                        android:layout_marginTop="20dp"
                         android:textSize="14sp"
-                        android:lineSpacingExtra="2dp"
-                        android:textColor="@color/colorTextPrimary"/>
+                        android:textColor="@color/colorTextPrimary"
+                        android:lineSpacingMultiplier="1.4" />
 
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#E8EAEB"
+                        android:layout_marginStart="20dp"
+                        android:layout_marginEnd="20dp"
+                        android:layout_marginTop="20dp" />
 
-            <!-- Seller card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                app:cardBackgroundColor="?attr/colorSurface">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="12dp"
-                    android:gravity="center_vertical">
-
-                    <ImageView
-                        android:id="@+id/pdpSellerAvatar"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:src="@drawable/ic_placeholder_circle"
-                        android:scaleType="centerCrop"
-                        android:background="@drawable/bg_circle_surface"/>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:layout_marginEnd="12dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/pdpSellerName"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:textStyle="bold"
-                            android:textSize="16sp"
-                            android:textColor="@color/colorTextPrimary"
-                            android:maxLines="1"
-                            android:ellipsize="end"/>
-
-                        <TextView
-                            android:id="@+id/pdpSellerMeta"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:textSize="12sp"
-                            android:textColor="@color/colorTextSecondary"
-                            android:maxLines="1"
-                            android:ellipsize="end"/>
-                    </LinearLayout>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/pdpViewProfile"
+                    <!-- Posted By -->
+                    <TextView
                         android:layout_width="wrap_content"
-                        android:layout_height="36dp"
-                        android:minWidth="0dp"
-                        android:paddingStart="20dp"
-                        android:paddingEnd="20dp"
-                        android:text="VIEW"
-                        android:textAllCaps="true"
-                        android:textColor="@color/colorPrimary"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="20dp"
+                        android:layout_marginTop="20dp"
+                        android:text="POSTED BY"
+                        android:textColor="#7A9C95"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.05" />
+
+                    <!-- Seller Card -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="20dp"
+                        android:layout_marginEnd="20dp"
+                        android:layout_marginTop="12dp"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="0dp"
                         app:strokeWidth="1dp"
-                        app:strokeColor="@color/colorPrimary"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                        app:strokeColor="#E8EAEB"
+                        app:cardBackgroundColor="@color/white">
 
-            <!-- Similar list card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="1dp"
-                app:cardBackgroundColor="?attr/colorSurface">
+                        <!-- Left accent bar -->
+                        <View
+                            android:layout_width="4dp"
+                            android:layout_height="match_parent"
+                            android:background="@color/colorPrimary" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="12dp">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="16dp"
+                            android:paddingStart="20dp">
 
+                            <FrameLayout
+                                android:layout_width="56dp"
+                                android:layout_height="56dp"
+                                android:background="@drawable/bg_dark_teal_rounded"
+                                android:backgroundTint="@color/colorPrimary">
+
+                                <TextView
+                                    android:id="@+id/tvSellerAvatarLetter"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:gravity="center"
+                                    android:text="H"
+                                    android:textColor="@color/white"
+                                    android:textSize="22sp"
+                                    android:textStyle="bold" />
+
+                                <com.google.android.material.imageview.ShapeableImageView
+                                    android:id="@+id/pdpSellerAvatar"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:scaleType="centerCrop"
+                                    app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
+                                    android:visibility="invisible" />
+                            </FrameLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:layout_marginStart="16dp">
+
+                                <TextView
+                                    android:id="@+id/pdpSellerName"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Harshil Bhudiya"
+                                    android:textColor="@color/colorTextPrimary"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/pdpSellerMeta"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Member since 2025"
+                                    android:textColor="@color/colorTextSecondary"
+                                    android:textSize="12sp"
+                                    android:layout_marginTop="2dp" />
+
+                                <LinearLayout
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:layout_marginTop="6dp"
+                                    android:gravity="center_vertical">
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:background="@drawable/bg_light_teal_pill"
+                                        android:text="✓ Verified"
+                                        android:textColor="@color/colorPrimary"
+                                        android:textSize="10sp"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="3dp" />
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="6dp"
+                                        android:background="@drawable/bg_light_gray_pill"
+                                        android:text="3 Listings"
+                                        android:textColor="@color/colorTextSecondary"
+                                        android:textSize="10sp"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="3dp" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/pdpViewProfile"
+                                android:layout_width="wrap_content"
+                                android:layout_height="36dp"
+                                android:text="View →"
+                                android:textAllCaps="false"
+                                android:textColor="@color/colorPrimary"
+                                android:textSize="12sp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                app:cornerRadius="18dp"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/colorPrimary"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Similar Listings -->
                     <TextView
                         android:id="@+id/labelSimilar"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Similar Listings"
+                        android:layout_marginStart="20dp"
+                        android:layout_marginTop="32dp"
+                        android:text="SIMILAR LISTINGS"
+                        android:textColor="#7A9C95"
+                        android:textSize="12sp"
                         android:textStyle="bold"
-                        android:textSize="16sp"
-                        android:textColor="@color/colorTextPrimary"/>
+                        android:letterSpacing="0.05" />
 
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/pdpSimilarRv"
                         android:layout_width="match_parent"
-                        android:layout_height="160dp"
-                        android:layout_marginTop="8dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
                         android:clipToPadding="false"
-                        android:paddingEnd="4dp"/>
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp" />
+
+                    <!-- Retaining unseen Rv to avoid null pointer crashes if used -->
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/pdpThumbRv"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:visibility="gone" />
+
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            </androidx.core.widget.NestedScrollView>
 
-        </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
+            <!-- Bottom Action Bar (Floating Buttons inside a rounded container) -->
+            <LinearLayout
+                android:id="@+id/bottomBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:orientation="horizontal"
+                android:background="@drawable/bg_bottom_sheet_rounded"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="12dp"
+                android:paddingBottom="24dp"
+                android:gravity="center"
+                android:elevation="16dp">
 
-    <!-- Bottom actions -->
-    <LinearLayout
-        android:id="@+id/bottomBar"
-        android:layout_width="match_parent"
-        android:layout_height="80dp"
-        android:layout_gravity="bottom"
-        android:background="?attr/colorSurface"
-        android:padding="8dp"
-        android:elevation="8dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/pdpCall"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:text="Call"
+                    android:textAllCaps="false"
+                    android:textSize="14sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/colorTextPrimary"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    app:icon="@drawable/ic_phone_24px"
+                    app:iconTint="@color/colorTextPrimary"
+                    app:cornerRadius="12dp"
+                    app:strokeColor="#E8EAEB"
+                    app:strokeWidth="1dp"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/pdpCall"
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/pdpCallWhatsapp"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1.2"
+                    android:layout_marginEnd="8dp"
+                    android:text="WhatsApp"
+                    android:textAllCaps="false"
+                    android:textSize="14sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    app:icon="@drawable/ic_whatsapp_24"
+                    app:iconGravity="textStart"
+                    app:iconTint="@null"
+                    app:backgroundTint="#0F8E78"
+                    app:cornerRadius="12dp"
+                    style="@style/Widget.MaterialComponents.Button" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/pdpViewLocation"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:text="Location"
+                    android:textAllCaps="false"
+                    android:textSize="14sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/colorTextPrimary"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    app:icon="@drawable/ic_location_24px"
+                    app:iconTint="@color/colorTextPrimary"
+                    app:cornerRadius="12dp"
+                    app:strokeColor="#E8EAEB"
+                    app:strokeWidth="1dp"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+            </LinearLayout>
+
+            <!-- Loading overlay -->
+            <FrameLayout
+                android:id="@+id/loadingOverlay"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clickable="true"
+                android:focusable="true"
+                android:visibility="gone"
+                android:background="#88000000">
+
+                <ProgressBar
+                    android:id="@+id/progress"
+                    style="?android:attr/progressBarStyleLarge"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center"/>
+            </FrameLayout>
+
+        </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+        <!-- Nav bar tint -->
+        <View
+            android:id="@+id/viewNavBarBackground"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginEnd="6dp"
-            android:text="Call"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            app:icon="@drawable/ic_coll_24"
-            app:iconPadding="8dp"
-            app:iconTint="@android:color/white"
-            app:backgroundTint="@color/colorPrimary"
-            style="@style/Widget.MaterialComponents.Button"/>
+            android:layout_height="0dp"
+            android:background="@color/black"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/pdpCallWhatsapp"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginEnd="6dp"
-            android:text="WhatsApp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            app:icon="@drawable/ic_whatsapp_24"
-            app:iconPadding="8dp"
-            app:iconGravity="textStart"
-            app:iconTint="@android:color/white"
-            app:backgroundTint="@color/colorPrimary"
-            style="@style/Widget.MaterialComponents.Button"/>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/pdpViewLocation"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Location"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            app:icon="@drawable/ic_location_24"
-            app:iconPadding="8dp"
-            app:iconTint="@color/colorPrimary"
-            android:textColor="@color/colorPrimary"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/colorPrimary"/>
-    </LinearLayout>
-
-    <!-- Loading overlay -->
-    <FrameLayout
-        android:id="@+id/loadingOverlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clickable="true"
-        android:focusable="true"
-        android:visibility="gone"
-        android:background="#66FFFFFF">
-
-        <ProgressBar
-            android:id="@+id/progress"
-            style="?android:attr/progressBarStyleLarge"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_gravity="center"/>
-    </FrameLayout>
-
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+</androidx.drawerlayout.widget.DrawerLayout>

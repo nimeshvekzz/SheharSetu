@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <group android:checkableBehavior="single">
-
+    <!-- Main Actions -->
+    <group android:id="@+id/group_main" android:checkableBehavior="single">
         <item
             android:id="@+id/nav_home"
             android:title="Home"
-            android:icon="@drawable/ic_home_24"/>
+            android:icon="@drawable/ic_home_24px"/>
 
         <item
             android:id="@+id/nav_post"
@@ -16,62 +16,71 @@
         <item
             android:id="@+id/nav_my_ads"
             android:title="My Ads"
-            android:icon="@drawable/ic_list_24"/>
-
+            android:icon="@drawable/ic_all_listings"/>
+            
         <item
             android:id="@+id/nav_notifications"
             android:title="Notifications"
-            android:icon="@drawable/ic_bell_24"/>
-
-        <item
-            android:id="@+id/nav_whatsapp"
-            android:title="WhatsApp"
-            android:icon="@drawable/ic_whatsapp_24"/>
-
-        <item
-            android:id="@+id/nav_youtube"
-            android:title="YouTube"
-            android:icon="@drawable/ic_youtube_24"/>
-
-        <item
-            android:id="@+id/nav_weather"
-            android:title="Weather"
-            android:icon="@drawable/ic_weather_24"/>
-
-        <item
-            android:id="@+id/nav_invite"
-            android:title="Invite Friends"
-            android:icon="@drawable/ic_share_24"/>
-
-        <item
-            android:id="@+id/nav_rate"
-            android:title="Rate us"
-            android:icon="@drawable/ic_star_24"/>
-
-        <item
-            android:id="@+id/nav_facebook"
-            android:title="Facebook"
-            android:icon="@drawable/ic_facebook_24"/>
-
-        <item
-            android:id="@+id/nav_contact"
-            android:title="Contact us"
-            android:icon="@drawable/ic_phone_24"/>
-
-        <item
-            android:id="@+id/nav_terms"
-            android:title="Terms &amp; Conditions"
-            android:icon="@drawable/ic_doc_24"/>
-
-        <item
-            android:id="@+id/nav_about"
-            android:title="About"
-            android:icon="@drawable/ic_info_24"/>
-
+            android:icon="@drawable/ic_check_circle_24"/>
     </group>
 
-    <!-- Logout at bottom (non-checkable) -->
-    <group android:checkableBehavior="none">
+    <!-- Social & Extras -->
+    <item android:title="Community &amp; social">
+        <menu>
+            <item
+                android:id="@+id/nav_whatsapp"
+                android:title="WhatsApp"
+                android:icon="@drawable/ic_whatsapp_24"/>
+
+            <item
+                android:id="@+id/nav_youtube"
+                android:title="YouTube"
+                android:icon="@drawable/ic_youtube_24"/>
+
+            <item
+                android:id="@+id/nav_weather"
+                android:title="Weather"
+                android:icon="@drawable/ic_weather_24"/>
+
+            <item
+                android:id="@+id/nav_invite"
+                android:title="Invite Friends"
+                android:icon="@drawable/ic_share_24"/>
+
+            <item
+                android:id="@+id/nav_rate"
+                android:title="Rate us"
+                android:icon="@drawable/ic_star_24"/>
+
+            <item
+                android:id="@+id/nav_facebook"
+                android:title="Facebook"
+                android:icon="@drawable/ic_language_24"/>
+        </menu>
+    </item>
+
+    <!-- Support & Info -->
+    <item android:title="Support &amp; Info">
+        <menu>
+            <item
+                android:id="@+id/nav_contact"
+                android:title="Contact us"
+                android:icon="@drawable/ic_phone_24px"/>
+
+            <item
+                android:id="@+id/nav_terms"
+                android:title="Terms &amp; Conditions"
+                android:icon="@drawable/ic_about_support"/>
+
+            <item
+                android:id="@+id/nav_about"
+                android:title="About"
+                android:icon="@drawable/ic_help_24"/>
+        </menu>
+    </item>
+
+    <!-- Logout at bottom -->
+    <group android:id="@+id/group_logout" android:checkableBehavior="none">
         <item
             android:id="@+id/nav_logout"
             android:title="Logout"

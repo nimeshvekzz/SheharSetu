@@ -14,6 +14,9 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.card.MaterialCardView;
+import com.infowave.sheharsetu.Adapter.I18n;
+import com.infowave.sheharsetu.Adapter.LanguageManager;
+import com.infowave.sheharsetu.core.SessionManager;
 
 public class ContactUsActivity extends AppCompatActivity {
 
@@ -29,6 +32,10 @@ public class ContactUsActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        String langCode = getSharedPreferences(SessionManager.PREFS, MODE_PRIVATE)
+                .getString("app_lang_code", "en");
+        LanguageManager.apply(this, langCode);
 
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_contact_us);
@@ -52,7 +59,7 @@ public class ContactUsActivity extends AppCompatActivity {
     private void setupToolbar() {
         if (topBar != null) {
             topBar.setNavigationOnClickListener(v -> onBackPressed());
-            topBar.setTitle("Contact & Support");
+            topBar.setTitle(I18n.t(this, "Contact & Support"));
         }
     }
 
@@ -81,9 +88,9 @@ public class ContactUsActivity extends AppCompatActivity {
         intent.putExtra(Intent.EXTRA_EMAIL, new String[]{SUPPORT_EMAIL});
         intent.putExtra(Intent.EXTRA_SUBJECT, "Support - Shehar Setu");
         try {
-            startActivity(Intent.createChooser(intent, "Send email"));
+            startActivity(Intent.createChooser(intent, I18n.t(this, "Send email")));
         } catch (ActivityNotFoundException e) {
-            Toast.makeText(this, "No email app found on this device.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, I18n.t(this, "No email app found on this device."), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -93,7 +100,7 @@ public class ContactUsActivity extends AppCompatActivity {
         try {
             startActivity(intent);
         } catch (ActivityNotFoundException e) {
-            Toast.makeText(this, "Unable to open dialer.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, I18n.t(this, "Unable to open dialer."), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -113,7 +120,7 @@ public class ContactUsActivity extends AppCompatActivity {
                 Intent browserIntent = new Intent(Intent.ACTION_VIEW, uri);
                 startActivity(browserIntent);
             } catch (ActivityNotFoundException ex) {
-                Toast.makeText(this, "WhatsApp is not available.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, I18n.t(this, "WhatsApp is not available."), Toast.LENGTH_SHORT).show();
             }
         }
     }

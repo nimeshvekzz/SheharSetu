@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Intentionally empty to prevent Dark Mode overrides -->
+    <style name="Theme.SheharSetu.M3" parent="Theme.SheharSetu" />
 </resources>

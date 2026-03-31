@@ -127,9 +127,9 @@ public class MyAdsAdapter extends RecyclerView.Adapter<MyAdsAdapter.ViewHolder> 
         holder.tvTitle.setText(item.title);
         holder.tvPrice.setText(item.price);
 
-        String categoryText = item.category;
+        String categoryText = I18n.t(context, item.category);
         if (!TextUtils.isEmpty(item.subcategory)) {
-            categoryText += " • " + item.subcategory;
+            categoryText += " • " + I18n.t(context, item.subcategory);
         }
         holder.tvCategory.setText(categoryText);
         holder.tvPosted.setText(item.postedWhen);
@@ -138,8 +138,8 @@ public class MyAdsAdapter extends RecyclerView.Adapter<MyAdsAdapter.ViewHolder> 
         if (item.repostCount > 0) {
             holder.tvRepostCount.setVisibility(View.VISIBLE);
             String countText = item.repostCount == 1
-                    ? "Reposted 1 time"
-                    : "Reposted " + item.repostCount + " times";
+                    ? I18n.t(context, "Reposted 1 time")
+                    : I18n.t(context, "Reposted") + " " + item.repostCount + " " + I18n.t(context, "times");
             holder.tvRepostCount.setText(countText);
         } else {
             holder.tvRepostCount.setVisibility(View.GONE);
@@ -147,19 +147,19 @@ public class MyAdsAdapter extends RecyclerView.Adapter<MyAdsAdapter.ViewHolder> 
 
         // Status chip
         if (item.isSold) {
-            holder.tvStatus.setText("SOLD");
+            holder.tvStatus.setText(I18n.t(context, "SOLD"));
             holder.tvStatus.setTextColor(0xFFFF5252);
             holder.tvStatus.setBackgroundColor(0x1AFF5252);
             holder.soldOverlay.setVisibility(View.VISIBLE);
-            holder.btnMarkSold.setText("Available");
+            holder.btnMarkSold.setText(I18n.t(context, "Available"));
             holder.btnRepost.setAlpha(0.5f);
             holder.btnRepost.setEnabled(false);
         } else {
-            holder.tvStatus.setText("ACTIVE");
+            holder.tvStatus.setText(I18n.t(context, "ACTIVE"));
             holder.tvStatus.setTextColor(0xFF4CAF50);
             holder.tvStatus.setBackgroundColor(0x1A4CAF50);
             holder.soldOverlay.setVisibility(View.GONE);
-            holder.btnMarkSold.setText("Sold");
+            holder.btnMarkSold.setText(I18n.t(context, "Sold"));
             holder.btnRepost.setAlpha(1.0f);
             holder.btnRepost.setEnabled(true);
         }

@@ -18,6 +18,7 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -40,15 +41,14 @@ public class SplashScreen extends AppCompatActivity {
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
 
 
-        getWindow().setStatusBarColor(
-                ContextCompat.getColor(this, R.color.splashStatusBar)
-        );
+        // Set entirely transparent status bar so gradient shows edge-to-edge
+        getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
 
         WindowInsetsControllerCompat controller =
                 new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
-        controller.setAppearanceLightStatusBars(true);
+        controller.setAppearanceLightStatusBars(false); // Make icons white on dark background
 
-        // Root view पर system bars का padding apply करो
+        // Root view padding
         View root = findViewById(R.id.main);
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
             Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -57,64 +57,42 @@ public class SplashScreen extends AppCompatActivity {
         });
 
         // ---------- Views ----------
-        CardView logoCard    = findViewById(R.id.logoCard);
-        TextView tvAppName   = findViewById(R.id.tvAppName);
-        TextView tvTagline   = findViewById(R.id.tvTagline);
+        View brandContainer  = findViewById(R.id.brandContainer);
         ProgressBar progress = findViewById(R.id.progress);
         TextView tvLoading   = findViewById(R.id.tvLoading);
 
-        logoCard.setScaleX(0.85f);
-        logoCard.setScaleY(0.85f);
-        logoCard.setAlpha(0f);
+        brandContainer.setScaleX(0.85f);
+        brandContainer.setScaleY(0.85f);
+        brandContainer.setAlpha(0f);
+        brandContainer.setTranslationY(20f);
 
-
-        tvAppName.setAlpha(0f);
-        tvAppName.setTranslationY(18f);
-
-        tvTagline.setAlpha(0f);
-        tvTagline.setTranslationY(16f);
 
         progress.setAlpha(0f);
         tvLoading.setAlpha(0f);
 
-        logoCard.animate()
+        // 1) Brand Container slide-up + fade-in + scale-up
+        brandContainer.animate()
                 .alpha(1f)
                 .scaleX(1f)
                 .scaleY(1f)
-                .setDuration(550L)
-                .setStartDelay(120L)
-                .setInterpolator(new DecelerateInterpolator())
-                .start();
-
-        // 2) App name slide-up + fade-in
-        tvAppName.animate()
-                .alpha(1f)
                 .translationY(0f)
-                .setDuration(420L)
-                .setStartDelay(520L)
+                .setDuration(600L)
+                .setStartDelay(200L)
                 .setInterpolator(new DecelerateInterpolator())
                 .start();
 
-        tvTagline.animate()
-                .alpha(1f)
-                .translationY(0f)
-                .setDuration(380L)
-                .setStartDelay(720L)
-                .setInterpolator(new DecelerateInterpolator())
-                .start();
-
-        // 4) Bottom loading + text fade-in
+        // 2) Bottom loading + text fade-in
         progress.animate()
                 .alpha(1f)
-                .setDuration(320L)
+                .setDuration(400L)
                 .setStartDelay(900L)
                 .setInterpolator(new AccelerateDecelerateInterpolator())
                 .start();
 
         tvLoading.animate()
                 .alpha(1f)
-                .setDuration(320L)
-                .setStartDelay(950L)
+                .setDuration(400L)
+                .setStartDelay(900L)
                 .setInterpolator(new AccelerateDecelerateInterpolator())
                 .start();
 

@@ -89,9 +89,9 @@ public class MyListingsAdapter extends RecyclerView.Adapter<MyListingsAdapter.Vi
         holder.tvPrice.setText(item.price);
 
         // Category + subcategory
-        String categoryText = item.category;
+        String categoryText = I18n.t(context, item.category);
         if (!TextUtils.isEmpty(item.subcategory)) {
-            categoryText += " • " + item.subcategory;
+            categoryText += " • " + I18n.t(context, item.subcategory);
         }
         holder.tvCategory.setText(categoryText);
         holder.tvPosted.setText(item.postedWhen);
@@ -99,11 +99,11 @@ public class MyListingsAdapter extends RecyclerView.Adapter<MyListingsAdapter.Vi
         // Handle sold status
         if (item.isSold) {
             holder.soldOverlay.setVisibility(View.VISIBLE);
-            holder.btnMarkSold.setText("Mark Available");
+            holder.btnMarkSold.setText(I18n.t(context, "Mark Available"));
             holder.btnMarkSold.setAlpha(0.7f);
         } else {
             holder.soldOverlay.setVisibility(View.GONE);
-            holder.btnMarkSold.setText("Mark Sold");
+            holder.btnMarkSold.setText(I18n.t(context, "Mark Sold"));
             holder.btnMarkSold.setAlpha(1.0f);
         }
 

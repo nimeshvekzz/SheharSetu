@@ -30,16 +30,6 @@ import org.json.JSONObject;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-/**
- * Adapter for dynamic form:
- * Field map keys:
- * - key, label, hint, type (TEXT, NUMBER, PHONE, EMAIL, DATE, DROPDOWN,
- * CHECKBOX, SWITCH, TEXTAREA, CURRENCY, LOCATION, PHOTOS)
- * - required (Boolean/Number/String)
- * - options:
- * - static mode: List<String>
- * - backend mode: List<Map<String,Object>> with "value" and "label"
- */
 public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     private static final String TAG = "DynamicFormAdapter";
@@ -70,11 +60,14 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
     private final Map<String, Object> answers = new HashMap<>();
     private final SimpleDateFormat df = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault());
     private final Callbacks callbacks;
+    private final Context adapterContext;
     private boolean isBinding = false; // Suppress listener callbacks during bind
+
 
     public DynamicFormAdapter(List<Map<String, Object>> fields, Callbacks callbacks) {
         this.fields = fields != null ? fields : new ArrayList<>();
         this.callbacks = callbacks;
+        this.adapterContext = callbacks instanceof Context ? (Context) callbacks : null;
         int idx = 0;
         for (Map<String, Object> f : this.fields) {
             String key = s(f.get("key"));
@@ -114,6 +107,11 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                     answers.put(key, "");
             }
         }
+    }
+
+    private String tr(String text) {
+        if (adapterContext == null) return text == null ? "" : text;
+        return I18n.t(adapterContext, text == null ? "" : text);
     }
 
     @Override
@@ -169,8 +167,8 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h, int pos) {
         Map<String, Object> f = fields.get(pos);
         String key = s(f.get("key"));
-        String label = s(f.get("label"));
-        String hint = s(f.get("hint"));
+        String label = tr(s(f.get("label")));
+        String hint = tr(s(f.get("hint")));
         String type = s(f.get("type"));
         isBinding = true;
         if (h instanceof VHText) {
@@ -242,7 +240,7 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             List<String> displayList = new ArrayList<>();
             List<String> valueList = new ArrayList<>();
 
-            displayList.add("Select...");
+            displayList.add(tr("Select..."));
             valueList.add("");
 
             if (optObj instanceof List) {
@@ -255,11 +253,11 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                         String lab = s(mo.get("label"));
                         if (TextUtils.isEmpty(lab))
                             lab = val;
-                        displayList.add(lab);
+                        displayList.add(tr(lab));
                         valueList.add(val);
                     } else {
                         String s = String.valueOf(o);
-                        displayList.add(s);
+                        displayList.add(tr(s));
                         valueList.add(s);
                     }
                 }
@@ -382,8 +380,8 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             vh.tvLabel.setText(label + (req(f) ? " *" : ""));
             vh.tvHelper.setText(TextUtils.isEmpty(hint) ? "Clear, no blur" : hint);
             if (vh.tvTip != null) {
-                vh.tvTip.setText(
-                        "Tip: The first selected photo becomes the cover. Tap any thumbnail to change or remove.");
+                vh.tvTip.setText(tr(
+                        "Tip: The first selected photo becomes the cover. Tap any thumbnail to change or remove."));
             }
 
             @SuppressWarnings("unchecked")
@@ -421,8 +419,8 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
             vh.rv.setAdapter(psa);
 
-            String msg = (TextUtils.isEmpty(cover) ? "Cover: not selected" : "Cover: selected")
-                    + "   |   More: " + more.size() + " selected";
+            String msg = (TextUtils.isEmpty(cover) ? tr("Cover: not selected") : tr("Cover: selected"))
+                    + "   |   " + tr("More") + ": " + more.size() + " " + tr("selected");
             vh.tvPhotoStatus.setText(msg);
         }
         isBinding = false;
@@ -440,17 +438,34 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
     private void setCoverFromMore(String fieldKey, int indexInMore) {
         @SuppressWarnings("unchecked")
         Map<String, Object> ph = (Map<String, Object>) answers.get(fieldKey);
-        if (ph == null)
+        if (ph == null) {
+            Log.w(TAG, "setCoverFromMore: photo state missing for key=" + fieldKey);
             return;
-        String currentCover = s(ph.get("cover"));
+        }
+
+        String currentCover = normalizePhotoValue(s(ph.get("cover")));
         @SuppressWarnings("unchecked")
         List<String> more = (List<String>) ph.get("more");
-        if (more == null || indexInMore < 0 || indexInMore >= more.size())
+        if (more == null || indexInMore < 0 || indexInMore >= more.size()) {
+            Log.w(TAG, "setCoverFromMore: invalid gallery index key=" + fieldKey
+                    + " index=" + indexInMore + " moreCount=" + (more == null ? 0 : more.size()));
             return;
+        }
 
-        String newCover = more.get(indexInMore);
-        more.set(indexInMore, currentCover);
+        String newCover = normalizePhotoValue(more.get(indexInMore));
+        more.remove(indexInMore);
+
+        if (!TextUtils.isEmpty(currentCover) && !samePhotoToken(currentCover, newCover)) {
+            addUniquePhoto(more, currentCover);
+        }
+
         ph.put("cover", newCover);
+        ph.put("more", more);
+
+        Log.d(TAG, "setCoverFromMore: key=" + fieldKey
+                + " coverNow=" + shortToken(newCover)
+                + " moreCount=" + more.size());
+
         notifyDataSetChanged();
     }
 
@@ -458,10 +473,12 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
     public void removePhoto(String fieldKey, int indexInMore, boolean isCover) {
         @SuppressWarnings("unchecked")
         Map<String, Object> ph = (Map<String, Object>) answers.get(fieldKey);
-        if (ph == null)
+        if (ph == null) {
+            Log.w(TAG, "removePhoto: photo state missing for key=" + fieldKey);
             return;
+        }
 
-        String cover = s(ph.get("cover"));
+        String cover = normalizePhotoValue(s(ph.get("cover")));
         @SuppressWarnings("unchecked")
         List<String> more = (List<String>) ph.get("more");
         if (more == null) {
@@ -473,27 +490,41 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
         if (isCover) {
             if (!TextUtils.isEmpty(cover)) {
+                Log.d(TAG, "removePhoto: removing current cover key=" + fieldKey
+                        + " cover=" + shortToken(cover));
                 ph.put("cover", "");
                 removed = true;
             }
         } else {
             if (indexInMore >= 0 && indexInMore < more.size()) {
+                String removedToken = normalizePhotoValue(more.get(indexInMore));
                 more.remove(indexInMore);
+                Log.d(TAG, "removePhoto: removed gallery item key=" + fieldKey
+                        + " index=" + indexInMore
+                        + " token=" + shortToken(removedToken)
+                        + " moreLeft=" + more.size());
                 removed = true;
+            } else {
+                Log.w(TAG, "removePhoto: invalid gallery index key=" + fieldKey
+                        + " index=" + indexInMore + " moreCount=" + more.size());
             }
         }
 
         if (removed) {
-            if (TextUtils.isEmpty(s(ph.get("cover"))) && more != null && !more.isEmpty()) {
-                ph.put("cover", more.get(0));
-                more.remove(0);
-                toast("Cover removed. Promoted next image as cover.");
+            if (TextUtils.isEmpty(normalizePhotoValue(s(ph.get("cover")))) && !more.isEmpty()) {
+                String promoted = normalizePhotoValue(more.remove(0));
+                ph.put("cover", promoted);
+                toast(tr("Cover removed. Promoted next image as cover."));
+                Log.d(TAG, "removePhoto: promoted next image as cover key=" + fieldKey
+                        + " newCover=" + shortToken(promoted)
+                        + " moreLeft=" + more.size());
             } else {
-                toast("Photo removed.");
+                toast(tr("Photo removed."));
             }
             notifyDataSetChanged();
         }
     }
+
 
     @SuppressLint("NotifyDataSetChanged")
     public void setTextAnswer(String fieldKey, String value) {
@@ -538,27 +569,20 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
     @SuppressLint("NotifyDataSetChanged")
     public void setCoverPhoto(String fieldKey, String base64) {
-        if (TextUtils.isEmpty(base64))
+        String normalized = normalizePhotoValue(base64);
+        if (TextUtils.isEmpty(normalized)) {
+            Log.w(TAG, "setCoverPhoto: empty incoming cover for key=" + fieldKey);
             return;
-        @SuppressWarnings("unchecked")
-        Map<String, Object> ph = (Map<String, Object>) answers.get(fieldKey);
-        if (ph == null)
-            return;
-        ph.put("cover", base64);
-        notifyDataSetChanged();
-    }
-
-    @SuppressLint("NotifyDataSetChanged")
-    public void addMorePhotos(String fieldKey, List<String> base64List) {
-        if (base64List == null || base64List.isEmpty())
-            return;
+        }
 
         @SuppressWarnings("unchecked")
         Map<String, Object> ph = (Map<String, Object>) answers.get(fieldKey);
-        if (ph == null)
+        if (ph == null) {
+            Log.w(TAG, "setCoverPhoto: photo state missing for key=" + fieldKey);
             return;
+        }
 
-        String cover = s(ph.get("cover"));
+        String oldCover = normalizePhotoValue(s(ph.get("cover")));
         @SuppressWarnings("unchecked")
         List<String> more = (List<String>) ph.get("more");
         if (more == null) {
@@ -566,32 +590,98 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             ph.put("more", more);
         }
 
-        boolean coverWasEmpty = TextUtils.isEmpty(cover);
-        // Also treat URL-based covers (from edit mode prefill) as replaceable
-        // since base64 images should always take priority over old URLs
-        boolean coverIsUrl = !coverWasEmpty && cover.startsWith("http");
+        removeMatchingPhoto(more, normalized);
 
-        if (coverWasEmpty || coverIsUrl) {
-            // Replace the old cover (empty or URL) with the first new photo
-            ph.put("cover", base64List.get(0));
-            for (int i = 1; i < base64List.size(); i++) {
-                String b64 = base64List.get(i);
-                if (!TextUtils.isEmpty(b64))
-                    more.add(b64);
-            }
-        } else {
-            for (String b64 : base64List) {
-                if (!TextUtils.isEmpty(b64))
-                    more.add(b64);
-            }
+        if (!TextUtils.isEmpty(oldCover) && !samePhotoToken(oldCover, normalized)) {
+            addUniquePhoto(more, oldCover);
         }
+
+        ph.put("cover", normalized);
+
+        Log.d(TAG, "setCoverPhoto: key=" + fieldKey
+                + " oldCover=" + shortToken(oldCover)
+                + " newCover=" + shortToken(normalized)
+                + " moreCount=" + more.size());
+
         notifyDataSetChanged();
-        if (coverWasEmpty || coverIsUrl) {
-            toast("First photo set as cover. Tap any thumbnail to change or remove.");
-        } else {
-            toast("Added " + base64List.size() + " photo(s). Tap a thumbnail to set cover or remove.");
-        }
     }
+
+    @SuppressLint("NotifyDataSetChanged")
+    public void addMorePhotos(String fieldKey, List<String> base64List) {
+        if (base64List == null || base64List.isEmpty()) {
+            Log.w(TAG, "addMorePhotos: empty picker result for key=" + fieldKey);
+            return;
+        }
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> ph = (Map<String, Object>) answers.get(fieldKey);
+        if (ph == null) {
+            Log.w(TAG, "addMorePhotos: photo state missing for key=" + fieldKey);
+            return;
+        }
+
+        String currentCover = normalizePhotoValue(s(ph.get("cover")));
+
+        @SuppressWarnings("unchecked")
+        List<String> more = (List<String>) ph.get("more");
+        if (more == null) {
+            more = new ArrayList<>();
+            ph.put("more", more);
+        }
+
+        List<String> normalizedNew = new ArrayList<>();
+        for (String raw : base64List) {
+            String normalized = normalizePhotoValue(raw);
+            if (!TextUtils.isEmpty(normalized)) {
+                normalizedNew.add(normalized);
+            }
+        }
+
+        if (normalizedNew.isEmpty()) {
+            Log.w(TAG, "addMorePhotos: all picked photos were empty after normalization for key=" + fieldKey);
+            return;
+        }
+
+        boolean coverWasEmpty = TextUtils.isEmpty(currentCover);
+
+        if (coverWasEmpty) {
+            String newCover = normalizedNew.get(0);
+            ph.put("cover", newCover);
+
+            for (int i = 1; i < normalizedNew.size(); i++) {
+                addUniquePhoto(more, normalizedNew.get(i));
+            }
+
+            Log.d(TAG, "addMorePhotos: key=" + fieldKey
+                    + " coverWasEmpty=true"
+                    + " newCover=" + shortToken(newCover)
+                    + " appendedMore=" + Math.max(0, normalizedNew.size() - 1)
+                    + " totalMore=" + more.size());
+
+            notifyDataSetChanged();
+            toast(tr("First photo set as cover. Tap any thumbnail to change or remove."));
+            return;
+        }
+
+        int before = more.size();
+        for (String normalized : normalizedNew) {
+            if (!samePhotoToken(currentCover, normalized)) {
+                addUniquePhoto(more, normalized);
+            }
+        }
+
+        int appended = Math.max(0, more.size() - before);
+
+        Log.d(TAG, "addMorePhotos: key=" + fieldKey
+                + " coverKept=" + shortToken(currentCover)
+                + " picked=" + normalizedNew.size()
+                + " appended=" + appended
+                + " totalMore=" + more.size());
+
+        notifyDataSetChanged();
+        toast(tr("Added ") + appended + tr(" photo(s). Tap a thumbnail to set cover or remove."));
+    }
+
 
     /**
      * Pre-fill photos from existing image URLs (for edit mode).
@@ -599,27 +689,48 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
      */
     @SuppressLint("NotifyDataSetChanged")
     public void prefillPhotos(String fieldKey, List<String> imageUrls) {
-        if (imageUrls == null || imageUrls.isEmpty())
+        if (imageUrls == null || imageUrls.isEmpty()) {
+            Log.w(TAG, "prefillPhotos: no incoming images for key=" + fieldKey);
             return;
+        }
 
         @SuppressWarnings("unchecked")
         Map<String, Object> ph = (Map<String, Object>) answers.get(fieldKey);
         if (ph == null) {
-            ph = new java.util.HashMap<>();
+            ph = new HashMap<>();
             answers.put(fieldKey, ph);
         }
 
-        // First image = cover, rest = more
-        ph.put("cover", imageUrls.get(0));
+        List<String> normalized = new ArrayList<>();
+        for (String raw : imageUrls) {
+            String token = normalizePhotoValue(raw);
+            if (!TextUtils.isEmpty(token) && !containsPhotoToken(normalized, token)) {
+                normalized.add(token);
+            }
+        }
+
+        if (normalized.isEmpty()) {
+            Log.w(TAG, "prefillPhotos: all incoming images became empty after normalization for key=" + fieldKey);
+            return;
+        }
+
+        ph.put("cover", normalized.get(0));
+
         List<String> more = new ArrayList<>();
-        for (int i = 1; i < imageUrls.size(); i++) {
-            String url = imageUrls.get(i);
-            if (!TextUtils.isEmpty(url))
-                more.add(url);
+        for (int i = 1; i < normalized.size(); i++) {
+            addUniquePhoto(more, normalized.get(i));
         }
         ph.put("more", more);
+
+        Log.d(TAG, "prefillPhotos: key=" + fieldKey
+                + " incoming=" + imageUrls.size()
+                + " normalized=" + normalized.size()
+                + " cover=" + shortToken(normalized.get(0))
+                + " moreCount=" + more.size());
+
         notifyDataSetChanged();
     }
+
 
     /**
      * Get the field key for the PHOTOS type field from the schema.
@@ -633,6 +744,76 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             }
         }
         return null;
+    }
+
+
+    private static String normalizePhotoValue(String raw) {
+        if (raw == null) return "";
+        String value = raw.trim();
+        if (TextUtils.isEmpty(value)) return "";
+        if (value.startsWith("data:image")) return value;
+        return value;
+    }
+
+    private static boolean isRemotePhoto(String token) {
+        return !TextUtils.isEmpty(token)
+                && (token.startsWith("http://") || token.startsWith("https://"));
+    }
+
+    private static boolean isDataUriPhoto(String token) {
+        return !TextUtils.isEmpty(token) && token.startsWith("data:image");
+    }
+
+    private static String stripDataUriPrefix(String token) {
+        if (TextUtils.isEmpty(token)) return "";
+        int comma = token.indexOf(',');
+        if (comma >= 0 && token.startsWith("data:image")) {
+            return token.substring(comma + 1);
+        }
+        return token;
+    }
+
+    private static boolean samePhotoToken(String a, String b) {
+        return normalizePhotoValue(a).equals(normalizePhotoValue(b));
+    }
+
+    private static boolean containsPhotoToken(List<String> list, String candidate) {
+        if (list == null || list.isEmpty()) return false;
+        for (String item : list) {
+            if (samePhotoToken(item, candidate)) return true;
+        }
+        return false;
+    }
+
+    private static void removeMatchingPhoto(List<String> list, String candidate) {
+        if (list == null || list.isEmpty()) return;
+        Iterator<String> it = list.iterator();
+        while (it.hasNext()) {
+            if (samePhotoToken(it.next(), candidate)) {
+                it.remove();
+            }
+        }
+    }
+
+    private static void addUniquePhoto(List<String> list, String candidate) {
+        String normalized = normalizePhotoValue(candidate);
+        if (TextUtils.isEmpty(normalized)) return;
+        if (!containsPhotoToken(list, normalized)) {
+            list.add(normalized);
+        }
+    }
+
+    private static String shortToken(String token) {
+        String normalized = normalizePhotoValue(token);
+        if (TextUtils.isEmpty(normalized)) return "<empty>";
+        if (isRemotePhoto(normalized)) {
+            int idx = normalized.lastIndexOf('/');
+            return idx >= 0 ? normalized.substring(idx + 1) : normalized;
+        }
+        if (isDataUriPhoto(normalized)) {
+            return "dataUri(len=" + normalized.length() + ")";
+        }
+        return "base64(len=" + normalized.length() + ")";
     }
 
     /* ================= Validation & JSON ================= */
@@ -815,43 +996,11 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
             VHT vh = (VHT) holder;
 
-            // Decode image — supports both Base64 and HTTP URLs
             try {
-                if (!TextUtils.isEmpty(base64)) {
-                    if (base64.startsWith("http://") || base64.startsWith("https://")) {
-                        // Load URL image asynchronously
-                        final String imageUrl = base64;
-                        vh.iv.setImageResource(R.drawable.ic_launcher_foreground); // placeholder
-                        vh.iv.setTag(imageUrl); // tag to prevent recycling issues
-                        new Thread(() -> {
-                            try {
-                                java.net.URL url = new java.net.URL(imageUrl);
-                                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
-                                conn.setDoInput(true);
-                                conn.setConnectTimeout(5000);
-                                conn.setReadTimeout(5000);
-                                conn.connect();
-                                java.io.InputStream is = conn.getInputStream();
-                                Bitmap bmp = BitmapFactory.decodeStream(is);
-                                is.close();
-                                if (bmp != null && imageUrl.equals(vh.iv.getTag())) {
-                                    vh.iv.post(() -> vh.iv.setImageBitmap(bmp));
-                                }
-                            } catch (Exception e) {
-                                Log.e(TAG, "Failed to load image URL: " + imageUrl, e);
-                            }
-                        }).start();
-                    } else {
-                        // Base64 image
-                        byte[] data = Base64.decode(base64, Base64.DEFAULT);
-                        Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length);
-                        vh.iv.setImageBitmap(bmp);
-                    }
-                } else {
-                    vh.iv.setImageDrawable(null);
-                }
+                bindThumbImage(vh, base64);
             } catch (Exception e) {
-                Log.e(TAG, "Failed to decode image for thumbnails", e);
+                Log.e(TAG, "onBindViewHolder: failed to bind thumb for key=" + fieldKey
+                        + " isCover=" + isCover + " token=" + shortToken(base64), e);
                 vh.iv.setImageDrawable(null);
             }
 
@@ -861,9 +1010,9 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             }
 
             if (isCover) {
-                vh.name.setText("Cover photo");
+                vh.name.setText(I18n.t(vh.itemView.getContext(), "Cover photo"));
             } else {
-                vh.name.setText("Photo " + (idxInMore + 1));
+                vh.name.setText(I18n.t(vh.itemView.getContext(), "Photo") + " " + (idxInMore + 1));
             }
 
             vh.remove.setVisibility(View.VISIBLE);
@@ -886,6 +1035,61 @@ public class DynamicFormAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             } else {
                 vh.itemView.setOnClickListener(null);
                 vh.itemView.setOnLongClickListener(null);
+            }
+        }
+
+
+        private void bindThumbImage(@NonNull VHT vh, String rawToken) {
+            final String token = normalizePhotoValue(rawToken);
+            if (TextUtils.isEmpty(token)) {
+                vh.iv.setImageDrawable(null);
+                vh.iv.setTag(null);
+                return;
+            }
+
+            if (isRemotePhoto(token)) {
+                final String imageUrl = token;
+                vh.iv.setImageResource(R.drawable.ic_launcher_foreground);
+                vh.iv.setTag(imageUrl);
+
+                new Thread(() -> {
+                    try {
+                        java.net.URL url = new java.net.URL(imageUrl);
+                        java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+                        conn.setDoInput(true);
+                        conn.setConnectTimeout(5000);
+                        conn.setReadTimeout(5000);
+                        conn.connect();
+                        java.io.InputStream is = conn.getInputStream();
+                        Bitmap bmp = BitmapFactory.decodeStream(is);
+                        is.close();
+
+                        if (bmp != null && imageUrl.equals(vh.iv.getTag())) {
+                            vh.iv.post(() -> vh.iv.setImageBitmap(bmp));
+                        } else if (bmp == null) {
+                            Log.w(TAG, "bindThumbImage: decoded null bitmap from URL=" + imageUrl);
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "bindThumbImage: failed URL load " + imageUrl, e);
+                    }
+                }).start();
+                return;
+            }
+
+            try {
+                String cleanBase64 = stripDataUriPrefix(token).replace("\n", "").replace("\r", "");
+                byte[] data = Base64.decode(cleanBase64, Base64.DEFAULT);
+                Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length);
+                if (bmp != null) {
+                    vh.iv.setImageBitmap(bmp);
+                    vh.iv.setTag(null);
+                } else {
+                    Log.w(TAG, "bindThumbImage: base64 decoded but bitmap null token=" + shortToken(token));
+                    vh.iv.setImageDrawable(null);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "bindThumbImage: failed base64 decode token=" + shortToken(token), e);
+                vh.iv.setImageDrawable(null);
             }
         }
 

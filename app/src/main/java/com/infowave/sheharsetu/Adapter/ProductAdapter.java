@@ -15,16 +15,14 @@ import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
+import com.infowave.sheharsetu.Adapter.I18n;
 import com.infowave.sheharsetu.ProductDetail;
 import com.infowave.sheharsetu.R;
-import androidx.viewpager2.widget.ViewPager2;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import android.os.Handler;
-import android.os.Looper;
-import android.view.MotionEvent;
 
 public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.VH> {
 
@@ -43,6 +41,8 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.VH> {
     public ProductAdapter(Context ctx) {
         this.ctx = ctx;
     }
+
+
 
     public void setOnContactClickListener(OnContactClickListener l) {
         this.contactClickListener = l;
@@ -67,8 +67,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.VH> {
     @NonNull
     @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View v = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_product, parent, false);
+        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_product, parent, false);
         return new VH(v);
     }
 
@@ -86,91 +85,86 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.VH> {
             id = getInt(p, "listing_id", 0);
 
         h.title.setText(title);
-        h.price.setText(price);
-        h.city.setText(city);
+
+        // Format price with ₹ prefix
+        String displayPrice;
+        if (TextUtils.isEmpty(price) || price.equals("null") || price.equals("0")) {
+            displayPrice = I18n.t(ctx, "Price on Request");
+        } else {
+            // Already has ₹? show as-is, else add prefix
+            displayPrice = price.startsWith("₹") ? price : "₹ " + price;
+        }
+        h.price.setText(displayPrice);
+        
+        String displayCity = TextUtils.isEmpty(city) ? "" : "📍 " + city;
+        String distance = getString(p, "distance", "");
+        if (!TextUtils.isEmpty(distance) && !distance.equals("0") && !distance.equals("null")) {
+            try {
+                double distVal = Double.parseDouble(distance);
+                displayCity += " • " + String.format(java.util.Locale.getDefault(), "%.1f km", distVal);
+            } catch (Exception e) {
+                // Fallback if parsing fails but string is present
+                displayCity += " • " + distance + " km";
+            }
+        }
+        String posted = getString(p, "posted_when", getString(p, "posted_time", ""));
+        
+        // --- Posted Time ---
+        if (h.posted != null) {
+            h.posted.setText(posted);
+        }
 
         String status = getString(p, "status", "active");
         boolean isSold = "sold".equalsIgnoreCase(status);
         if (h.soldBadge != null) {
-            h.soldBadge.setVisibility(isSold ? View.VISIBLE : View.GONE);
+            if (isSold) {
+                h.soldBadge.setText(I18n.t(ctx, "SOLD"));
+                h.soldBadge.setTextColor(ctx.getResources().getColor(android.R.color.white));
+                h.soldBadge.setBackgroundResource(R.drawable.bg_sold_badge);
+                h.soldBadge.setVisibility(View.VISIBLE);
+            } else {
+                // If not sold, show "New" as per mockup style
+                h.soldBadge.setText(I18n.t(ctx, "New"));
+                h.soldBadge.setTextColor(android.graphics.Color.parseColor("#27AE60"));
+                h.soldBadge.setBackgroundResource(R.drawable.bg_new_badge);
+                h.soldBadge.setVisibility(View.VISIBLE);
+            }
         }
-
-        String posted = getString(p, "posted_when", getString(p, "posted_time", ""));
 
         int finalId = id;
         h.itemView.setOnClickListener(v -> openPdp(finalId, title, price, city, posted, 0));
 
-        h.cleanup();
-
+        // --- Load image using Glide ---
         List<String> images = (List<String>) p.get("images");
-        if (images == null)
-            images = new ArrayList<>();
-
-        if (images.isEmpty()) {
-            String singleObj = getString(p, "imageUrl", getString(p, "image_url", ""));
-            if (!TextUtils.isEmpty(singleObj)) {
-                images.add(singleObj);
-            }
+        String imageUrl = "";
+        if (images != null && !images.isEmpty()) {
+            imageUrl = images.get(0);
+        }
+        if (TextUtils.isEmpty(imageUrl)) {
+            imageUrl = getString(p, "imageUrl", getString(p, "image_url", ""));
         }
 
-        if (images.isEmpty()) {
-            images.add("");
+        if (!TextUtils.isEmpty(imageUrl)) {
+            Glide.with(h.productImage.getContext())
+                    .load(imageUrl)
+                    .placeholder(placeholderIcon)
+                    .error(placeholderIcon)
+                    .centerCrop()
+                    .into(h.productImage);
+        } else {
+            h.productImage.setImageResource(placeholderIcon);
         }
 
-        ImageSliderAdapter sliderAdapter = new ImageSliderAdapter(images, v -> {
-            openPdp(finalId, title, price, city, posted, 0);
-        });
-        h.vpImages.setAdapter(sliderAdapter);
-        h.vpImages.setOrientation(androidx.viewpager2.widget.ViewPager2.ORIENTATION_HORIZONTAL); // Ensure horizontal
-        h.vpImages.setOffscreenPageLimit(1);
-
-        // Auto-slide functionality
-        int imageCount = images.size();
-        if (imageCount > 1) {
-            final int[] currentPage = { 0 };
-            h.slideRunnable = new Runnable() {
-                @Override
-                public void run() {
-                    if (h.vpImages != null && h.vpImages.getAdapter() != null) {
-                        currentPage[0] = (currentPage[0] + 1) % imageCount;
-                        h.vpImages.setCurrentItem(currentPage[0], true);
-                        h.slideHandler.postDelayed(this, 5000); // 5 second interval
-                    }
+        // Contact button (might be hidden in grid view)
+        if (h.btn != null) {
+            h.btn.setOnClickListener(v -> {
+                if (contactClickListener != null) {
+                    contactClickListener.onContactClick(p);
+                } else {
+                    openPdp(finalId, title, price, city, posted, 0);
                 }
-            };
-            h.slideHandler.postDelayed(h.slideRunnable, 5000);
-
-            // Pause on touch, resume on release
-            h.vpImages.getChildAt(0).setOnTouchListener((v, event) -> {
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        h.slideHandler.removeCallbacks(h.slideRunnable);
-                        break;
-                    case MotionEvent.ACTION_UP:
-                    case MotionEvent.ACTION_CANCEL:
-                        h.slideHandler.postDelayed(h.slideRunnable, 5000);
-                        break;
-                }
-                return false;
             });
-
-            h.pageCallback = new ViewPager2.OnPageChangeCallback() {
-                @Override
-                public void onPageSelected(int position) {
-                    currentPage[0] = position;
-                }
-            };
-            h.vpImages.registerOnPageChangeCallback(h.pageCallback);
         }
-
-        // Contact button
-        h.btn.setOnClickListener(v -> {
-            if (contactClickListener != null) {
-                contactClickListener.onContactClick(p);
-            } else {
-                openPdp(finalId, title, price, city, posted, 0);
-            }
-        });
     }
 
     @Override
@@ -186,34 +180,24 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.VH> {
 
     /* ===================== ViewHolder ===================== */
     static class VH extends RecyclerView.ViewHolder {
-        androidx.viewpager2.widget.ViewPager2 vpImages;
-        TextView title, price, city, soldBadge;
-        Button btn;
-
-        // Management for auto-slide
-        Handler slideHandler = new Handler(Looper.getMainLooper());
-        Runnable slideRunnable;
-        ViewPager2.OnPageChangeCallback pageCallback;
+        ImageView productImage;
+        TextView title, price, city, soldBadge, posted;
+        View btn, btnFavorite;
 
         VH(@NonNull View v) {
             super(v);
-            vpImages = v.findViewById(R.id.vpImages);
+            productImage = v.findViewById(R.id.productImage);
             title = v.findViewById(R.id.tvTitle);
             price = v.findViewById(R.id.tvPrice);
             city = v.findViewById(R.id.tvCity);
             btn = v.findViewById(R.id.btnContact);
-            soldBadge = v.findViewById(R.id.tvSoldBadge);
+//            soldBadge = v.findViewById(R.id.tvSoldBadge);
+            posted = v.findViewById(R.id.tvPosted);
+//            btnFavorite = v.findViewById(R.id.btnFavorite);
         }
 
         void cleanup() {
-            if (slideRunnable != null) {
-                slideHandler.removeCallbacks(slideRunnable);
-                slideRunnable = null;
-            }
-            if (pageCallback != null && vpImages != null) {
-                vpImages.unregisterOnPageChangeCallback(pageCallback);
-                pageCallback = null;
-            }
+            // No-op: nothing to clean up with simple ImageView
         }
     }
 

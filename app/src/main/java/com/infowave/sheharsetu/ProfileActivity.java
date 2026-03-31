@@ -31,6 +31,8 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
+import com.infowave.sheharsetu.Adapter.I18n;
 import com.infowave.sheharsetu.Adapter.LanguageAdapter;
 import com.infowave.sheharsetu.Adapter.LanguageManager;
 
@@ -89,16 +91,45 @@ public class ProfileActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // Black status + navigation bar
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
-        getWindow().setStatusBarColor(Color.BLACK);
-        getWindow().setNavigationBarColor(Color.BLACK);
-        WindowInsetsControllerCompat controller = new WindowInsetsControllerCompat(getWindow(),
+
+        String langCode = getSharedPreferences(SessionManager.PREFS, MODE_PRIVATE)
+                .getString("app_lang_code", "en");
+        LanguageManager.apply(this, langCode);
+
+        // Apply edged-to-edge window decor to draw behind system bars (like MainActivity)
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        // Force status bar and navigation bar icons to be light (white)
+        WindowInsetsControllerCompat windowInsetsController = WindowCompat.getInsetsController(getWindow(),
                 getWindow().getDecorView());
-        controller.setAppearanceLightStatusBars(false);
-        controller.setAppearanceLightNavigationBars(false);
+        if (windowInsetsController != null) {
+            windowInsetsController.setAppearanceLightStatusBars(false); // false = white icons
+            windowInsetsController.setAppearanceLightNavigationBars(false); // false = white icons
+        }
 
         setContentView(R.layout.activity_profile);
+
+        // Apply dynamically heights to the custom background views
+        View viewStatusBarBg = findViewById(R.id.viewStatusBarBg);
+        View viewNavBarBg = findViewById(R.id.viewNavBarBg);
+
+        View rootProfile = findViewById(R.id.rootProfile);
+        if (rootProfile != null) {
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(rootProfile, (v, insets) -> {
+                androidx.core.graphics.Insets systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+
+                if (viewStatusBarBg != null) {
+                    viewStatusBarBg.getLayoutParams().height = systemBars.top;
+                    viewStatusBarBg.requestLayout();
+                }
+
+                if (viewNavBarBg != null) {
+                    viewNavBarBg.getLayoutParams().height = systemBars.bottom;
+                    viewNavBarBg.requestLayout();
+                }
+
+                return insets;
+            });
+        }
 
         // Initialize session
         session = new SessionManager(this);
@@ -106,6 +137,7 @@ public class ProfileActivity extends AppCompatActivity {
         setupToolbar();
         setupEditFab();
         setupLanguageSettings();
+        prefetchAndApplyStaticTexts();
         // Fetch user profile from API
         fetchUserProfile();
     }
@@ -136,8 +168,164 @@ public class ProfileActivity extends AppCompatActivity {
 
     }
 
+
+    private boolean shouldSkipDynamicText(View view) {
+        if (view == null) return false;
+        int id = view.getId();
+        return id == R.id.tvFullName
+                || id == R.id.tvPhone
+                || id == R.id.tvPlaceTypeChip
+                || id == R.id.tvSurnameValue
+                || id == R.id.tvContactPhone
+                || id == R.id.tvAddressLine
+                || id == R.id.tvVillage
+                || id == R.id.tvDistrict
+                || id == R.id.tvState
+                || id == R.id.tvPincode
+                || id == R.id.tvLanguageValue
+                || id == R.id.tvAvatarLetter;
+    }
+
+    private void collectTranslatableTexts(View view, List<String> out) {
+        if (view == null) return;
+
+        if (view instanceof TextInputLayout) {
+            CharSequence hint = ((TextInputLayout) view).getHint();
+            if (!TextUtils.isEmpty(hint)) out.add(hint.toString());
+        } else if (view instanceof TextView) {
+            TextView tv = (TextView) view;
+            if (!(tv instanceof TextInputEditText) && !(tv instanceof AutoCompleteTextView) && !shouldSkipDynamicText(tv)) {
+                CharSequence text = tv.getText();
+                if (!TextUtils.isEmpty(text)) out.add(text.toString());
+            }
+            CharSequence hint = tv.getHint();
+            if (!TextUtils.isEmpty(hint)) out.add(hint.toString());
+        }
+
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup vg = (android.view.ViewGroup) view;
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                collectTranslatableTexts(vg.getChildAt(i), out);
+            }
+        }
+    }
+
+    private void applyTranslationsToViewTree(View view) {
+        if (view == null) return;
+
+        if (view instanceof TextInputLayout) {
+            TextInputLayout til = (TextInputLayout) view;
+            CharSequence hint = til.getHint();
+            if (!TextUtils.isEmpty(hint)) {
+                til.setHint(I18n.t(this, hint.toString()));
+            }
+        } else if (view instanceof TextView) {
+            TextView tv = (TextView) view;
+            if (!(tv instanceof TextInputEditText) && !(tv instanceof AutoCompleteTextView) && !shouldSkipDynamicText(tv)) {
+                CharSequence text = tv.getText();
+                if (!TextUtils.isEmpty(text)) {
+                    tv.setText(I18n.t(this, text.toString()));
+                }
+            }
+            CharSequence hint = tv.getHint();
+            if (!TextUtils.isEmpty(hint)) {
+                tv.setHint(I18n.t(this, hint.toString()));
+            }
+        }
+
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup vg = (android.view.ViewGroup) view;
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                applyTranslationsToViewTree(vg.getChildAt(i));
+            }
+        }
+    }
+
+    private void prefetchAndTranslateViewTree(View view) {
+        if (view == null) return;
+        List<String> keys = new ArrayList<>();
+        collectTranslatableTexts(view, keys);
+        I18n.prefetch(this, keys, () -> applyTranslationsToViewTree(view), () -> applyTranslationsToViewTree(view));
+    }
+
+    private void prefetchAndApplyStaticTexts() {
+        if (rootProfile == null) return;
+        List<String> keys = new ArrayList<>();
+        keys.add("Profile");
+        keys.add("Loading profile...");
+        keys.add("Failed to load languages");
+        keys.add("Language changed to");
+        keys.add("Guest User");
+        keys.add("Village");
+        keys.add("City");
+        keys.add("Enter full name");
+        keys.add("Pincode must be 6 digits");
+        keys.add("Save changes");
+        keys.add("Saving...");
+        collectTranslatableTexts(rootProfile, keys);
+
+        I18n.prefetch(this, keys, () -> {
+            if (tvToolbarTitle != null) {
+                tvToolbarTitle.setText(I18n.t(this, "Profile"));
+            }
+            applyTranslationsToViewTree(rootProfile);
+        }, () -> {
+            if (tvToolbarTitle != null) {
+                tvToolbarTitle.setText(I18n.t(this, "Profile"));
+            }
+            applyTranslationsToViewTree(rootProfile);
+        });
+    }
+
+    private void renderTranslatedProfileData(String displayName, String formattedPhone, String displayPlaceType) {
+        List<String> keys = new ArrayList<>();
+        if (!TextUtils.isEmpty(displayName)) keys.add(displayName);
+        if (!TextUtils.isEmpty(cachedSurname)) keys.add(cachedSurname);
+        if (!TextUtils.isEmpty(cachedAddress)) keys.add(cachedAddress);
+        if (!TextUtils.isEmpty(cachedVillage)) keys.add(cachedVillage);
+        if (!TextUtils.isEmpty(cachedDistrict)) keys.add(cachedDistrict);
+        if (!TextUtils.isEmpty(cachedState)) keys.add(cachedState);
+        if (!TextUtils.isEmpty(displayPlaceType)) keys.add(displayPlaceType);
+
+        I18n.prefetch(this, keys, () -> {
+            tvFullName.setText(TextUtils.isEmpty(displayName) ? "-" : I18n.t(this, displayName));
+            tvPhone.setText(formattedPhone);
+            tvContactPhone.setText(formattedPhone);
+            tvSurnameValue.setText(cachedSurname.isEmpty() ? "-" : I18n.t(this, cachedSurname));
+            tvAddressLine.setText(cachedAddress.isEmpty() ? "-" : I18n.t(this, cachedAddress));
+            tvVillage.setText(cachedVillage.isEmpty() ? "-" : I18n.t(this, cachedVillage));
+            tvDistrict.setText(cachedDistrict.isEmpty() ? "-" : I18n.t(this, cachedDistrict));
+            tvState.setText(cachedState.isEmpty() ? "-" : I18n.t(this, cachedState));
+            tvPincode.setText(cachedPincode.isEmpty() ? "-" : cachedPincode);
+            tvPlaceTypeChip.setText(TextUtils.isEmpty(displayPlaceType) ? I18n.t(this, "Village") : I18n.t(this, displayPlaceType));
+            tvPlaceTypeChip.setVisibility(View.VISIBLE);
+
+            if (!TextUtils.isEmpty(displayName)) {
+                char first = Character.toUpperCase(displayName.trim().charAt(0));
+                tvAvatarLetter.setText(String.valueOf(first));
+            }
+        }, () -> {
+            tvFullName.setText(TextUtils.isEmpty(displayName) ? "-" : displayName);
+            tvPhone.setText(formattedPhone);
+            tvContactPhone.setText(formattedPhone);
+            tvSurnameValue.setText(cachedSurname.isEmpty() ? "-" : cachedSurname);
+            tvAddressLine.setText(cachedAddress.isEmpty() ? "-" : cachedAddress);
+            tvVillage.setText(cachedVillage.isEmpty() ? "-" : cachedVillage);
+            tvDistrict.setText(cachedDistrict.isEmpty() ? "-" : cachedDistrict);
+            tvState.setText(cachedState.isEmpty() ? "-" : cachedState);
+            tvPincode.setText(cachedPincode.isEmpty() ? "-" : cachedPincode);
+            tvPlaceTypeChip.setText(TextUtils.isEmpty(displayPlaceType) ? "Village" : displayPlaceType);
+            tvPlaceTypeChip.setVisibility(View.VISIBLE);
+
+            if (!TextUtils.isEmpty(displayName)) {
+                char first = Character.toUpperCase(displayName.trim().charAt(0));
+                tvAvatarLetter.setText(String.valueOf(first));
+            }
+        });
+    }
+
     private void setupToolbar() {
-        tvToolbarTitle.setText("Profile");
+        tvToolbarTitle.setText(I18n.t(this, "Profile"));
         btnBack.setOnClickListener(v -> onBackPressed());
     }
 
@@ -193,7 +381,7 @@ public class ProfileActivity extends AppCompatActivity {
             dialog.dismiss();
 
             // Restart app for full effect
-            Toast.makeText(this, "Language changed to " + lang[1], Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, I18n.t(this, "Language changed to") + " " + lang[1], Toast.LENGTH_SHORT).show();
             restartApp();
         });
 
@@ -203,6 +391,7 @@ public class ProfileActivity extends AppCompatActivity {
         // Fetch languages from API
         fetchLanguagesForPicker(languages, adapter, progress, rvLangs);
 
+        prefetchAndTranslateViewTree(view);
         dialog.show();
     }
 
@@ -210,9 +399,9 @@ public class ProfileActivity extends AppCompatActivity {
      * Fetch languages from API for picker
      */
     private void fetchLanguagesForPicker(java.util.List<String[]> languages,
-            LanguageAdapter adapter,
-            View progress,
-            RecyclerView rvLangs) {
+                                         LanguageAdapter adapter,
+                                         View progress,
+                                         RecyclerView rvLangs) {
         progress.setVisibility(View.VISIBLE);
         rvLangs.setVisibility(View.INVISIBLE);
 
@@ -272,7 +461,7 @@ public class ProfileActivity extends AppCompatActivity {
                 },
                 error -> {
                     progress.setVisibility(View.GONE);
-                    Toast.makeText(this, "Failed to load languages", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, I18n.t(this, "Failed to load languages"), Toast.LENGTH_SHORT).show();
                 });
 
         req.setRetryPolicy(new DefaultRetryPolicy(15000, 0, 1.0f));
@@ -301,7 +490,7 @@ public class ProfileActivity extends AppCompatActivity {
 
         String url = ApiRoutes.GET_USER_PROFILE;
         // Show loading dialog
-        LoadingDialog.showLoading(this, "Loading profile...");
+        LoadingDialog.showLoading(this, I18n.t(this, "Loading profile..."));
 
         JsonObjectRequest req = new JsonObjectRequest(
                 Request.Method.GET,
@@ -376,28 +565,11 @@ public class ProfileActivity extends AppCompatActivity {
         String formattedPhone = user.optString("formatted_phone", "");
         String displayName = user.optString("name", cachedFullName);
 
-        // Update view mode TextViews
-        tvFullName.setText(displayName);
-        tvPhone.setText(formattedPhone);
-        tvContactPhone.setText(formattedPhone);
-        tvSurnameValue.setText(cachedSurname.isEmpty() ? "-" : cachedSurname);
-        tvAddressLine.setText(cachedAddress.isEmpty() ? "-" : cachedAddress);
-        tvVillage.setText(cachedVillage.isEmpty() ? "-" : cachedVillage);
-        tvDistrict.setText(cachedDistrict.isEmpty() ? "-" : cachedDistrict);
-        tvState.setText(cachedState.isEmpty() ? "-" : cachedState);
-        tvPincode.setText(cachedPincode.isEmpty() ? "-" : cachedPincode);
-
         // Place type chip - capitalize first letter and show it
         String displayPlaceType = cachedPlaceType.isEmpty() ? "Village"
                 : cachedPlaceType.substring(0, 1).toUpperCase() + cachedPlaceType.substring(1);
-        tvPlaceTypeChip.setText(displayPlaceType);
-        tvPlaceTypeChip.setVisibility(View.VISIBLE);
 
-        // Avatar = first letter of full name
-        if (!displayName.isEmpty()) {
-            char first = Character.toUpperCase(displayName.trim().charAt(0));
-            tvAvatarLetter.setText(String.valueOf(first));
-        }
+        renderTranslatedProfileData(displayName, formattedPhone, displayPlaceType);
     }
 
     /**
@@ -405,7 +577,7 @@ public class ProfileActivity extends AppCompatActivity {
      */
     @SuppressLint("SetTextI18n")
     private void showPlaceholderData() {
-        tvFullName.setText("Guest User");
+        tvFullName.setText(I18n.t(this, "Guest User"));
         tvPhone.setText("-");
         tvContactPhone.setText("-");
         tvSurnameValue.setText("-");
@@ -414,7 +586,7 @@ public class ProfileActivity extends AppCompatActivity {
         tvDistrict.setText("-");
         tvState.setText("-");
         tvPincode.setText("-");
-        tvPlaceTypeChip.setText("Village");
+        tvPlaceTypeChip.setText(I18n.t(this, "Village"));
         tvAvatarLetter.setText("G");
     }
 
@@ -488,15 +660,15 @@ public class ProfileActivity extends AppCompatActivity {
 
         // Place type dropdown
         if (etPlaceTypeBottom != null) {
-            String[] placeTypes = new String[] { "Village", "City" };
+            String[] placeTypes = new String[] { I18n.t(this, "Village"), I18n.t(this, "City") };
             ArrayAdapter<String> adapter = new ArrayAdapter<>(
                     this,
                     android.R.layout.simple_list_item_1,
                     placeTypes);
             etPlaceTypeBottom.setAdapter(adapter);
             // Set current value with proper capitalization
-            String displayPlaceType = cachedPlaceType.isEmpty() ? "Village"
-                    : cachedPlaceType.substring(0, 1).toUpperCase() + cachedPlaceType.substring(1);
+            String displayPlaceType = cachedPlaceType.isEmpty() ? I18n.t(this, "Village")
+                    : I18n.t(this, cachedPlaceType.substring(0, 1).toUpperCase() + cachedPlaceType.substring(1));
             etPlaceTypeBottom.setText(displayPlaceType, false);
         }
 
@@ -520,17 +692,17 @@ public class ProfileActivity extends AppCompatActivity {
                 // Validation
                 if (newFullName.isEmpty()) {
                     if (etFullNameBottom != null)
-                        etFullNameBottom.setError("Enter full name");
+                        etFullNameBottom.setError(I18n.t(this, "Enter full name"));
                     return;
                 }
                 if (!newPincode.isEmpty() && newPincode.length() != 6) {
                     if (etPincodeBottom != null)
-                        etPincodeBottom.setError("Pincode must be 6 digits");
+                        etPincodeBottom.setError(I18n.t(this, "Pincode must be 6 digits"));
                     return;
                 }
 
                 // Convert place type to lowercase for API
-                String placeTypeApi = newPlaceType.toLowerCase();
+                String placeTypeApi = newPlaceType.equalsIgnoreCase(I18n.t(this, "City")) ? "city" : "village";
 
                 // Call update API
                 updateUserProfile(
@@ -540,6 +712,7 @@ public class ProfileActivity extends AppCompatActivity {
             });
         }
 
+        prefetchAndTranslateViewTree(view);
         dialog.show();
     }
 
@@ -562,7 +735,7 @@ public class ProfileActivity extends AppCompatActivity {
             BottomSheetDialog dialog, MaterialButton btnSave) {
         String accessToken = session.getAccessToken();
         if (TextUtils.isEmpty(accessToken)) {
-            showError("Not logged in. Please login again.");
+            showError(I18n.t(this, "Not logged in. Please login again."));
             return;
         }
 
@@ -580,13 +753,13 @@ public class ProfileActivity extends AppCompatActivity {
             body.put("pincode", pincode);
         } catch (JSONException e) {
             Log.e(TAG, "Error building request body: " + e.getMessage());
-            showError("Error preparing update request");
+            showError(I18n.t(this, "Error preparing update request"));
             return;
         }
 
         // Disable save button while updating
         btnSave.setEnabled(false);
-        btnSave.setText("Saving...");
+        btnSave.setText(I18n.t(this, "Saving..."));
 
         JsonObjectRequest req = new JsonObjectRequest(
                 Request.Method.POST,
@@ -594,30 +767,30 @@ public class ProfileActivity extends AppCompatActivity {
                 body,
                 response -> {
                     btnSave.setEnabled(true);
-                    btnSave.setText("Save changes");
+                    btnSave.setText(I18n.t(this, "Save changes"));
 
                     try {
                         if (response.getBoolean("success")) {
                             JSONObject user = response.getJSONObject("user");
                             updateUIWithUserData(user);
-                            Toast.makeText(this, "Profile updated successfully!", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, I18n.t(this, "Profile updated successfully!"), Toast.LENGTH_SHORT).show();
                             dialog.dismiss();
                         } else {
-                            String error = response.optString("error", "Update failed");
+                            String error = response.optString("error", I18n.t(this, "Update failed"));
                             showError(error);
                         }
                     } catch (JSONException e) {
                         Log.e(TAG, "❌ Error parsing update response: " + e.getMessage());
-                        showError("Error updating profile");
+                        showError(I18n.t(this, "Error updating profile"));
                     }
                 },
                 error -> {
                     Log.e(TAG, "❌ ========== UPDATE API ERROR ==========");
                     Log.e(TAG, "Error: " + error.toString());
                     btnSave.setEnabled(true);
-                    btnSave.setText("Save changes");
+                    btnSave.setText(I18n.t(this, "Save changes"));
 
-                    String errorMsg = "Failed to update profile";
+                    String errorMsg = I18n.t(this, "Failed to update profile");
                     if (error.networkResponse != null) {
                         Log.e(TAG, "Status Code: " + error.networkResponse.statusCode);
                         try {

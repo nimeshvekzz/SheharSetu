@@ -163,7 +163,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void sendOtpToServer(String mobile) {
-        LoadingDialog.showLoading(this, "Sending OTP...");
+        LoadingDialog.showLoading(this, I18n.t(this, "Sending OTP..."));
         try {
             JSONObject body = new JSONObject();
             body.put("phone", mobile);
@@ -301,7 +301,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void verifyOtpOnServer(String mobile, String otp, TextView errorField) {
-        LoadingDialog.showLoading(this, "Verifying OTP...");
+        LoadingDialog.showLoading(this, I18n.t(this, "Verifying OTP..."));
         try {
             JSONObject body = new JSONObject();
             body.put("phone", mobile);

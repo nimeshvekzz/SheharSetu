@@ -1,16 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/cardAd"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginVertical="6dp"
     app:cardBackgroundColor="@color/colorSurface"
     app:cardCornerRadius="16dp"
-    app:cardElevation="3dp"
-    app:strokeColor="@color/colorDivider"
-    app:strokeWidth="1dp">
+    app:cardElevation="2dp"
+    app:strokeColor="#2F000000"
+    app:strokeWidth="1dp"
+    app:rippleColor="#1A000000">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -22,12 +25,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:padding="12dp">
+            android:minHeight="140dp">
 
-            <!-- Listing Image -->
+            <!-- Elegant Image Frame (Left aligned with card bounds) -->
             <FrameLayout
-                android:layout_width="100dp"
-                android:layout_height="100dp">
+                android:layout_width="135dp"
+                android:layout_height="match_parent"
+                android:background="#F0F2F5">
 
                 <ImageView
                     android:id="@+id/imgListing"
@@ -42,7 +46,7 @@
                     android:id="@+id/soldOverlay"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:background="#99000000"
+                    android:background="#A6000000"
                     android:visibility="gone">
 
                     <TextView
@@ -50,25 +54,23 @@
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
                         android:background="@drawable/bg_sold_badge"
-                        android:letterSpacing="0.1"
-                        android:paddingStart="12dp"
-                        android:paddingTop="4dp"
-                        android:paddingEnd="12dp"
-                        android:paddingBottom="4dp"
+                        android:letterSpacing="0.05"
+                        android:paddingHorizontal="14dp"
+                        android:paddingVertical="6dp"
                         android:text="SOLD"
-                        android:textColor="#FF5252"
-                        android:textSize="16sp"
+                        android:textColor="#9E0000"
+                        android:textSize="13sp"
                         android:textStyle="bold" />
                 </FrameLayout>
             </FrameLayout>
 
-            <!-- Info -->
+            <!-- Info Area (Right) -->
             <LinearLayout
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:layout_marginStart="12dp"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:padding="16dp">
 
                 <TextView
                     android:id="@+id/tvTitle"
@@ -76,18 +78,23 @@
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:maxLines="2"
-                    android:textColor="@color/colorTextPrimary"
+                    android:textColor="#1F2937"
                     android:textSize="15sp"
-                    android:textStyle="bold"
+                    android:fontFamily="sans-serif-medium"
+                    android:lineSpacingMultiplier="1.2"
                     tools:text="iPhone 14 Pro Max 256GB" />
 
                 <TextView
                     android:id="@+id/tvPrice"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_price_tag"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="4dp"
                     android:textColor="@color/colorPrimary"
                     android:textSize="16sp"
+                    android:fontFamily="sans-serif-medium"
                     android:textStyle="bold"
                     tools:text="₹89,000" />
 
@@ -95,17 +102,23 @@
                     android:id="@+id/tvCategory"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="6dp"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textColor="@color/colorTextSecondary"
+                    android:textColor="#4B5563"
                     android:textSize="12sp"
                     tools:text="Electronics • Mobile" />
+
+                <!-- Space to push bottom info down -->
+                <Space
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="10dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
@@ -114,7 +127,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:textColor="@color/colorTextSecondary"
+                        android:textColor="#6B7280"
                         android:textSize="11sp"
                         tools:text="2d ago" />
 
@@ -124,13 +137,13 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:background="@drawable/bg_status_chip"
-                        android:paddingStart="8dp"
-                        android:paddingTop="2dp"
-                        android:paddingEnd="8dp"
-                        android:paddingBottom="2dp"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="3dp"
                         android:textColor="@color/colorPrimary"
                         android:textSize="10sp"
-                        android:textStyle="bold"
+                        android:fontFamily="sans-serif-medium"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.05"
                         tools:text="ACTIVE" />
 
                 </LinearLayout>
@@ -140,95 +153,155 @@
                     android:id="@+id/tvRepostCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:drawablePadding="4dp"
-                    android:textColor="@color/colorTextSecondary"
-                    android:textSize="10sp"
+                    android:layout_marginTop="4dp"
+                    android:drawablePadding="6dp"
+                    android:textColor="#6B7280"
+                    android:textSize="11sp"
                     android:visibility="gone"
                     tools:text="Reposted 2 times" />
 
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Divider -->
+        <!-- Elegant Divider -->
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginStart="12dp"
-            android:layout_marginEnd="12dp"
-            android:background="@color/colorDivider" />
+            android:background="#E5E7EB" />
 
-        <!-- Action buttons row -->
+        <!-- Crisp Action Buttons Row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:padding="8dp">
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="6dp"
+            android:baselineAligned="false"
+            android:weightSum="4">
 
             <!-- Mark Sold / Mark Available -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnMarkSold"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
+            <LinearLayout
                 android:layout_width="0dp"
-                android:layout_height="40dp"
+                android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Sold"
-                android:textAllCaps="false"
-                android:textSize="12sp"
-                app:cornerRadius="8dp"
-                app:icon="@drawable/ic_check_circle_24"
-                app:iconGravity="textStart"
-                app:iconSize="16dp"
-                app:iconTint="@color/colorTextSecondary" />
+                android:gravity="center"
+                android:orientation="vertical"
+                android:paddingVertical="8dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:src="@drawable/ic_check_circle_24"
+                    app:tint="#4B5563" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnMarkSold"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:padding="0dp"
+                    android:text="Sold"
+                    android:textAllCaps="false"
+                    android:textColor="#4B5563"
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium"
+                    app:rippleColor="#1A000000" />
+            </LinearLayout>
 
             <!-- Repost -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnRepost"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
+            <LinearLayout
                 android:layout_width="0dp"
-                android:layout_height="40dp"
+                android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Repost"
-                android:textAllCaps="false"
-                android:textSize="12sp"
-                app:cornerRadius="8dp"
-                app:icon="@drawable/ic_refresh_24"
-                app:iconGravity="textStart"
-                app:iconSize="16dp"
-                app:iconTint="@color/colorPrimary" />
+                android:gravity="center"
+                android:orientation="vertical"
+                android:paddingVertical="8dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:src="@drawable/ic_refresh_24"
+                    app:tint="@color/colorPrimary" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRepost"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:padding="0dp"
+                    android:text="Repost"
+                    android:textAllCaps="false"
+                    android:textColor="@color/colorPrimary"
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium"
+                    app:rippleColor="#1A000000" />
+            </LinearLayout>
 
             <!-- Edit -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnEdit"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
+            <LinearLayout
                 android:layout_width="0dp"
-                android:layout_height="40dp"
+                android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Edit"
-                android:textAllCaps="false"
-                android:textSize="12sp"
-                app:cornerRadius="8dp"
-                app:icon="@drawable/ic_form_edit"
-                app:iconGravity="textStart"
-                app:iconSize="16dp"
-                app:iconTint="@color/colorTextSecondary" />
+                android:gravity="center"
+                android:orientation="vertical"
+                android:paddingVertical="8dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:src="@drawable/ic_form_edit"
+                    app:tint="#4B5563" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnEdit"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:padding="0dp"
+                    android:text="Edit"
+                    android:textAllCaps="false"
+                    android:textColor="#4B5563"
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium"
+                    app:rippleColor="#1A000000" />
+            </LinearLayout>
 
             <!-- Delete -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnDelete"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
+            <LinearLayout
                 android:layout_width="0dp"
-                android:layout_height="40dp"
+                android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Delete"
-                android:textAllCaps="false"
-                android:textColor="#FF5252"
-                android:textSize="12sp"
-                app:cornerRadius="8dp"
-                app:icon="@drawable/ic_delete_24"
-                app:iconGravity="textStart"
-                app:iconSize="16dp"
-                app:iconTint="#FF5252" />
+                android:gravity="center"
+                android:orientation="vertical"
+                android:paddingVertical="8dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:src="@drawable/ic_delete_24"
+                    app:tint="#DC2626" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDelete"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:padding="0dp"
+                    android:text="Delete"
+                    android:textAllCaps="false"
+                    android:textColor="#DC2626"
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium"
+                    app:rippleColor="#1A000000" />
+            </LinearLayout>
 
         </LinearLayout>
 

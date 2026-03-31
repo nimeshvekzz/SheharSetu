@@ -1,6 +1,7 @@
 package com.infowave.sheharsetu.Adapter;
 
 import android.content.Context;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -35,12 +36,8 @@ public class ImagePagerAdapter extends RecyclerView.Adapter<ImagePagerAdapter.VH
     @NonNull
     @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        ImageView iv = new ImageView(parent.getContext());
-        iv.setLayoutParams(new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT));
-        iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        return new VH(iv);
+        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_image_slider, parent, false);
+        return new VH(v);
     }
 
     @Override
@@ -68,7 +65,7 @@ public class ImagePagerAdapter extends RecyclerView.Adapter<ImagePagerAdapter.VH
 
         VH(@NonNull View itemView) {
             super(itemView);
-            iv = (ImageView) itemView;
+            iv = itemView.findViewById(R.id.ivSliderImage);
         }
     }
 }

@@ -60,11 +60,18 @@ public class SimilarAdapter extends RecyclerView.Adapter<SimilarAdapter.VH> {
         String title = getString(item, "title", "");
         String price = getString(item, "price", "");
         String imageUrl = getString(item, "image_url", "");
+        String city = getString(item, "city", "Location");
         int listingId = getInt(item, "id", 0);
 
         // Bind text
         h.title.setText(title);
         h.price.setText(price);
+        if (h.category != null) {
+            h.category.setText(I18n.t(context, "LISTING"));
+        }
+        if (h.location != null) {
+            h.location.setText(city);
+        }
 
         // Load image with Glide
         if (!TextUtils.isEmpty(imageUrl)) {
@@ -100,12 +107,16 @@ public class SimilarAdapter extends RecyclerView.Adapter<SimilarAdapter.VH> {
         final ImageView image;
         final TextView title;
         final TextView price;
+        final TextView category;
+        final TextView location;
 
         VH(@NonNull View itemView) {
             super(itemView);
             image = itemView.findViewById(R.id.simImage);
             title = itemView.findViewById(R.id.simTitle);
             price = itemView.findViewById(R.id.simPrice);
+            category = itemView.findViewById(R.id.simCategory);
+            location = itemView.findViewById(R.id.simLocation);
         }
     }
 
