@@ -1,0 +1,6 @@
+<!-- bg_header_icon_light.xml -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Use surface color with light overlay -->
+    <solid android:color="?attr/colorSurfaceVariant"/>
+    <corners android:radius="18dp"/>
+</shape>

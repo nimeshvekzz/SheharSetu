@@ -1,0 +1,6 @@
+<!-- bg_header_icon_dark.xml -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Use theme primaryColor with transparency -->
+    <solid android:color="?attr/colorPrimaryVariant"/>
+    <corners android:radius="18dp"/>
+</shape>

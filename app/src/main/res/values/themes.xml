@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+<!-- Base app theme (Material 3, no ActionBar) -->
+<style name="Base.Theme.SheharSetu" parent="Theme.Material3.Light.NoActionBar">
+    <!-- System bars handle edge-to-edge -->
+    <item name="android:statusBarColor">@android:color/transparent</item>
+    <item name="android:navigationBarColor">@android:color/transparent</item>
+    <item name="android:windowLightStatusBar">true</item>
+
+    <item name="colorPrimary">@color/colorPrimary</item>
+    <item name="colorSecondary">@color/teal_premium</item>
+    <item name="android:windowBackground">@color/premium_bg</item>
+</style>
+
+<!-- App theme alias -->
+<style name="Theme.SheharSetu" parent="Base.Theme.SheharSetu" />
+<style name="Theme.SheharSetu.M3" parent="Theme.SheharSetu" />
+</resources>

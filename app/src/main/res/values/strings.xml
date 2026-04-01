@@ -1,0 +1,90 @@
+<resources>
+    <string name="app_name">SheharSetu</string>
+    <string name="cd_menu">Open drawer</string>
+    <string name="cd_search">Search</string>
+    <string name="cd_voice_search">Voice search</string>
+    <string name="hint_search">Search products, cities…</string>
+    <string name="lbl_new">New</string>
+    <string name="lbl_old">Old</string>
+    <string name="post_ad">Post Ad</string>
+
+    <string name="help">Help</string>
+
+    <string name="loading">Loading</string>
+
+    <string name="continue_text">Continue</string>
+
+
+
+<!--    &lt;!&ndash; UI &ndash;&gt;-->
+<!--    <string name="featured_listings">Featured Listings</string>-->
+<!--    <string name="btn_contact_seller">Contact Seller</string>-->
+<!--    <string name="toggle_new">New</string>-->
+<!--    <string name="toggle_old">Old</string>-->
+
+<!--    &lt;!&ndash; Categories &ndash;&gt;-->
+<!--    <string name="cat_scrap">Scrap</string>-->
+<!--    <string name="cat_textile">Textile</string>-->
+<!--    <string name="cat_agri">Agriculture</string>-->
+<!--    <string name="cat_vehicles">Vehicles</string>-->
+<!--    <string name="cat_transport">Transport</string>-->
+<!--    <string name="cat_home">Home</string>-->
+<!--    <string name="cat_business">Business</string>-->
+<!--    <string name="help_banner_text">To advertise, tap the green button and choose the correct option.</string>-->
+
+<!--    <string name="drawer_open">Open navigation drawer</string>-->
+<!--    <string name="drawer_close">Close navigation drawer</string>-->
+
+<!--    <string name="sub_all">All</string>-->
+<!--    <string name="sub_aluminum">Aluminum</string>-->
+<!--    <string name="sub_copper">Copper</string>-->
+<!--    <string name="sub_cars">Cars</string>-->
+<!--    <string name="sub_bikes">Bikes</string>-->
+<!--    <string name="sub_trucks">Trucks</string>-->
+<!--    <string name="sub_crops">Crops</string>-->
+<!--    <string name="sub_tractor">Tractor</string>-->
+
+
+
+
+
+<!--    <string name="title_login">Log in to your account</string>-->
+<!--    <string name="hint_mobile">Mobile number</string>-->
+<!--    <string name="btn_send_otp">Send OTP</string>-->
+<!--    <string name="cta_register">New here? Register</string>-->
+<!--    <string name="badge_language">Language: %1$s</string>-->
+<!--    <string name="err_mobile">Enter 10-digit mobile</string> &lt;!&ndash; 👈 ये missing था &ndash;&gt;-->
+<!--    <string name="otp_resent">OTP resent successfully</string>-->
+
+
+    <!-- OTP sheet -->
+<!--    <string name="otp_sent_demo">OTP sent (demo: 123456)</string>-->
+<!--    <string name="otp_sent_to">OTP sent to +91 %1$s</string>-->
+<!--    <string name="otp_sent_to_placeholder">OTP sent to</string>-->
+<!--    <string name="otp_resend">Resend OTP</string>-->
+<!--    <string name="btn_verify">Verify</string>-->
+<!--    <string name="btn_close">Close</string>-->
+<!--    <string name="resend_in_s">Resend in %1$d s</string>-->
+<!--    <string name="err_enter_otp">Enter 6-digit OTP</string>-->
+<!--    <string name="err_invalid_otp">Invalid OTP. Try again.</string>-->
+
+
+
+
+
+
+<!--    <string name="badge_language">Language</string>-->
+<!--    <string name="title_login">Login</string>-->
+
+    <!-- Subtitle under main title -->
+    <string name="login_subtitle">Enter your mobile number to receive an OTP and continue.</string>
+
+    <!-- Section title inside the card -->
+    <string name="login_section_title">Mobile verification</string>
+
+    <!-- Mobile field -->
+<!--    <string name="hint_mobile">Mobile number</string>-->
+    <string name="login_mobile_helper">You will receive a one-time password (OTP) on this number.</string>
+
+
+</resources>

@@ -1,0 +1,4 @@
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true" android:color="#1F1F24"/> <!-- light purple track -->
+    <item android:color="@color/ss_divider"/> <!-- light gray track -->
+</selector>

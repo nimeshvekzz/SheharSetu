@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<!--    <style name="OtpBox">-->
+<!--        <item name="android:layout_width">0dp</item>-->
+<!--        <item name="android:layout_height">56dp</item>-->
+<!--        <item name="android:layout_weight">1</item>-->
+<!--        <item name="android:layout_margin">4dp</item>-->
+<!--        <item name="android:gravity">center</item>-->
+<!--        <item name="android:inputType">number</item>-->
+<!--        <item name="android:maxLength">1</item>-->
+<!--        <item name="android:textSize">18sp</item>-->
+<!--        <item name="android:background">@drawable/otp_box_bg</item>-->
+<!--    </style>-->
+
+
+    <style name="Rounded16">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+
+
+    <style name="SheharToggleButton" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="android:minHeight">0dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="iconPadding">0dp</item>
+
+        <!-- square look -->
+        <item name="cornerRadius">0dp</item>
+
+        <!-- colors -->
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/toggle_text_tint</item>
+        <item name="backgroundTint">@color/toggle_bg_tint</item>
+        <item name="strokeColor">@color/toggle_stroke_tint</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="rippleColor">@color/toggle_ripple</item>
+    </style>
+
+    <!-- Left/Right edges भी square (0dp) -->
+    <style name="ShapeSquareLeft">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">0dp</item>
+    </style>
+    <style name="ShapeSquareRight">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">0dp</item>
+    </style>
+
+    <style name="ShapePill">
+        <item name="cornerSize">28dp</item>
+    </style>
+
+
+    <style name="OtpBox" parent="@android:style/Widget.EditText">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_margin">4dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:background">@drawable/bg_otp_box</item>
+        <item name="android:inputType">number</item>
+        <item name="android:maxLength">1</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/ss_on_surface</item>
+        <item name="android:importantForAutofill">no</item>
+    </style>
+
+    <style name="ShapeCircle">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+</resources>

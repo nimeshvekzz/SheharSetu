@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Base soft background -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/colorBackgroundSoft"/>
+        </shape>
+    </item>
+
+    <!-- Top-right light highlight -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="800dp"
+                android:centerX="1"
+                android:centerY="0"
+                android:startColor="@color/colorPrimaryLight"
+                android:centerColor="@color/colorBackgroundSoft"
+                android:endColor="@android:color/transparent"/>
+        </shape>
+    </item>
+
+    <!-- Bottom-left soft green wash -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="900dp"
+                android:centerX="0"
+                android:centerY="1"
+                android:startColor="@color/colorPrimaryMedium"
+                android:centerColor="@color/colorBackgroundSoft"
+                android:endColor="@android:color/transparent"/>
+        </shape>
+    </item>
+
+</layer-list>

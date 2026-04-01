@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <!-- Splash gradient base background -->
+    <color name="splash_bg">#1E7BB6</color> <!-- Blue background; change if needed -->
+    <color name="input_bg">#0FFFFFFF</color>      <!-- ~6% white -->
+    <color name="input_stroke">#40FFFFFF</color>  <!-- 25% white -->
+
+    <color name="lavender_200">#D8C8FF</color>
+    <color name="greenPrimary">#4CAF50</color>     <!-- Main theme green -->
+    <color name="greenChipBg">#E8F5E9</color>     <!-- Light background for chips -->
+            <!-- Solid white -->
+
+
+    <color name="iw_primary">#6C5CE7</color>      <!-- your purple -->
+    
+    <!-- Theme color variants - greenish to match primary theme -->
+    <color name="colorPrimaryVariant">#7A8D70</color> <!-- Darker greenish -->
+    <color name="colorSurfaceVariant">#E8EDE4</color> <!-- Light greenish surface -->
+    <color name="colorBackgroundSoft">#FAFCF8</color> <!-- Soft off-white for cards -->
+    
+    <color name="iw_onPrimary">#FFFFFF</color>
+    <color name="iw_secondary">#9F7AEA</color>    <!-- lighter purple -->
+    <color name="iw_surface">#111014</color>      <!-- dark surface seen in screenshot -->
+    <color name="iw_onSurface">#EAE6F7</color>
+    <color name="iw_outline">#3B3742</color>
+    <color name="iw_tonal">#CDB7FF</color>        <!-- for tonal buttons/switch track -->
+
+    <!-- Inputs -->
+    <color name="iw_text_hint">#AAEAE6F7</color>
+    <color name="iw_divider">#332C35</color>
+    <color name="iw_success">#22C55E</color>
+    <!-- Optional: secondary shades -->
+    <color name="greenDark">#388E3C</color>
+    <color name="greenLight">#C8E6C9</color>
+
+
+    <color name="primary_alpha_40">#6696A78D</color> <!-- 40% alpha of greenish primary -->
+    <color name="surface_alpha_07">#1196A78D</color> <!-- 7% alpha of greenish primary -->
+
+
+    <!-- Search icon tints -->
+    <color name="search_icon_idle">#B3FFFFFF</color>  <!-- 70% white -->
+    <color name="search_icon_active">#FFFFFFFF</color>
+
+    <color name="brand_blue">#1976D2</color>
+    <color name="brand_green">#1DB954</color>
+    <color name="card_stroke">#33000000</color>
+    <color name="royalBlue">#4169E1</color>
+    <!-- Toggle colors -->
+    <color name="mint">#00E0A4</color>
+    <color name="mint_dark_text">#000000</color>
+    <color name="mint_text_unselected">#FF666666</color>
+
+    <color name="ss_primary">#7C4DFF</color>        <!-- main purple -->
+    <color name="ss_primary_tonal">#E7DDFF</color>  <!-- lighter purple for tonal buttons -->
+    <color name="ss_on_primary">#FFFFFF</color>     <!-- text on primary -->
+
+    <color name="ss_surface">#FFFFFF</color>        <!-- screen background -->
+    <color name="ss_on_surface">#111111</color>     <!-- normal text -->
+    <color name="ss_hint">#99000000</color>         <!-- hint / helper -->
+    <color name="ss_divider">#14000000</color>
+
+    <color name="ss_translucent_white">#F2FFFFFF</color>
+    <color name="ss_alert_red">#E53935</color>
+    <color name="drawerSurface">#1E1E24</color>
+    <color name="nav_ripple">#22FFFFFF</color>
+
+
+
+
+
+
+
+    <!-- Premium Colors (Professional Coral & Teal) -->
+    <color name="coral_primary">#E67E22</color> <!-- Professional warm orange-coral -->
+    <color name="coral_dark">#D35400</color>
+    <color name="coral_light">#F39C12</color>
+    <color name="teal_premium">#16A085</color> <!-- Sophisticated teal -->
+    
+    <!-- Sophisticated Neutrals (Updated to new color system) -->
+    <color name="premium_bg">#F7F9F9</color>
+    <color name="premium_surface">#FFFFFF</color>
+    <color name="premium_text_main">#1B1F24</color> <!-- Deep navy-grey text -->
+    <color name="premium_text_sub">#6B7280</color> <!-- Refined subtext -->
+    <color name="premium_divider">#E5E7EB</color>
+    
+    <!-- Glassmorphism/Overlay -->
+    <color name="glass_white">#BCFFFFFF</color>
+    <color name="hero_overlay">#8E1C0D02</color> <!-- Sophisticated deep brown-red overlay -->
+
+    <!-- New Professional Color System -->
+    <color name="colorPrimary">#195E63</color>
+    <color name="colorPrimaryDark">#063940</color>
+    <color name="colorSecondary">#3E838C</color>
+    <color name="colorAccent">#2EC4B6</color>
+    <color name="accentGreen">#16B381</color>
+    
+    <color name="colorPrimaryMedium">#EB984E</color>
+    <color name="colorPrimaryLight">#FAD7A0</color>
+
+    <color name="colorBackground">#F7F9F9</color>
+    <color name="colorSurface">#FFFFFF</color>
+    
+    <color name="colorTextPrimary">#1B1F24</color>
+    <color name="colorTextSecondary">#6B7280</color>
+    
+    <color name="colorBorder">#E5E7EB</color>
+    <color name="colorDivider">#E5E7EB</color>
+    
+    <color name="colorError">#EF4444</color>
+    <color name="colorSuccess">#22C55E</color>
+    
+    <!-- Glass Background for Forms -->
+    <color name="colorGlass">#CCFFFFFF</color>          <!-- Semi-transparent White -->
+
+    <!-- Status bar color for splash -->
+    <color name="splashStatusBar">#B6CEB4</color>
+
+
+    <!-- Brand primary button color -->
+<!--    <color name="brand_green">#00B894</color> &lt;!&ndash; adjust to your theme &ndash;&gt;-->
+
+<!--    &lt;!&ndash; Surface text color used inside card &ndash;&gt;-->
+<!--    <color name="ss_on_surface">#1F2933</color>-->
+
+<!--    &lt;!&ndash; Hint / secondary text color &ndash;&gt;-->
+<!--    <color name="ss_hint">#8895A7</color>-->
+
+    <!-- Ripple for light buttons -->
+    <color name="ss_ripple_light">#33FFFFFF</color>
+    <color name="whatsapp_green">#25D366</color>
+</resources>

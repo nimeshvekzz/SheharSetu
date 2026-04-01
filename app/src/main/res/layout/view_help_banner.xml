@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="60dp"
+    android:foreground="?attr/selectableItemBackground"
+    app:cardBackgroundColor="@android:color/transparent"
+    app:cardUseCompatPadding="false"
+    app:cardElevation="0dp"
+    app:strokeWidth="0dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_vertical"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:background="@drawable/bg_glass_banner">
+
+        <!-- LEFT: Post (paper-plane) in green circle -->
+        <ImageButton
+            android:id="@+id/btnPost"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_circle_green"
+            android:contentDescription="@string/post_ad"
+            android:src="@drawable/ic_send_24"
+            android:padding="10dp"
+            android:scaleType="centerInside"
+            app:tint="@android:color/white" />
+
+        <!-- CENTER: Big sliding marquee -->
+        <TextView
+            android:id="@+id/tvMarquee"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Need help? Contact support"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:textColor="#D32F2F"
+            android:ellipsize="marquee"
+            android:marqueeRepeatLimit="marquee_forever"
+            android:singleLine="true"
+            android:paddingVertical="4dp"/>
+
+        <!-- RIGHT: Help (?) in green circle -->
+        <ImageButton
+            android:id="@+id/btnHelp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_circle_green"
+            android:contentDescription="@string/help"
+            android:src="@drawable/ic_help_24"
+            android:padding="10dp"
+            android:scaleType="centerInside"
+            app:tint="@android:color/white" />
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Green themed sky gradient -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:startColor="#7A8D70"
+                android:centerColor="#96A78D"
+                android:endColor="#B6CEB4"
+                android:angle="270"/>
+        </shape>
+    </item>
+    
+    <!-- Original image as overlay (keeps the buildings/village) -->
+    <item>
+        <bitmap
+            android:src="@drawable/hedar2"
+            android:gravity="fill"
+            android:tileMode="disabled"/>
+    </item>
+</layer-list>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Outer target + crosshair -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="
+            M12,8
+            a4,4 0 0,0 -4,4
+            a4,4 0 0,0 4,4
+            a4,4 0 0,0 4,-4
+            a4,4 0 0,0 -4,-4z
+
+            M20,11h-2.1
+            a6.01,6.01 0 0,0 -4.9,-4.9V4h-2v2.1
+            A6.01,6.01 0 0,0 6.1,11H4v2h2.1
+            a6.01,6.01 0 0,0 4.9,4.9V20h2v-2.1
+            a6.01,6.01 0 0,0 4.9,-4.9H20z"/>
+</vector>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_marginTop="12dp">
+
+    <TextView
+        android:id="@+id/tvLabel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Accept Terms"
+        android:textStyle="bold"
+        android:textSize="15sp"
+        android:textColor="@color/colorTextPrimary"
+        android:paddingBottom="2dp"/>
+
+    <androidx.appcompat.widget.AppCompatCheckBox
+        android:id="@+id/cb"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="You must accept terms to continue"
+        android:textColor="@color/colorTextPrimary"
+        app:buttonTint="@color/checkbox_tint"/>
+
+</LinearLayout>

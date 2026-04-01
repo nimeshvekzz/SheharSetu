@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Base vertical gradient using your Teal palette -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="@color/colorSecondary"
+                android:endColor="@color/colorPrimary" /> <!-- Sophisticated Teal Gradient -->
+        </shape>
+    </item>
+
+    <!-- Soft big circle top-right (white, low opacity) -->
+    <item
+        android:gravity="top|end"
+        android:right="-90dp"
+        android:top="-120dp">
+        <shape android:shape="oval">
+            <size
+                android:width="260dp"
+                android:height="260dp" />
+            <solid android:color="#20FFFFFF" />
+        </shape>
+    </item>
+
+    <!-- Soft big circle bottom-left (white, low opacity) -->
+    <item
+        android:gravity="bottom|start"
+        android:left="-110dp"
+        android:bottom="-130dp">
+        <shape android:shape="oval">
+            <size
+                android:width="320dp"
+                android:height="320dp" />
+            <solid android:color="#10FFFFFF" />
+        </shape>
+    </item>
+
+    <!-- Subtle horizontal band behind logo area -->
+    <item
+        android:gravity="center_vertical"
+        android:top="80dp"
+        android:bottom="140dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="32dp" />
+            <gradient
+                android:type="linear"
+                android:angle="0"
+                android:startColor="#00FFFFFF"
+                android:centerColor="#10FFFFFF"
+                android:endColor="#00FFFFFF" />
+        </shape>
+    </item>
+
+</layer-list>

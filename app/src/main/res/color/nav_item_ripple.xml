@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- जब pressed/checked होगा तब हल्का grey ripple -->
+    <item android:color="#22000000" android:state_pressed="true"/>
+    <item android:color="#22000000" android:state_checked="true"/>
+    <!-- बाकी default transparent -->
+    <item android:color="@android:color/transparent"/>
+</selector>

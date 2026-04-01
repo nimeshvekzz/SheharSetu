@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+
+    <!-- Base config for all domains -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Hostinger domain config -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">magenta-owl-444153.hostingersite.com</domain>
+        <domain includeSubdomains="true">hostingersite.com</domain>
+        <trust-anchors>
+            <!-- Trust system and user certificates -->
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </domain-config>
+
+    <!-- Debug override to allow debugging with Charles/Fiddler etc -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+
+</network-security-config>

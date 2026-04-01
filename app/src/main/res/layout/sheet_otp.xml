@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_otp_sheet"
+    android:padding="20dp">
+
+    <!-- Header row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Verify Phone"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:textColor="@color/ss_on_surface"
+            android:letterSpacing="0.02"
+            android:maxLines="1"/>
+
+        <ImageButton
+            android:id="@+id/btnClose"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:contentDescription="Close"
+            app:tint="@color/ss_hint" />
+    </LinearLayout>
+
+    <!-- Subtitle: where OTP sent -->
+    <TextView
+        android:id="@+id/tvMobile"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="OTP sent to +91 XXXXXXXX"
+        android:textSize="14sp"
+        android:textColor="@color/ss_hint"
+        android:layout_marginTop="6dp"/>
+
+    <!-- 6 digit boxes -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginTop="18dp"
+        android:weightSum="6">
+
+        <EditText
+            android:id="@+id/d1"
+
+            style="@style/OtpBox" />
+
+        <EditText
+            android:id="@+id/d2"
+            style="@style/OtpBox" />
+
+        <EditText
+            android:id="@+id/d3"
+            style="@style/OtpBox" />
+
+        <EditText
+            android:id="@+id/d4"
+            style="@style/OtpBox" />
+
+        <EditText
+            android:id="@+id/d5"
+            style="@style/OtpBox" />
+
+        <EditText
+            android:id="@+id/d6"
+            style="@style/OtpBox" />
+    </LinearLayout>
+
+    <!-- Timer + Resend -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="12dp">
+
+        <TextView
+            android:id="@+id/tvTimer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text=""
+            android:textColor="@color/ss_hint"
+            android:textSize="13sp"/>
+
+        <TextView
+            android:id="@+id/tvResend"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Resend OTP"
+            android:textStyle="bold"
+            android:enabled="false"
+            android:textSize="13sp"
+            android:textColor="@color/otp_resend_color"/>
+    </LinearLayout>
+
+    <!-- Verify button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnVerify"
+        style="@style/Widget.Material3.Button"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="16dp"
+        android:text="Verify"
+        android:textColor="@android:color/white"
+        android:backgroundTint="@color/colorPrimary"
+        app:cornerRadius="16dp"/>
+</LinearLayout>
