@@ -6,28 +6,32 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.view.View;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.card.MaterialCardView;
+import com.infowave.sheharsetu.Adapter.ContactSupportAdapter;
 import com.infowave.sheharsetu.Adapter.I18n;
 import com.infowave.sheharsetu.Adapter.LanguageManager;
 import com.infowave.sheharsetu.core.SessionManager;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class ContactUsActivity extends AppCompatActivity {
 
     private MaterialToolbar topBar;
-    private MaterialCardView cardEmail, cardPhone, cardWhatsapp;
-    private TextView tvEmailValue, tvPhoneValue, tvWhatsappValue;
+    private RecyclerView recyclerSupport;
 
-    // Edit these values only here
-    private static final String SUPPORT_EMAIL   = "support@sheharsetu.com";
-    private static final String SUPPORT_PHONE   = "+916354355617"; // full number with country code
-    private static final String WHATSAPP_NUMBER = "+916354355617"; // same as above or different
+    private TextView tvPageTitle, tvPageSubtitle, tvHeading, tvSubHeading, tvResponseTitle, tvResponseNote;
+
+    private static final String SUPPORT_EMAIL = "support@sheharsetu.com";
+    private static final String SUPPORT_PHONE = "+916354355617";
+    private static final String WHATSAPP_NUMBER = "+916354355617";
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -43,43 +47,77 @@ public class ContactUsActivity extends AppCompatActivity {
         bindViews();
         setupToolbar();
         setupTexts();
-        setupClicks();
+        setupRecycler();
     }
 
     private void bindViews() {
-        topBar         = findViewById(R.id.topBar);
-        cardEmail      = findViewById(R.id.cardEmail);
-        cardPhone      = findViewById(R.id.cardPhone);
-        cardWhatsapp   = findViewById(R.id.cardWhatsapp);
-        tvEmailValue   = findViewById(R.id.tvEmailValue);
-        tvPhoneValue   = findViewById(R.id.tvPhoneValue);
-        tvWhatsappValue= findViewById(R.id.tvWhatsappValue);
+        topBar = findViewById(R.id.topBar);
+        recyclerSupport = findViewById(R.id.recyclerSupport);
+
+        tvPageTitle = findViewById(R.id.tvPageTitle);
+        tvPageSubtitle = findViewById(R.id.tvPageSubtitle);
+        tvHeading = findViewById(R.id.tvHeading);
+        tvSubHeading = findViewById(R.id.tvSubHeading);
+        tvResponseTitle = findViewById(R.id.tvResponseTitle);
+        tvResponseNote = findViewById(R.id.tvResponseNote);
     }
 
     private void setupToolbar() {
-        if (topBar != null) {
-            topBar.setNavigationOnClickListener(v -> onBackPressed());
-            topBar.setTitle(I18n.t(this, "Contact & Support"));
-        }
+        topBar.setTitle(I18n.t(this, "Contact & Support"));
+        topBar.setNavigationOnClickListener(v -> getOnBackPressedDispatcher().onBackPressed());
     }
 
     private void setupTexts() {
-        tvEmailValue.setText(SUPPORT_EMAIL);
-        // For display you may want spaces – but keep raw constants for intents
-        tvPhoneValue.setText("+91 98765 43210");
-        tvWhatsappValue.setText("+91 98765 43210");
+        tvPageTitle.setText(I18n.t(this, "Need help with Shehar Setu?"));
+        tvPageSubtitle.setText(I18n.t(this, "Choose the fastest support option for your issue. We are here to help you quickly and clearly."));
+        tvHeading.setText(I18n.t(this, "We are here to help"));
+        tvSubHeading.setText(I18n.t(this, "Connect with our team through email, call, or WhatsApp for fast support."));
+        tvResponseTitle.setText(I18n.t(this, "Support Hours"));
+        tvResponseNote.setText(I18n.t(this, "10:00 AM – 7:00 PM • Monday to Saturday"));
     }
 
-    private void setupClicks() {
+    private void setupRecycler() {
+        recyclerSupport.setLayoutManager(new LinearLayoutManager(this));
+        recyclerSupport.setNestedScrollingEnabled(false);
 
-        // Email
-        cardEmail.setOnClickListener(v -> openEmail());
+        List<ContactSupportAdapter.SupportItem> items = new ArrayList<>();
+        items.add(new ContactSupportAdapter.SupportItem(
+                I18n.t(this, "Email Support"),
+                SUPPORT_EMAIL,
+                I18n.t(this, "Best for issue details and screenshots"),
+                I18n.t(this, "Send"),
+                R.drawable.gmail
+        ));
 
-        // Phone
-        cardPhone.setOnClickListener(v -> openDialer(SUPPORT_PHONE));
+        items.add(new ContactSupportAdapter.SupportItem(
+                I18n.t(this, "Call Support"),
+                "+91 63543 55617",
+                I18n.t(this, "Best for urgent help and quick discussion"),
+                I18n.t(this, "Call"),
+                R.drawable.ic_phone_24px
+        ));
 
-        // WhatsApp
-        cardWhatsapp.setOnClickListener(v -> openWhatsApp(WHATSAPP_NUMBER));
+        items.add(new ContactSupportAdapter.SupportItem(
+                I18n.t(this, "WhatsApp Chat"),
+                "+91 63543 55617",
+                I18n.t(this, "Best for fast chat and easy follow-up"),
+                I18n.t(this, "Chat"),
+                R.drawable.ic_whatsapp_24
+        ));
+
+        ContactSupportAdapter adapter = new ContactSupportAdapter(this, items, item -> {
+            String title = item.title.toLowerCase();
+
+            if (title.contains("email")) {
+                openEmail();
+            } else if (title.contains("call")) {
+                openDialer(SUPPORT_PHONE);
+            } else {
+                openWhatsApp(WHATSAPP_NUMBER);
+            }
+        });
+
+        recyclerSupport.setAdapter(adapter);
     }
 
     private void openEmail() {
@@ -87,6 +125,7 @@ public class ContactUsActivity extends AppCompatActivity {
         intent.setData(Uri.parse("mailto:" + SUPPORT_EMAIL));
         intent.putExtra(Intent.EXTRA_EMAIL, new String[]{SUPPORT_EMAIL});
         intent.putExtra(Intent.EXTRA_SUBJECT, "Support - Shehar Setu");
+
         try {
             startActivity(Intent.createChooser(intent, I18n.t(this, "Send email")));
         } catch (ActivityNotFoundException e) {
@@ -97,6 +136,7 @@ public class ContactUsActivity extends AppCompatActivity {
     private void openDialer(String phoneRaw) {
         Intent intent = new Intent(Intent.ACTION_DIAL);
         intent.setData(Uri.parse("tel:" + phoneRaw));
+
         try {
             startActivity(intent);
         } catch (ActivityNotFoundException e) {
@@ -105,7 +145,6 @@ public class ContactUsActivity extends AppCompatActivity {
     }
 
     private void openWhatsApp(String phoneRaw) {
-        // phoneRaw must include country code, e.g. +9198...
         String phone = phoneRaw.replace("+", "").replace(" ", "");
         Uri uri = Uri.parse("https://wa.me/" + phone);
 
@@ -115,12 +154,10 @@ public class ContactUsActivity extends AppCompatActivity {
         try {
             startActivity(intent);
         } catch (ActivityNotFoundException e) {
-            // Fallback: open in browser or show message
             try {
-                Intent browserIntent = new Intent(Intent.ACTION_VIEW, uri);
-                startActivity(browserIntent);
+                startActivity(new Intent(Intent.ACTION_VIEW, uri));
             } catch (ActivityNotFoundException ex) {
-            Toast.makeText(this, I18n.t(this, "WhatsApp is not available."), Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, I18n.t(this, "WhatsApp is not available."), Toast.LENGTH_SHORT).show();
             }
         }
     }
