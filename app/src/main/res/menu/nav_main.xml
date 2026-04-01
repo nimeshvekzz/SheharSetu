@@ -17,7 +17,7 @@
             android:id="@+id/nav_my_ads"
             android:title="My Ads"
             android:icon="@drawable/ic_all_listings"/>
-            
+
         <item
             android:id="@+id/nav_notifications"
             android:title="Notifications"
