@@ -6,11 +6,10 @@
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_contact_us"
+    android:background="#F7FBFA"
     android:fitsSystemWindows="true"
     tools:context=".ContactUsActivity">
 
-    <!-- Top AppBar -->
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -28,18 +27,17 @@
             app:navigationIconTint="@color/colorPrimary"
             app:title="Contact and Support"
             app:titleCentered="true"
-            app:titleTextColor="@color/colorPrimary"/>
+            app:titleTextColor="@color/colorPrimary" />
     </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- Scrollable content -->
     <androidx.core.widget.NestedScrollView
-        android:id="@+id/scrollContact"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true"
-        android:paddingHorizontal="16dp"
+        android:paddingStart="16dp"
         android:paddingTop="8dp"
-        android:paddingBottom="16dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="18dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
@@ -47,318 +45,132 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Section title -->
-            <LinearLayout
+            <TextView
+                android:id="@+id/tvPageTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingHorizontal="4dp"
-                android:paddingTop="4dp"
-                android:paddingBottom="10dp">
+                android:text="Need help with Shehar Setu?"
+                android:textColor="@color/colorPrimary"
+                android:textSize="19sp"
+                android:textStyle="bold" />
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Need help with Shehar Setu?"
-                    android:textStyle="bold"
-                    android:textSize="16sp"
-                    android:textColor="@color/colorPrimary"/>
+            <TextView
+                android:id="@+id/tvPageSubtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Choose the fastest support option for your issue. We are here to help you quickly and clearly."
+                android:textColor="@color/black"
+                android:textSize="13sp"
+                android:lineSpacingExtra="2dp" />
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Choose a support option that suits you best. Our team will respond as soon as possible."
-                    android:textSize="12sp"
-                    android:lineHeight="16sp"
-                    android:textColor="@color/colorPrimaryMedium"/>
-            </LinearLayout>
-
-            <!-- Intro / Brand card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardIntro"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="10dp"
-                app:cardCornerRadius="22dp"
-                app:cardUseCompatPadding="true"
-                app:cardElevation="6dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"
                 app:cardBackgroundColor="@android:color/white"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/colorPrimaryLight">
+                app:cardCornerRadius="24dp"
+                app:cardElevation="4dp"
+                app:strokeColor="@color/colorPrimaryLight"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:padding="16dp">
+                    android:orientation="horizontal"
+                    android:padding="18dp">
 
-                    <FrameLayout
-                        android:layout_width="56dp"
-                        android:layout_height="56dp"
-                        android:background="@drawable/bg_contact_icon_circle">
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="62dp"
+                        android:layout_height="62dp"
+                        app:cardBackgroundColor="@color/colorPrimaryLight"
+                        app:cardCornerRadius="31dp"
+                        app:cardElevation="0dp">
 
                         <ImageView
-                            android:layout_width="54dp"
-                            android:layout_height="54dp"
+                            android:layout_width="30dp"
+                            android:layout_height="30dp"
                             android:layout_gravity="center"
+                            android:contentDescription="@null"
                             android:src="@drawable/ic_about_img"
                             app:tint="@color/colorPrimary" />
-                    </FrameLayout>
+                    </com.google.android.material.card.MaterialCardView>
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
+                        android:layout_marginStart="14dp"
                         android:layout_weight="1"
                         android:orientation="vertical">
 
                         <TextView
                             android:id="@+id/tvHeading"
-                            android:layout_width="match_parent"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="We are here to help"
-                            android:textStyle="bold"
+                            android:textColor="@android:color/black"
                             android:textSize="17sp"
-                            android:textColor="@color/black"/>
+                            android:textStyle="bold" />
 
                         <TextView
                             android:id="@+id/tvSubHeading"
-                            android:layout_width="match_parent"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="Reach our team quickly via email, phone or WhatsApp for any support related to Shehar Setu."
+                            android:text="Connect with our team through email, call, or WhatsApp for fast support."
+                            android:textColor="@color/colorPrimaryMedium"
                             android:textSize="13sp"
-                            android:lineHeight="18sp"
-                            android:textColor="@color/colorPrimaryMedium"/>
+                            android:lineSpacingExtra="2dp" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Email Support -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardEmail"
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerSupport"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="0dp"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardCornerRadius="20dp"
-                app:cardUseCompatPadding="true"
-                app:cardElevation="3dp"
+                android:nestedScrollingEnabled="false"
+                tools:listitem="@layout/item_contact_support" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
                 app:cardBackgroundColor="@android:color/white"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/colorPrimaryLight">
+                app:cardCornerRadius="18dp"
+                app:cardElevation="1dp"
+                app:strokeColor="@color/colorPrimaryLight"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
+                    android:orientation="vertical"
                     android:padding="14dp">
 
-                    <FrameLayout
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:background="@drawable/bg_contact_icon_circle_small">
-
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/gmail"/>
-                    </FrameLayout>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/tvEmailTitle"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="Email Support"
-                            android:textStyle="bold"
-                            android:textSize="14sp"
-                            android:textColor="@color/black"/>
-
-                        <TextView
-                            android:id="@+id/tvEmailValue"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="support@sheharsetu.com"
-                            android:textSize="13sp"
-                            android:textColor="@color/colorPrimary"/>
-                    </LinearLayout>
-
                     <TextView
+                        android:id="@+id/tvResponseTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Send"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/colorPrimaryMedium"/>
+                        android:text="Support Hours"
+                        android:textColor="@android:color/black"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvResponseNote"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="10:00 AM – 7:00 PM • Monday to Saturday"
+                        android:textColor="@color/colorPrimaryMedium"
+                        android:textSize="12sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Phone Support -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardPhone"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="0dp"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardCornerRadius="20dp"
-                app:cardUseCompatPadding="true"
-                app:cardElevation="3dp"
-                app:cardBackgroundColor="@android:color/white"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/colorPrimaryLight">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:padding="14dp">
-
-                    <FrameLayout
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:background="@drawable/bg_contact_icon_circle_small">
-
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_phone_24px"/>
-                    </FrameLayout>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/tvPhoneTitle"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="Call Support"
-                            android:textStyle="bold"
-                            android:textSize="14sp"
-                            android:textColor="@color/black"/>
-
-                        <TextView
-                            android:id="@+id/tvPhoneValue"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="+91 63543 55617"
-                            android:textSize="13sp"
-                            android:textColor="@color/colorPrimary"/>
-                    </LinearLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Call"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/colorPrimaryMedium"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- WhatsApp Support -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardWhatsapp"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="0dp"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardCornerRadius="20dp"
-                app:cardUseCompatPadding="true"
-                app:cardElevation="3dp"
-                app:cardBackgroundColor="@android:color/white"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/colorPrimaryLight">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:padding="14dp">
-
-                    <FrameLayout
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:background="@drawable/bg_contact_icon_circle_small">
-
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_whatsapp_24"/>
-                    </FrameLayout>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/tvWhatsappTitle"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="WhatsApp Chat"
-                            android:textStyle="bold"
-                            android:textSize="14sp"
-                            android:textColor="@color/black"/>
-
-                        <TextView
-                            android:id="@+id/tvWhatsappValue"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="+91 63543 55617"
-                            android:textSize="13sp"
-                            android:textColor="@color/colorPrimary"/>
-                    </LinearLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Chat"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/colorPrimaryMedium"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Small note -->
-            <TextView
-                android:id="@+id/tvResponseNote"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Response window: 10:00 AM – 7:00 PM (Mon–Sat)"
-                android:textSize="11sp"
-                android:textColor="#849784"
-                android:gravity="center"
-                android:paddingTop="4dp"/>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

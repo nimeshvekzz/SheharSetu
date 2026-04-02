@@ -6,11 +6,10 @@
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_about_us"
+    android:background="#F4FAF8"
     android:fitsSystemWindows="true"
     tools:context=".AboutUsActivity">
 
-    <!-- AppBar -->
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -23,21 +22,24 @@
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:background="@android:color/transparent"
-            android:paddingHorizontal="12dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
             app:navigationIcon="@drawable/ic_arrows_24"
             app:navigationIconTint="@color/colorPrimary"
             app:title="About Shehar Setu"
             app:titleCentered="true"
-            app:titleTextColor="@color/colorPrimary"/>
+            app:titleTextColor="@color/colorPrimary" />
     </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- Scroll content -->
     <androidx.core.widget.NestedScrollView
-        android:id="@+id/scrollAbout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true"
-        android:padding="16dp"
+        android:clipToPadding="false"
+        android:paddingStart="16dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="24dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
@@ -45,402 +47,201 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Top brand card -->
-            <com.google.android.material.card.MaterialCardView
+            <TextView
+                android:id="@+id/tvPageTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="14dp"
-                app:cardCornerRadius="18dp"
-                app:cardElevation="4dp"
-                app:cardBackgroundColor="@android:color/white"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/colorPrimaryLight">
+                android:text="Built for local trust, clarity and growth"
+                android:textColor="@android:color/black"
+                android:textSize="22sp"
+                android:textStyle="bold" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:padding="14dp">
-
-                    <FrameLayout
-                        android:layout_width="52dp"
-                        android:layout_height="52dp"
-                        android:background="@drawable/bg_about_icon_circle">
-
-                        <ImageView
-                            android:layout_width="50dp"
-                            android:layout_height="50dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_about_img"
-                            app:tint="@color/colorPrimary" />
-                    </FrameLayout>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/tvHeadingApp"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="Connecting City, Markets and People"
-                            android:textStyle="bold"
-                            android:textSize="16sp"
-                            android:textColor="@color/black"/>
-
-                        <TextView
-                            android:id="@+id/tvSubHeadingApp"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:text="Shehar Setu is your bridge between local buyers, sellers and service providers."
-                            android:textSize="13sp"
-                            android:textColor="@color/colorPrimaryMedium"/>
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- What is Shehar Setu -->
-            <com.google.android.material.card.MaterialCardView
+            <TextView
+                android:id="@+id/tvPageSubtitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="14dp"
-                app:cardCornerRadius="18dp"
-                app:cardElevation="2dp"
+                android:layout_marginTop="6dp"
+                android:lineSpacingExtra="2dp"
+                android:text="Shehar Setu helps people discover, post and connect across local products, services and opportunities through a simpler and more structured experience."
+                android:textColor="@color/colorPrimaryMedium"
+                android:textSize="13sp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardBrand"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:layout_marginBottom="16dp"
                 app:cardBackgroundColor="@android:color/white"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/colorPrimaryLight">
+                app:cardCornerRadius="28dp"
+                app:cardElevation="5dp"
+                app:strokeColor="@color/colorPrimaryLight"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="14dp">
+                    android:padding="18dp">
 
                     <TextView
-                        android:id="@+id/tvAboutTitle"
-                        android:layout_width="match_parent"
+                        android:id="@+id/tvHeroBadge"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="What is Shehar Setu?"
-                        android:textStyle="bold"
-                        android:textSize="15sp"
-                        android:textColor="@color/colorPrimary"/>
+                        android:background="@drawable/bg_about_badge"
+                        android:paddingStart="12dp"
+                        android:paddingTop="5dp"
+                        android:paddingEnd="12dp"
+                        android:paddingBottom="5dp"
+                        android:text="TRUSTED LOCAL PLATFORM"
+                        android:textAllCaps="true"
+                        android:textColor="@color/colorPrimary"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
 
-                    <TextView
-                        android:id="@+id/tvAboutDesc"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:text="Shehar Setu is a local marketplace platform designed to simplify buying, selling and service discovery in your city. From agriculture to services, real estate to daily needs, citizens can post and explore listings in a structured, easy-to-use format."
-                        android:textSize="13sp"
-                        android:lineHeight="18sp"
-                        android:textColor="@color/black"/>
-
-                    <!-- Chips -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="10dp">
-
-                        <TextView
-                            android:id="@+id/tvChipMarketplace"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/bg_about_chip"
-                            android:paddingHorizontal="10dp"
-                            android:paddingVertical="4dp"
-                            android:text="Local Marketplace"
-                            android:textSize="11sp"
-                            android:textColor="@color/colorPrimary"/>
-
-                        <TextView
-                            android:id="@+id/tvChipMultiCategory"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:background="@drawable/bg_about_chip"
-                            android:paddingHorizontal="10dp"
-                            android:paddingVertical="4dp"
-                            android:text="Multi-category"
-                            android:textSize="11sp"
-                            android:textColor="@color/colorPrimary"/>
-
-                        <TextView
-                            android:id="@+id/tvChipDynamicForms"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:background="@drawable/bg_about_chip"
-                            android:paddingHorizontal="10dp"
-                            android:paddingVertical="4dp"
-                            android:text="Dynamic Forms"
-                            android:textSize="11sp"
-                            android:textColor="@color/colorPrimary"/>
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- For Buyers & Sellers -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="14dp"
-                app:cardCornerRadius="18dp"
-                app:cardElevation="2dp"
-                app:cardBackgroundColor="@android:color/white"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/colorPrimaryLight">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="14dp">
-
-                    <!-- Buyers -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <ImageView
-                            android:layout_width="22dp"
-                            android:layout_height="22dp"
-                            android:src="@drawable/ic_about_buyer"
-                            app:tint="@color/colorPrimary" />
-
-                        <TextView
-                            android:id="@+id/tvBuyersTitle"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:layout_weight="1"
-                            android:text="For Buyers"
-                            android:textStyle="bold"
-                            android:textSize="14sp"
-                            android:textColor="@color/black"/>
-                    </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/tvBuyersPoints"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="- Discover nearby products and services.\n- Filter by category, subcategory and condition.\n- View clear, structured information with localized language support."
-                        android:textSize="13sp"
-                        android:lineHeight="18sp"
-                        android:textColor="@color/black"/>
-
-                    <!-- Divider -->
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:layout_marginVertical="10dp"
-                        android:background="@drawable/divider_about_us"/>
-
-                    <!-- Sellers -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <ImageView
-                            android:layout_width="22dp"
-                            android:layout_height="22dp"
-                            android:src="@drawable/ic_about_seller"
-                            app:tint="@color/colorPrimary"/>
-
-                        <TextView
-                            android:id="@+id/tvSellersTitle"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:layout_weight="1"
-                            android:text="For Sellers and Service Providers"
-                            android:textStyle="bold"
-                            android:textSize="14sp"
-                            android:textColor="@color/black"/>
-                    </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/tvSellersPoints"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="- Post detailed listings with category-specific dynamic forms.\n- Highlight condition, price, quantity, location and images.\n- Reach relevant local users without complexity."
-                        android:textSize="13sp"
-                        android:lineHeight="18sp"
-                        android:textColor="@color/black"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Vision & Values -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="14dp"
-                app:cardCornerRadius="18dp"
-                app:cardElevation="2dp"
-                app:cardBackgroundColor="@android:color/white"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/colorPrimaryLight">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="14dp">
-
-                    <TextView
-                        android:id="@+id/tvVisionTitle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Our Vision"
-                        android:textStyle="bold"
-                        android:textSize="15sp"
-                        android:textColor="@color/colorPrimary"/>
-
-                    <TextView
-                        android:id="@+id/tvVisionDesc"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:text="To become the trusted digital bridge of every city – connecting citizens, markets and services with clarity, transparency and simplicity."
-                        android:textSize="13sp"
-                        android:lineHeight="18sp"
-                        android:textColor="@color/black"/>
-
-                    <!-- Key values row -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
+                        android:layout_marginTop="14dp"
+                        android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:gravity="center_horizontal">
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="66dp"
+                            android:layout_height="66dp"
+                            app:cardBackgroundColor="@color/colorPrimaryLight"
+                            app:cardCornerRadius="33dp"
+                            app:cardElevation="0dp">
 
                             <ImageView
-                                android:layout_width="22dp"
-                                android:layout_height="22dp"
-                                android:src="@drawable/ic_about_secure"
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:layout_gravity="center"
+                                android:contentDescription="@null"
+                                android:src="@drawable/ic_about_img"
                                 app:tint="@color/colorPrimary" />
-
-                            <TextView
-                                android:id="@+id/tvValueStructured"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text="Structured"
-                                android:textSize="11sp"
-                                android:textColor="@color/black"/>
-                        </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
 
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="14dp"
                             android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:gravity="center_horizontal">
-
-                            <ImageView
-                                android:layout_width="22dp"
-                                android:layout_height="22dp"
-                                android:src="@drawable/ic_about_locale"
-                                app:tint="@color/colorPrimary" />
+                            android:orientation="vertical">
 
                             <TextView
-                                android:id="@+id/tvValueLocalFirst"
-                                android:layout_width="wrap_content"
+                                android:id="@+id/tvHeadingApp"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text="Local-first"
-                                android:textSize="11sp"
-                                android:textColor="@color/black"/>
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:gravity="center_horizontal">
-
-                            <ImageView
-                                android:layout_width="22dp"
-                                android:layout_height="22dp"
-                                android:src="@drawable/ic_about_support"
-                                app:tint="@color/colorPrimary" />
+                                android:text="Connecting City, Markets and People"
+                                android:textColor="@android:color/black"
+                                android:textSize="18sp"
+                                android:textStyle="bold" />
 
                             <TextView
-                                android:id="@+id/tvValueSupportive"
-                                android:layout_width="wrap_content"
+                                android:id="@+id/tvSubHeadingApp"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
-                                android:text="Supportive"
-                                android:textSize="11sp"
-                                android:textColor="@color/black"/>
+                                android:lineSpacingExtra="2dp"
+                                android:text="A local-first marketplace for buyers, sellers and service providers."
+                                android:textColor="@color/colorPrimaryMedium"
+                                android:textSize="13sp" />
                         </LinearLayout>
                     </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_about_stat_chip"
+                            android:paddingStart="12dp"
+                            android:paddingTop="7dp"
+                            android:paddingEnd="12dp"
+                            android:paddingBottom="7dp"
+                            android:text="Local-first"
+                            android:textColor="@color/colorPrimary"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_about_stat_chip"
+                            android:paddingStart="12dp"
+                            android:paddingTop="7dp"
+                            android:paddingEnd="12dp"
+                            android:paddingBottom="7dp"
+                            android:text="Structured"
+                            android:textColor="@color/colorPrimary"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_about_stat_chip"
+                            android:paddingStart="12dp"
+                            android:paddingTop="7dp"
+                            android:paddingEnd="12dp"
+                            android:paddingBottom="7dp"
+                            android:text="Supportive"
+                            android:textColor="@color/colorPrimary"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Contact / Support -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerAboutSections"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                tools:listitem="@layout/item_about_section" />
+
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="18dp"
-                app:cardElevation="2dp"
+                android:layout_marginTop="2dp"
                 app:cardBackgroundColor="@android:color/white"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/colorPrimaryLight">
+                app:cardCornerRadius="22dp"
+                app:cardElevation="1dp"
+                app:strokeColor="@color/colorPrimaryLight"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="14dp">
+                    android:padding="16dp">
 
                     <TextView
-                        android:id="@+id/tvSupportTitle"
-                        android:layout_width="match_parent"
+                        android:id="@+id/tvFooterTitle"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Support and Feedback"
-                        android:textStyle="bold"
+                        android:text="Designed to feel clear and trustworthy"
+                        android:textColor="@android:color/black"
                         android:textSize="15sp"
-                        android:textColor="@color/colorPrimary"/>
+                        android:textStyle="bold" />
 
                     <TextView
-                        android:id="@+id/tvSupportDesc"
-                        android:layout_width="match_parent"
+                        android:id="@+id/tvFooterDesc"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:text="For any issues, suggestions or feedback related to Shehar Setu, you can reach out to the development team."
-                        android:textSize="13sp"
-                        android:lineHeight="18sp"
-                        android:textColor="@color/black"/>
-
-                    <TextView
-                        android:id="@+id/tvSupportEmail"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="Email: support@sheharsetu.com"
-                        android:textSize="13sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/colorPrimary"/>
+                        android:layout_marginTop="5dp"
+                        android:lineSpacingExtra="2dp"
+                        android:text="Clean structure, clear information and local relevance help users browse and post with more confidence."
+                        android:textColor="@color/colorPrimaryMedium"
+                        android:textSize="12sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

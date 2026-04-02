@@ -6,28 +6,24 @@ import android.widget.TextView;
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.infowave.sheharsetu.Adapter.AboutSectionAdapter;
 import com.infowave.sheharsetu.Adapter.I18n;
 import com.infowave.sheharsetu.Adapter.LanguageManager;
 import com.infowave.sheharsetu.core.SessionManager;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
 public class AboutUsActivity extends AppCompatActivity {
 
     private MaterialToolbar topBar;
+    private RecyclerView recyclerAboutSections;
 
-    // Text views
-    private TextView tvHeadingApp, tvSubHeadingApp;
-    private TextView tvAboutTitle, tvAboutDesc;
-    private TextView tvChipMarketplace, tvChipMultiCategory, tvChipDynamicForms;
-    private TextView tvBuyersTitle, tvBuyersPoints;
-    private TextView tvSellersTitle, tvSellersPoints;
-    private TextView tvVisionTitle, tvVisionDesc;
-    private TextView tvValueStructured, tvValueLocalFirst, tvValueSupportive;
-    private TextView tvSupportTitle, tvSupportDesc, tvSupportEmail;
+    private TextView tvPageTitle, tvPageSubtitle, tvHeadingApp, tvSubHeadingApp, tvFooterTitle, tvFooterDesc;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -42,133 +38,93 @@ public class AboutUsActivity extends AppCompatActivity {
 
         bindViews();
         setupToolbar();
-        prefetchAndSetupTexts();
+        setupTexts();
+        setupRecycler();
     }
 
     private void bindViews() {
         topBar = findViewById(R.id.topBar);
+        recyclerAboutSections = findViewById(R.id.recyclerAboutSections);
 
-        tvHeadingApp        = findViewById(R.id.tvHeadingApp);
-        tvSubHeadingApp     = findViewById(R.id.tvSubHeadingApp);
-
-        tvAboutTitle        = findViewById(R.id.tvAboutTitle);
-        tvAboutDesc         = findViewById(R.id.tvAboutDesc);
-        tvChipMarketplace   = findViewById(R.id.tvChipMarketplace);
-        tvChipMultiCategory = findViewById(R.id.tvChipMultiCategory);
-        tvChipDynamicForms  = findViewById(R.id.tvChipDynamicForms);
-
-        tvBuyersTitle       = findViewById(R.id.tvBuyersTitle);
-        tvBuyersPoints      = findViewById(R.id.tvBuyersPoints);
-        tvSellersTitle      = findViewById(R.id.tvSellersTitle);
-        tvSellersPoints     = findViewById(R.id.tvSellersPoints);
-
-        tvVisionTitle       = findViewById(R.id.tvVisionTitle);
-        tvVisionDesc        = findViewById(R.id.tvVisionDesc);
-        tvValueStructured   = findViewById(R.id.tvValueStructured);
-        tvValueLocalFirst   = findViewById(R.id.tvValueLocalFirst);
-        tvValueSupportive   = findViewById(R.id.tvValueSupportive);
-
-        tvSupportTitle      = findViewById(R.id.tvSupportTitle);
-        tvSupportDesc       = findViewById(R.id.tvSupportDesc);
-        tvSupportEmail      = findViewById(R.id.tvSupportEmail);
+        tvPageTitle = findViewById(R.id.tvPageTitle);
+        tvPageSubtitle = findViewById(R.id.tvPageSubtitle);
+        tvHeadingApp = findViewById(R.id.tvHeadingApp);
+        tvSubHeadingApp = findViewById(R.id.tvSubHeadingApp);
+        tvFooterTitle = findViewById(R.id.tvFooterTitle);
+        tvFooterDesc = findViewById(R.id.tvFooterDesc);
     }
 
     private void setupToolbar() {
-        if (topBar != null) {
-            topBar.setNavigationOnClickListener(v -> onBackPressed());
-            topBar.setTitle(I18n.t(this, "About Shehar Setu"));
-        }
+        topBar.setTitle(I18n.t(this, "About Shehar Setu"));
+        topBar.setNavigationOnClickListener(v -> getOnBackPressedDispatcher().onBackPressed());
     }
 
-    private void prefetchAndSetupTexts() {
-        List<String> keys = Arrays.asList(
-                "About Shehar Setu",
-                "Connecting City, Markets and People",
-                "Shehar Setu is your bridge between local buyers, sellers and service providers.",
-                "What is Shehar Setu?",
-                "Shehar Setu is a local marketplace platform designed to simplify buying, " +
-                        "selling and service discovery in your city. From agriculture to services, " +
-                        "real estate to daily needs, citizens can post and explore listings in a " +
-                        "structured, easy-to-use format.",
-                "Local Marketplace", "Multi-category", "Dynamic Forms",
-                "For Buyers",
-                "- Discover nearby products and services.\n" +
-                        "- Filter by category, subcategory and condition.\n" +
-                        "- View clear, structured information with localized language support.",
-                "For Sellers and Service Providers",
-                "- Post detailed listings with category-specific dynamic forms.\n" +
-                        "- Highlight condition, price, quantity, location and images.\n" +
-                        "- Reach relevant local users without complexity.",
-                "Our Vision",
-                "To become the trusted digital bridge of every city – connecting citizens, " +
-                        "markets and services with clarity, transparency and simplicity.",
-                "Structured", "Local-first", "Supportive",
-                "Support and Feedback",
-                "For any issues, suggestions or feedback related to Shehar Setu, you can " +
-                        "reach out to the development team.",
-                "Email: support@sheharsetu.com"
-        );
-        I18n.prefetch(this, keys, () -> {
-            setupToolbar();
-            setupTexts();
-        }, () -> setupTexts());
-    }
-
-    /**
-     * All visible text for the About screen is defined here,
-     * wrapped in I18n.t() for runtime translation.
-     */
     private void setupTexts() {
-
-        // Hero section
+        tvPageTitle.setText(I18n.t(this, "A modern local marketplace built for clarity"));
+        tvPageSubtitle.setText(I18n.t(this, "Shehar Setu connects people, local businesses, and services through a simple and well-structured experience."));
         tvHeadingApp.setText(I18n.t(this, "Connecting City, Markets and People"));
-        tvSubHeadingApp.setText(I18n.t(this,
-                "Shehar Setu is your bridge between local buyers, sellers and service providers."
+        tvSubHeadingApp.setText(I18n.t(this, "Shehar Setu is your bridge between local buyers, sellers, and service providers."));
+        tvFooterTitle.setText(I18n.t(this, "Built for trust, clarity and local growth"));
+        tvFooterDesc.setText(I18n.t(this, "A cleaner interface and structured listing flow help users browse and post with confidence."));
+    }
+
+    private void setupRecycler() {
+        recyclerAboutSections.setLayoutManager(new LinearLayoutManager(this));
+        recyclerAboutSections.setNestedScrollingEnabled(false);
+
+        List<AboutSectionAdapter.SectionItem> items = new ArrayList<>();
+
+        items.add(new AboutSectionAdapter.SectionItem(
+                R.drawable.ic_about_img,
+                I18n.t(this, "Platform"),
+                I18n.t(this, "What is Shehar Setu?"),
+                I18n.t(this, "Local marketplace made simple"),
+                I18n.t(this, "Shehar Setu is a local marketplace platform designed to simplify buying, selling, and service discovery in your city. From agriculture to services, real estate to daily needs, users can post and explore listings in a structured and easy-to-use format."),
+                null
         ));
 
-        // About section
-        tvAboutTitle.setText(I18n.t(this, "What is Shehar Setu?"));
-        tvAboutDesc.setText(I18n.t(this,
-                "Shehar Setu is a local marketplace platform designed to simplify buying, " +
-                        "selling and service discovery in your city. From agriculture to services, " +
-                        "real estate to daily needs, citizens can post and explore listings in a " +
-                        "structured, easy-to-use format."
-        ));
-        tvChipMarketplace.setText(I18n.t(this, "Local Marketplace"));
-        tvChipMultiCategory.setText(I18n.t(this, "Multi-category"));
-        tvChipDynamicForms.setText(I18n.t(this, "Dynamic Forms"));
-
-        // Buyers / Sellers
-        tvBuyersTitle.setText(I18n.t(this, "For Buyers"));
-        tvBuyersPoints.setText(I18n.t(this,
-                "- Discover nearby products and services.\n" +
-                        "- Filter by category, subcategory and condition.\n" +
-                        "- View clear, structured information with localized language support."
+        items.add(new AboutSectionAdapter.SectionItem(
+                R.drawable.ic_about_buyer,
+                I18n.t(this, "For Buyers"),
+                I18n.t(this, "Discover nearby opportunities"),
+                null,
+                I18n.t(this, "Buyers can quickly explore nearby products and services with better filtering and more structured details."),
+                I18n.t(this,
+                        "• Discover nearby products and services\n" +
+                                "• Filter by category, subcategory and condition\n" +
+                                "• View clear, structured information with localized language support")
         ));
 
-        tvSellersTitle.setText(I18n.t(this, "For Sellers and Service Providers"));
-        tvSellersPoints.setText(I18n.t(this,
-                "- Post detailed listings with category-specific dynamic forms.\n" +
-                        "- Highlight condition, price, quantity, location and images.\n" +
-                        "- Reach relevant local users without complexity."
+        items.add(new AboutSectionAdapter.SectionItem(
+                R.drawable.ic_about_seller,
+                I18n.t(this, "For Sellers"),
+                I18n.t(this, "Post with confidence"),
+                null,
+                I18n.t(this, "Sellers and service providers get a guided listing experience with category-based forms and richer details."),
+                I18n.t(this,
+                        "• Post detailed listings with dynamic forms\n" +
+                                "• Highlight price, quantity, condition, location and images\n" +
+                                "• Reach relevant local users without complexity")
         ));
 
-        // Vision & values
-        tvVisionTitle.setText(I18n.t(this, "Our Vision"));
-        tvVisionDesc.setText(I18n.t(this,
-                "To become the trusted digital bridge of every city – connecting citizens, " +
-                        "markets and services with clarity, transparency and simplicity."
+        items.add(new AboutSectionAdapter.SectionItem(
+                R.drawable.ic_about_secure,
+                I18n.t(this, "Vision"),
+                I18n.t(this, "Our Vision"),
+                I18n.t(this, "Trusted digital bridge for every city"),
+                I18n.t(this, "To become the trusted digital bridge of every city by connecting citizens, markets, and services with clarity, transparency, and simplicity."),
+                I18n.t(this, "• Structured\n• Local-first\n• Supportive")
         ));
-        tvValueStructured.setText(I18n.t(this, "Structured"));
-        tvValueLocalFirst.setText(I18n.t(this, "Local-first"));
-        tvValueSupportive.setText(I18n.t(this, "Supportive"));
 
-        // Support
-        tvSupportTitle.setText(I18n.t(this, "Support and Feedback"));
-        tvSupportDesc.setText(I18n.t(this,
-                "For any issues, suggestions or feedback related to Shehar Setu, you can " +
-                        "reach out to the development team."
+        items.add(new AboutSectionAdapter.SectionItem(
+                R.drawable.ic_about_support,
+                I18n.t(this, "Support"),
+                I18n.t(this, "Support and Feedback"),
+                null,
+                I18n.t(this, "For any issues, suggestions, or feedback related to Shehar Setu, users can reach out to the development team."),
+                I18n.t(this, "• Email: support@sheharsetu.com")
         ));
-        tvSupportEmail.setText("Email: support@sheharsetu.com"); // keep email raw
+
+        recyclerAboutSections.setAdapter(new AboutSectionAdapter(this, items));
     }
 }

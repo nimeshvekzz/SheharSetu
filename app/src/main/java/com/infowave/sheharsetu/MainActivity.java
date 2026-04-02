@@ -652,12 +652,22 @@ public class MainActivity extends AppCompatActivity {
             return true;
         });
     }
+    private void applyDrawerWidth60Percent() {
+        if (navigationView == null) return;
 
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int drawerWidth = (int) (screenWidth * 0.60f);
+
+        DrawerLayout.LayoutParams params =
+                (DrawerLayout.LayoutParams) navigationView.getLayoutParams();
+        params.width = drawerWidth;
+        navigationView.setLayoutParams(params);
+    }
     private void setupAppDrawer() {
         drawerLayout = findViewById(R.id.drawerLayout);
         navigationView = findViewById(R.id.navView);
         if (drawerLayout == null || navigationView == null) return;
-
+        applyDrawerWidth60Percent();
         drawerToggle = new ActionBarDrawerToggle(this, drawerLayout,
                 android.R.string.ok, android.R.string.cancel);
         drawerLayout.addDrawerListener(drawerToggle);
