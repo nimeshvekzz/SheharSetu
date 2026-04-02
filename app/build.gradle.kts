@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.infowave.sheharsetu"
+    namespace = "com.Anvexgroup.sheharsetu"
     compileSdk = 35
 
     defaultConfig {
