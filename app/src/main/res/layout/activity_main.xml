@@ -697,7 +697,7 @@
             android:fitsSystemWindows="false"
             app:headerLayout="@layout/av_header_main"
             app:menu="@menu/nav_main"
-            app:itemIconTint="@color/colorTextSecondary"
+            app:itemIconTint="@null"
             app:itemIconSize="22dp"
             app:itemTextColor="@color/colorTextPrimary"
             app:itemHorizontalPadding="20dp"
