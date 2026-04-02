@@ -2,8 +2,15 @@
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="oval">
     <size android:width="56dp" android:height="56dp"/>
+<<<<<<< HEAD
     <solid android:color="@color/colorPrimary"/>
     <stroke
         android:width="1dp"
         android:color="@color/colorPrimary"/>
+=======
+    <solid android:color="@color/colorPrimaryLight"/>
+    <stroke
+        android:width="1dp"
+        android:color="@color/colorBorder"/>
+>>>>>>> origin/main
 </shape>

@@ -13,11 +13,19 @@
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/catCard"
+<<<<<<< HEAD
         android:layout_width="64dp"
         android:layout_height="64dp"
         app:cardCornerRadius="32dp"
         app:cardElevation="2dp"
         app:strokeWidth="1dp"
+=======
+        android:layout_width="66dp"
+        android:layout_height="66dp"
+        app:cardCornerRadius="33dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="1.5dp"
+>>>>>>> origin/main
         app:strokeColor="@color/premium_divider"
         app:cardBackgroundColor="@color/premium_surface">
 
@@ -25,7 +33,11 @@
             android:id="@+id/catIcon"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+<<<<<<< HEAD
             android:padding="16dp"
+=======
+            android:padding="18dp"
+>>>>>>> origin/main
             android:scaleType="centerInside"
             android:src="@drawable/ic_placeholder_circle"
             app:tint="@color/colorPrimary" />
@@ -35,6 +47,7 @@
         android:id="@+id/catTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+<<<<<<< HEAD
         android:layout_marginTop="8dp"
         android:text="Category"
         android:textSize="13sp"
@@ -44,5 +57,17 @@
         android:maxWidth="80dp"
         android:maxLines="1"
         android:ellipsize="end"/>
+=======
+        android:layout_marginTop="10dp"
+        android:text="Category"
+        android:textSize="12sp"
+        android:fontFamily="sans-serif-medium"
+        android:textColor="@color/premium_text_main"
+        android:gravity="center"
+        android:maxWidth="84dp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:alpha="0.8"/>
+>>>>>>> origin/main
 
 </LinearLayout>

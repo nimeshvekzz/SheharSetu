@@ -30,7 +30,11 @@
                 android:gradientRadius="900dp"
                 android:centerX="0"
                 android:centerY="1"
+<<<<<<< HEAD
                 android:startColor="@color/colorPrimary"
+=======
+                android:startColor="@color/colorPrimaryMedium"
+>>>>>>> origin/main
                 android:centerColor="@color/colorBackgroundSoft"
                 android:endColor="@android:color/transparent"/>
         </shape>

@@ -128,6 +128,6 @@
 <!--    &lt;!&ndash; Hint / secondary text color &ndash;&gt;-->
 <!--    <color name="ss_hint">#8895A7</color>-->
 
-    <!-- Ripple for light buttons -->
     <color name="ss_ripple_light">#33FFFFFF</color>
+    <color name="whatsapp_green">#25D366</color>
 </resources>

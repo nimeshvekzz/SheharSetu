@@ -17,7 +17,11 @@
             android:id="@+id/nav_my_ads"
             android:title="My Ads"
             android:icon="@drawable/ic_all_listings"/>
+<<<<<<< HEAD
 
+=======
+            
+>>>>>>> origin/main
         <item
             android:id="@+id/nav_notifications"
             android:title="Notifications"
@@ -70,12 +74,20 @@
             <item
                 android:id="@+id/nav_terms"
                 android:title="Terms &amp; Conditions"
+<<<<<<< HEAD
                 android:icon="@drawable/ic_about_support"/>
+=======
+                android:icon="@drawable/ic_assignment_teal"/>
+>>>>>>> origin/main
 
             <item
                 android:id="@+id/nav_about"
                 android:title="About"
+<<<<<<< HEAD
                 android:icon="@drawable/ic_help_24"/>
+=======
+                android:icon="@drawable/ic_info_teal"/>
+>>>>>>> origin/main
         </menu>
     </item>
 
@@ -84,7 +96,11 @@
         <item
             android:id="@+id/nav_logout"
             android:title="Logout"
+<<<<<<< HEAD
             android:icon="@drawable/ic_logout_24"/>
+=======
+            android:icon="@drawable/ic_logout_teal"/>
+>>>>>>> origin/main
     </group>
 
 </menu>

@@ -5,7 +5,12 @@
     android:id="@+id/rootContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+<<<<<<< HEAD
     android:background="@color/black">
+=======
+    android:background="@color/black"
+    android:fitsSystemWindows="false">
+>>>>>>> origin/main
 
     <!-- Top Black Status Bar View -->
     <View
@@ -100,6 +105,7 @@
                                         android:letterSpacing="0.12" />
                                 </LinearLayout>
 
+<<<<<<< HEAD
                                 <!-- Notification Icon -->
                                 <ImageView
                                     android:id="@+id/topImage"
@@ -121,6 +127,8 @@
                                     android:src="@drawable/ic_person_24px"
                                     app:tint="@color/white" />
 
+=======
+>>>>>>> origin/main
                             </LinearLayout>
 
                             <!-- ===== LOCATION ROW ===== -->
@@ -468,7 +476,11 @@
                                     android:id="@+id/btnSearchSmall"
                                     android:layout_width="48dp"
                                     android:layout_height="48dp"
+<<<<<<< HEAD
                                     android:layout_marginEnd="12dp"
+=======
+                                    android:layout_marginEnd="82dp"
+>>>>>>> origin/main
                                     android:background="?attr/selectableItemBackgroundBorderless"
                                     android:padding="12dp"
                                     android:src="@drawable/ic_search_24"
@@ -478,6 +490,37 @@
                                     app:layout_constraintTop_toTopOf="parent"
                                     app:tint="@color/white" />
 
+<<<<<<< HEAD
+=======
+                                <!-- Notification Icon (Pinned) -->
+                                <ImageView
+                                    android:id="@+id/topImage"
+                                    android:layout_width="40dp"
+                                    android:layout_height="40dp"
+                                    android:layout_marginEnd="48dp"
+                                    android:background="@drawable/bg_icon_circle"
+                                    android:padding="10dp"
+                                    android:src="@drawable/ic_bell_vector"
+                                    app:layout_constraintBottom_toBottomOf="parent"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintTop_toTopOf="parent"
+                                    app:tint="@color/white" />
+
+                                <!-- Profile Icon (Pinned) -->
+                                <ImageView
+                                    android:id="@+id/headerOverlay"
+                                    android:layout_width="40dp"
+                                    android:layout_height="40dp"
+                                    android:layout_marginEnd="8dp"
+                                    android:background="@drawable/bg_icon_circle"
+                                    android:padding="10dp"
+                                    android:src="@drawable/ic_person_24px"
+                                    app:layout_constraintBottom_toBottomOf="parent"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintTop_toTopOf="parent"
+                                    app:tint="@color/white" />
+
+>>>>>>> origin/main
                             </androidx.constraintlayout.widget.ConstraintLayout>
 
                         </androidx.appcompat.widget.Toolbar>
@@ -697,12 +740,20 @@
             android:fitsSystemWindows="false"
             app:headerLayout="@layout/av_header_main"
             app:menu="@menu/nav_main"
+<<<<<<< HEAD
             app:itemIconTint="@null"
             app:itemIconSize="22dp"
             app:itemTextColor="@color/colorTextPrimary"
             app:itemHorizontalPadding="20dp"
             app:itemIconPadding="16dp"
             app:itemVerticalPadding="8dp"
+=======
+            app:itemIconSize="24dp"
+            app:itemTextColor="@color/colorTextPrimary"
+            app:itemHorizontalPadding="24dp"
+            app:itemIconPadding="20dp"
+            app:itemVerticalPadding="12dp"
+>>>>>>> origin/main
             app:itemBackground="@android:color/transparent"
             app:itemShapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium" />
 

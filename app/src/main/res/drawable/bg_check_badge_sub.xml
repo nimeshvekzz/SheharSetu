@@ -8,6 +8,10 @@
 
     <stroke
         android:width="2dp"
+<<<<<<< HEAD
         android:color="@color/colorPrimary"/>
+=======
+        android:color="@color/colorPrimaryLight"/>
+>>>>>>> origin/main
 
 </shape>

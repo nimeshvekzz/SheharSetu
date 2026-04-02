@@ -35,9 +35,15 @@
             <com.google.android.material.appbar.AppBarLayout
                 android:id="@+id/appBar"
                 android:layout_width="match_parent"
+<<<<<<< HEAD
                 android:layout_height="360dp"
                 android:fitsSystemWindows="false"
                 android:background="@color/colorPrimaryDark"
+=======
+                android:layout_height="320dp"
+                android:fitsSystemWindows="false"
+                android:background="@color/colorPrimary"
+>>>>>>> origin/main
                 app:elevation="0dp">
 
                 <com.google.android.material.appbar.CollapsingToolbarLayout
@@ -53,6 +59,7 @@
                         android:background="@color/colorPrimaryDark"
                         app:layout_collapseMode="parallax">
 
+<<<<<<< HEAD
                         <!-- FULL HERO IMAGE -->
                         <androidx.viewpager2.widget.ViewPager2
                             android:id="@+id/pdpImagePager"
@@ -95,11 +102,34 @@
                             app:layout_constraintEnd_toEndOf="parent" />
 
                         <!-- Dots over image -->
+=======
+                        <!-- Main Image Pager (simulating the inner card logic or full bleed) -->
+                        <androidx.viewpager2.widget.ViewPager2
+                            android:id="@+id/pdpImagePager"
+                            android:layout_width="0dp"
+                            android:layout_height="180dp"
+                            android:layout_marginTop="56dp"
+                            android:layout_marginStart="32dp"
+                            android:layout_marginEnd="32dp"
+                            app:layout_constraintTop_toTopOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintEnd_toEndOf="parent" />
+
+                        <!-- Dark overlay on bottom half to blend pager -->
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="100dp"
+                            android:background="@drawable/bg_toolbar_gradient"
+                            app:layout_constraintBottom_toBottomOf="parent" />
+
+                        <!-- Dots -->
+>>>>>>> origin/main
                         <LinearLayout
                             android:id="@+id/pdpDots"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
+<<<<<<< HEAD
                             android:layout_marginBottom="96dp"
                             app:layout_constraintBottom_toBottomOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
@@ -109,11 +139,23 @@
                         <LinearLayout
                             android:id="@+id/priceRow"
                             android:layout_width="0dp"
+=======
+                            android:layout_marginBottom="16dp"
+                            app:layout_constraintBottom_toTopOf="@id/priceRow"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintEnd_toEndOf="parent"/>
+
+                        <!-- Custom Price Row at bottom of AppBar -->
+                        <LinearLayout
+                            android:id="@+id/priceRow"
+                            android:layout_width="match_parent"
+>>>>>>> origin/main
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
                             android:gravity="center_vertical"
                             android:layout_marginStart="16dp"
                             android:layout_marginEnd="16dp"
+<<<<<<< HEAD
                             android:layout_marginBottom="20dp"
                             android:padding="16dp"
                             android:background="@drawable/bg_dark_teal_rounded"
@@ -121,6 +163,12 @@
                             app:layout_constraintBottom_toBottomOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintEnd_toEndOf="parent">
+=======
+                            android:layout_marginBottom="16dp"
+                            android:padding="16dp"
+                            android:background="@drawable/bg_dark_teal_rounded"
+                            app:layout_constraintBottom_toBottomOf="parent">
+>>>>>>> origin/main
 
                             <LinearLayout
                                 android:layout_width="0dp"
@@ -168,6 +216,7 @@
                                 </LinearLayout>
                             </LinearLayout>
 
+<<<<<<< HEAD
 <!--                            <ImageView-->
 <!--                                android:layout_width="36dp"-->
 <!--                                android:layout_height="36dp"-->
@@ -184,16 +233,42 @@
 <!--                                android:padding="8dp"-->
 <!--                                android:src="@drawable/ic_copy_24"-->
 <!--                                app:tint="#CCFFFFFF" />-->
+=======
+                            <!-- Location + Copy Icons -->
+                            <ImageView
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:layout_marginEnd="8dp"
+                                android:background="@drawable/bg_icon_outline_teal"
+                                android:padding="8dp"
+                                android:src="@drawable/ic_location_24px"
+                                app:tint="#80FFFFFF" />
+
+                            <ImageView
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:background="@drawable/bg_icon_outline_teal"
+                                android:padding="8dp"
+                                android:src="@drawable/ic_copy_24"
+                                app:tint="#80FFFFFF" />
+>>>>>>> origin/main
 
                         </LinearLayout>
 
                     </androidx.constraintlayout.widget.ConstraintLayout>
 
+<<<<<<< HEAD
                     <!-- Toolbar pinned OVER image -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="56dp"
                         android:layout_marginTop="8dp"
+=======
+                    <!-- Pinned Toolbar Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+>>>>>>> origin/main
                         android:paddingStart="16dp"
                         android:paddingEnd="16dp"
                         android:gravity="center_vertical"
@@ -208,10 +283,14 @@
                             android:src="@drawable/ic_arrows_24"
                             app:tint="@color/white" />
 
+<<<<<<< HEAD
                         <View
                             android:layout_width="0dp"
                             android:layout_height="1dp"
                             android:layout_weight="1" />
+=======
+                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+>>>>>>> origin/main
 
                         <ImageView
                             android:id="@+id/pdpShare"
@@ -233,7 +312,10 @@
                             app:tint="@color/white" />
 
                     </LinearLayout>
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
                 </com.google.android.material.appbar.CollapsingToolbarLayout>
             </com.google.android.material.appbar.AppBarLayout>
 
@@ -283,10 +365,14 @@
                             android:paddingHorizontal="10dp"
                             android:paddingVertical="4dp" />
 
+<<<<<<< HEAD
                         <View
                             android:layout_width="0dp"
                             android:layout_height="1dp"
                             android:layout_weight="1" />
+=======
+                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+>>>>>>> origin/main
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -304,7 +390,11 @@
                         android:layout_marginStart="20dp"
                         android:layout_marginEnd="20dp"
                         android:layout_marginTop="16dp"
+<<<<<<< HEAD
                         android:text="Tempo Transport&#10;Service Available"
+=======
+                        android:text="Tempo Transport\nService Available"
+>>>>>>> origin/main
                         android:textColor="@color/colorTextPrimary"
                         android:textSize="24sp"
                         android:textStyle="bold"
@@ -409,6 +499,10 @@
                         app:strokeColor="#E8EAEB"
                         app:cardBackgroundColor="@color/white">
 
+<<<<<<< HEAD
+=======
+                        <!-- Left accent bar -->
+>>>>>>> origin/main
                         <View
                             android:layout_width="4dp"
                             android:layout_height="match_parent"
@@ -478,7 +572,10 @@
                                     android:orientation="horizontal"
                                     android:layout_marginTop="6dp"
                                     android:gravity="center_vertical">
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
                                     <TextView
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
@@ -488,7 +585,10 @@
                                         android:textSize="10sp"
                                         android:paddingHorizontal="8dp"
                                         android:paddingVertical="3dp" />
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
                                     <TextView
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
@@ -544,6 +644,10 @@
                         android:paddingStart="16dp"
                         android:paddingEnd="16dp" />
 
+<<<<<<< HEAD
+=======
+                    <!-- Retaining unseen Rv to avoid null pointer crashes if used -->
+>>>>>>> origin/main
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/pdpThumbRv"
                         android:layout_width="match_parent"
@@ -553,7 +657,11 @@
                 </LinearLayout>
             </androidx.core.widget.NestedScrollView>
 
+<<<<<<< HEAD
             <!-- Bottom Action Bar -->
+=======
+            <!-- Bottom Action Bar (Floating Buttons inside a rounded container) -->
+>>>>>>> origin/main
             <LinearLayout
                 android:id="@+id/bottomBar"
                 android:layout_width="match_parent"
@@ -602,7 +710,11 @@
                     android:insetBottom="0dp"
                     android:paddingStart="4dp"
                     android:paddingEnd="4dp"
+<<<<<<< HEAD
                     app:icon="@drawable/ic_whatsapp_clean"
+=======
+                    app:icon="@drawable/ic_whatsapp_24"
+>>>>>>> origin/main
                     app:iconGravity="textStart"
                     app:iconTint="@null"
                     app:backgroundTint="#0F8E78"
@@ -645,7 +757,11 @@
                     style="?android:attr/progressBarStyleLarge"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
+<<<<<<< HEAD
                     android:layout_gravity="center" />
+=======
+                    android:layout_gravity="center"/>
+>>>>>>> origin/main
             </FrameLayout>
 
         </androidx.coordinatorlayout.widget.CoordinatorLayout>
@@ -662,4 +778,8 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+<<<<<<< HEAD
 </androidx.drawerlayout.widget.DrawerLayout>
+=======
+</androidx.drawerlayout.widget.DrawerLayout>
+>>>>>>> origin/main

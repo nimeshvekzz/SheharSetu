@@ -8,7 +8,11 @@
                 android:type="linear"
                 android:angle="135"
                 android:startColor="@color/colorBackgroundSoft"
+<<<<<<< HEAD
             android:centerColor="@color/colorPrimary"
+=======
+            android:centerColor="@color/colorPrimaryLight"
+>>>>>>> origin/main
             android:endColor="@android:color/white"
             android:centerY="0.45" />
         </shape>
